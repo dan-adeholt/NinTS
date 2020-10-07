@@ -1,3 +1,65 @@
+import { hex } from './stateLogging';
+import opcodeMetadata from './opcodeMetadata';
+
+const P_REG_CARRY = 0;
+const P_REG_ZERO = 1;
+const P_REG_INTERRUPT = 2;
+const P_REG_DECIMAL = 3;
+const P_REG_BREAK = 4;
+const P_REG_ALWAYS_1 = 5;
+const P_REG_OVERFLOW = 6;
+const P_REG_NEGATIVE = 7;
+
+const setZero = (state, value) => {
+  if (value === 0) {
+    state.P = state.P | (1 << P_REG_ZERO);
+  } else {
+    state.P = state.P & (~(1 << P_REG_ZERO));
+  }
+};
+
+const setNegative = (state, value) => {
+  if (value <= 0x7F) {
+    state.P = state.P & (~(1 << P_REG_NEGATIVE));
+  } else {
+    state.P = state.P | (1 << P_REG_NEGATIVE);
+  }
+};
+
+const translateAddress = address => {
+  // TODO: Handle support for mirroring etc
+  return address;
+}
+
+const Opcodes = {
+  JMP_Abs: 0x4C,
+  LDX_Immediate: 0xA2,
+  STX_ZeroPage: 0x86,
+  NOP: 0xEA
+};
+
+const opcodeHandlers = new Array(255);
+
+opcodeHandlers[Opcodes.JMP_Abs] = state => {
+  state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
+  state.CYC += 3;
+};
+
+opcodeHandlers[Opcodes.LDX_Immediate] = state => {
+  state.X = state.readMem(state.PC + 1);
+  setZero(state, state.X);
+  setNegative(state, state.X);
+  state.PC+=2;
+  state.CYC+=2;
+};
+
+opcodeHandlers[Opcodes.STX_ZeroPage] = state => {
+  state.setMem(state.PC + 1, state.X);
+  state.PC+=2;
+  state.CYC+=3;
+};
+
+
 export const initMachine = (rom) => {
   let memory = new Uint8Array(1 << 16);
   memory.set(rom.prgData, 0x8000);
@@ -16,69 +78,20 @@ export const initMachine = (rom) => {
     CYC: 0,
     CHR: rom.chrData,
     settings: rom.settings,
+    readMem: addr => memory[addr],
+    setMem: (addr, value) => {
+      memory[addr] = value;
+    },
     memory,
   };
 }
 
-export const stateToString = (state) => {
-  const hex = num => num.toString(16).toUpperCase().padStart(2, '0');
-  let str = state.PC.toString(16).toUpperCase();
-  str += '  ';
-  const opcode = state.memory[state.PC];
-
-  if (opcode == null) {
-    return str;
-  }
-
-  str += hex(opcode);
-  str += ' ';
-
-  const opcodeMetadata = {
-    0x4c: [args => 'JMP $' + hex(args[1]) + hex(args[0]), 2],
-  }
-
-  if (opcode in opcodeMetadata) {
-    const [label, numberOfArgs] = opcodeMetadata[opcode];
-    let args = state.memory.slice(state.PC + 1, state.PC + 1 + numberOfArgs);
-
-    for (let arg of args) {
-      str += hex(arg) + ' ';
-    }
-
-    str = str.padEnd(16, ' ');
-    str += label(args) + ' ';
-  }
-
-  str = str.padEnd(48, ' ');
-
-
-
-  str += 'A:' + hex(state.A) + ' ';
-  str += 'X:' + hex(state.X) + ' ';
-  str += 'Y:' + hex(state.Y) + ' ';
-  str += 'P:' + hex(state.P) + ' ';
-  str += 'SP:' + hex(state.SP) + ' ';
-
-  // Figure which PPU state ([scanline, pixel]) by deriving from cycle count
-  const PIXELS_PER_SCANLINE = 342;
-  const NUM_SCANLINES = 262;
-  const scanline = Math.floor((state.CYC * 3) / PIXELS_PER_SCANLINE) % NUM_SCANLINES;
-  const pixel = (state.CYC * 3) % PIXELS_PER_SCANLINE;
-  str += 'PPU:' + scanline.toString(10).padStart(3, ' ') +',' + pixel.toString(10).padStart(3, ' ') + ' ';
-  str += 'CYC:' + state.CYC.toString(10);
-
-  return str;
-}
-
-
 export const step = (state) => {
-  const opcode = state.memory[state.PC];
-  const opcodes = new Array(255);
+  const opcode = state.readMem(state.PC);
+  if (opcode in opcodeHandlers) {
+    opcodeHandlers[opcode](state);
+  } else {
+    console.error('No handler found for opcode $' + hex(opcode), opcodeMetadata[opcode].name);
+  }
 
-  opcodes[0x4C] = (state) => { // JMP Absolute
-    state.PC = state.memory[state.PC + 1] + (state.memory[state.PC + 2] << 8);
-    state.CYC += 3;
-  };
-
-  opcodes[opcode](state);
 };

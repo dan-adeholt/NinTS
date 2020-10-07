@@ -1,5 +1,6 @@
 import { parseROM } from '../emulator/parseROM';
-import {initMachine, stateToString, step} from '../emulator/emulator';
+import { initMachine, step } from '../emulator/emulator';
+import { stateToString } from '../emulator/stateLogging';
 
 const parseLog = (data) => data.toString().split('\n');
 
