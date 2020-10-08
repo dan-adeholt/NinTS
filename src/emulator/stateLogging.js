@@ -7,6 +7,8 @@ const formatters = {
     const offset = state.readMem(state.PC + 1);
     return "$" + hex(offset) + " = " + hex(state.memory[offset]);
   },
+  Implied: state => "",
+  Relative: state => "$" + hex(state.PC + state.readMem(state.PC + 1) + 2)
 };
 
 export const hex = num => num.toString(16).toUpperCase().padStart(2, '0');
@@ -24,7 +26,7 @@ export const stateToString = (state) => {
   str += hex(opcode);
   str += ' ';
 
-  if (opcode in opcodeMetadata) {
+  if (opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {
     const { instructionSize, name, mode } = opcodeMetadata[opcode];
 
     for (let i = 0; i < instructionSize - 1; i++) {

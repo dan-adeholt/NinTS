@@ -1,7 +1,6 @@
 import { hex } from './stateLogging';
 import opcodeMetadata from './opcodeMetadata';
 
-const P_REG_CARRY = 0;
 const P_REG_ZERO = 1;
 const P_REG_INTERRUPT = 2;
 const P_REG_DECIMAL = 3;
@@ -9,6 +8,14 @@ const P_REG_BREAK = 4;
 const P_REG_ALWAYS_1 = 5;
 const P_REG_OVERFLOW = 6;
 const P_REG_NEGATIVE = 7;
+
+const setCarry = (state, on) => {
+  if (on) {
+    state.P = state.P | 1;    // P_REG_CARRY is 0, no need to shift
+  } else {
+    state.P = state.P & (~(1));
+  }
+};
 
 const setZero = (state, value) => {
   if (value === 0) {
@@ -35,7 +42,9 @@ const Opcodes = {
   JMP_Abs: 0x4C,
   LDX_Immediate: 0xA2,
   STX_ZeroPage: 0x86,
-  NOP: 0xEA
+  JSR: 0x20,
+  NOP: 0xEA,
+  SEC: 0x38
 };
 
 const opcodeHandlers = new Array(255);
@@ -59,6 +68,25 @@ opcodeHandlers[Opcodes.STX_ZeroPage] = state => {
   state.CYC+=3;
 };
 
+opcodeHandlers[Opcodes.JSR] = state => {
+  const addr = state.PC + 2; // Next instruction - 1
+  state.setMem(state.SP, addr >> 8);
+  state.setMem(state.SP - 1, addr & 0xFF);
+  state.SP -= 2;
+  state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
+  state.CYC+=6;
+};
+
+opcodeHandlers[Opcodes.NOP] = state => {
+  state.PC += 1;
+  state.CYC += 2;
+}
+
+opcodeHandlers[Opcodes.SEC] = state => {
+  setCarry(state, true);
+  state.PC += 1;
+  state.CYC += 2;
+}
 
 export const initMachine = (rom) => {
   let memory = new Uint8Array(1 << 16);

@@ -134,6 +134,23 @@ Implied       BRK           $00  1   7
 Implied       NOP           $EA  1   2
 Implied       RTI           $40  1   6
 Implied       RTS           $60  1   6
+
+Implied       CLC           $18  1   2
+Implied       SEC           $38  1   2
+Implied       CLI           $58  1   2
+Implied       SEI           $78  1   2
+Implied       CLV           $B8  1   2
+Implied       CLD           $D8  1   2
+Implied       SED           $F8  1   2
+
+Relative      BPL           $10  2   X
+Relative      BMI           $30  2   X
+Relative      BVC           $50  2   X
+Relative      BVS           $70  2   X
+Relative      BCC           $90  2   X
+Relative      BCS           $B0  2   X
+Relative      BNE           $D0  2   X
+Relative      BEQ           $F0  2   X
 `
 
 const lines = data.split("\n");
@@ -152,10 +169,10 @@ for (var line of lines) {
 
     let [mode, name, example, opcode, instructionSize] = elems;
 
-    opcode = parseInt(opcode.replace("$", ""), 16);
+    const opcodeNum = parseInt(opcode.replace("$", ""), 16);
 
-    opcodeData[opcode] = {
-        name, mode, instructionSize
+    opcodeData[opcodeNum] = {
+        name, mode, instructionSize, opcode
     };
 }
 
