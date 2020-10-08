@@ -44,7 +44,16 @@ const Opcodes = {
   STX_ZeroPage: 0x86,
   JSR: 0x20,
   NOP: 0xEA,
-  SEC: 0x38
+  SEC: 0x38,
+  CLC: 0x18,
+  BCS: 0xB0,
+  BCC: 0x90
+};
+
+const PAGE_SIZE = 256;
+
+const onSamePageBoundary = (a1, a2) => {
+  return (a1 ^ a2) < PAGE_SIZE;
 };
 
 const opcodeHandlers = new Array(255);
@@ -86,6 +95,50 @@ opcodeHandlers[Opcodes.SEC] = state => {
   setCarry(state, true);
   state.PC += 1;
   state.CYC += 2;
+}
+
+opcodeHandlers[Opcodes.CLC] = state => {
+  setCarry(state, false);
+  state.PC += 1;
+  state.CYC += 2;
+}
+
+opcodeHandlers[Opcodes.BCC] = state => {
+  const offset = state.readMem(state.PC + 1);
+  const nextInstruction = state.PC + 2;
+  const jumpInstruction = state.PC + 2 + offset;
+
+  state.CYC += 2;
+  if (!(state.P & 0x1 )) { // P_REG_CARRY is bit 0
+    state.CYC += 1;
+
+    if (!onSamePageBoundary(nextInstruction, jumpInstruction)) {
+      state.CYC += 1;
+    }
+
+    state.PC = jumpInstruction;
+  } else {
+    state.PC = nextInstruction;
+  }
+}
+
+opcodeHandlers[Opcodes.BCS] = state => {
+  const offset = state.readMem(state.PC + 1);
+  const nextInstruction = state.PC + 2;
+  const jumpInstruction = state.PC + 2 + offset;
+
+  state.CYC += 2;
+  if (state.P & 0x1 ) { // P_REG_CARRY is bit 0
+    state.CYC += 1;
+
+    if (!onSamePageBoundary(nextInstruction, jumpInstruction)) {
+      state.CYC += 1;
+    }
+
+    state.PC = jumpInstruction;
+  } else {
+    state.PC = nextInstruction;
+  }
 }
 
 export const initMachine = (rom) => {

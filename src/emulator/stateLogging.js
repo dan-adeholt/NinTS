@@ -40,8 +40,6 @@ export const stateToString = (state) => {
     } else {
       str += name + ' ' + formatters[mode](state) + ' ';
     }
-
-
   }
 
   str = str.padEnd(48, ' ');
