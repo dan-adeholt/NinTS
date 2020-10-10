@@ -51,7 +51,7 @@ export const stateToString = (state) => {
   str += 'SP:' + hex(state.SP) + ' ';
 
   // Figure which PPU state ([scanline, pixel]) by deriving from cycle count
-  const PIXELS_PER_SCANLINE = 342;
+  const PIXELS_PER_SCANLINE = 341;
   const NUM_SCANLINES = 262;
   const scanline = Math.floor((state.CYC * 3) / PIXELS_PER_SCANLINE) % NUM_SCANLINES;
   const pixel = (state.CYC * 3) % PIXELS_PER_SCANLINE;

@@ -1,5 +1,5 @@
 import { parseROM } from '../emulator/parseROM';
-import { initMachine, step } from '../emulator/emulator';
+import { addCycles, initMachine, step } from '../emulator/emulator';
 import { stateToString } from '../emulator/stateLogging';
 
 const parseLog = (data) => data.toString().split('\n');
@@ -13,7 +13,7 @@ test('Nes test rom executes properly', () => {
   const rom = parseROM(data);
   const machine = initMachine(rom);
   machine.PC = 0xC000;
-  machine.CYC = 7; // For some reason the logs start at 7 ? Perhaps has to do with reset vector or something
+  addCycles(machine, 7); // For some reason the logs start at 7 ? Perhaps has to do with reset vector or something
 
   log.forEach(entry => {
     expect(stateToString(machine)).toEqual(entry);
