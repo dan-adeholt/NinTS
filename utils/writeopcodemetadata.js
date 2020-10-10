@@ -151,6 +151,13 @@ Relative      BCC           $90  2   X
 Relative      BCS           $B0  2   X
 Relative      BNE           $D0  2   X
 Relative      BEQ           $F0  2   X
+
+Implied       TXS           $9A  1   2
+Implied       TSX           $BA  1   2
+Implied       PHA           $48  1   3
+Implied       PLA           $68  1   4
+Implied       PHP           $08  1   3
+Implied       PLP           $28  1   4
 `
 
 const lines = data.split("\n");

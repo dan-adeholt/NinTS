@@ -26,34 +26,19 @@ export const addCycles = (state, cycles) => {
   state.CYC += cycles;
 }
 
-const setCarry = (state, on) => {
+const setFlag = (state, flag, mask, on) => {
   if (on) {
-    state.P = state.P | P_REG_CARRY;
+    state.P = state.P | flag;
   } else {
-    state.P = state.P & P_MASK_CARRY;
+    state.P = state.P & mask;
   }
-};
-
-const setZero = (state, value) => {
-  if (value === 0) {
-    state.P = state.P | P_REG_ZERO;
-  } else {
-    state.P = state.P & P_MASK_ZERO;
-  }
-};
-
-const setNegative = (state, value) => {
-  if (value <= 0x7F) {
-    state.P = state.P & P_MASK_NEGATIVE;
-  } else {
-    state.P = state.P | P_REG_NEGATIVE;
-  }
-};
-
-const translateAddress = address => {
-  // TODO: Handle support for mirroring etc
-  return address;
 }
+
+const setCarry = (state, on) => setFlag(state, P_REG_CARRY, P_MASK_CARRY, on);
+const setZero = (state, value) => setFlag(state, P_REG_ZERO, P_MASK_ZERO, value === 0);
+const setNegative = (state, value) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value > 0x7F);
+const setInterrupt = (state, on) => setFlag(state, P_REG_INTERRUPT, P_MASK_INTERRUPT, on);
+const setDecimal = (state, on) => setFlag(state, P_REG_DECIMAL, P_MASK_DECIMAL, on);
 
 const Opcodes = {
   JMP_Abs: 0x4C,
@@ -74,7 +59,10 @@ const Opcodes = {
   BVC: 0x50,
   BPL: 0x10,
   BMI: 0x30,
-  RTS: 0x60
+  RTS: 0x60,
+  SEI: 0x78,
+  SED: 0xF8
+
 };
 
 const PAGE_SIZE = 256;
@@ -186,6 +174,18 @@ opcodeHandlers[Opcodes.BPL] = state => {
 
 opcodeHandlers[Opcodes.BMI] = state => {
   branchOpcode(state, state.P & P_REG_NEGATIVE);
+}
+
+opcodeHandlers[Opcodes.SEI] = state => {
+  setInterrupt(state, true);
+  addCycles(state, 2);
+  state.PC += 1;
+}
+
+opcodeHandlers[Opcodes.SED] = state => {
+  setDecimal(state, true);
+  addCycles(state, 2);
+  state.PC += 1;
 }
 
 opcodeHandlers[Opcodes.BIT_ZeroPage] = state => {

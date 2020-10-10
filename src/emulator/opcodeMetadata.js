@@ -27,7 +27,12 @@ const opcodeMetadata = [
     "opcode": "$06"
   },
   null,
-  null,
+  {
+    "name": "PHP",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$08"
+  },
   {
     "name": "ORA",
     "mode": "Immediate",
@@ -144,7 +149,12 @@ const opcodeMetadata = [
     "opcode": "$26"
   },
   null,
-  null,
+  {
+    "name": "PLP",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$28"
+  },
   {
     "name": "AND",
     "mode": "Immediate",
@@ -261,7 +271,12 @@ const opcodeMetadata = [
     "opcode": "$46"
   },
   null,
-  null,
+  {
+    "name": "PHA",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$48"
+  },
   {
     "name": "EOR",
     "mode": "Immediate",
@@ -378,7 +393,12 @@ const opcodeMetadata = [
     "opcode": "$66"
   },
   null,
-  null,
+  {
+    "name": "PLA",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$68"
+  },
   {
     "name": "ADC",
     "mode": "Immediate",
@@ -548,7 +568,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$99"
   },
-  null,
+  {
+    "name": "TXS",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$9A"
+  },
   null,
   null,
   {
@@ -665,7 +690,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$B9"
   },
-  null,
+  {
+    "name": "TSX",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$BA"
+  },
   null,
   {
     "name": "LDY",
