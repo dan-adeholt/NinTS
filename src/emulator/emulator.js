@@ -37,11 +37,16 @@ const setFlag = (state, flag, mask, on) => {
 const setCarry = (state, on) => setFlag(state, P_REG_CARRY, P_MASK_CARRY, on);
 const setZero = (state, value) => setFlag(state, P_REG_ZERO, P_MASK_ZERO, value === 0);
 const setNegative = (state, value) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value > 0x7F);
+const setNegativeNativeNumber = (state, value) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value < 0);
 const setInterrupt = (state, on) => setFlag(state, P_REG_INTERRUPT, P_MASK_INTERRUPT, on);
 const setDecimal = (state, on) => setFlag(state, P_REG_DECIMAL, P_MASK_DECIMAL, on);
+const setBreak = (state, on) => setFlag(state, P_REG_BREAK, P_MASK_BREAK, on);
+const setAlwaysOne = (state) => setFlag(state, P_REG_ALWAYS_1, P_MASK_ALWAYS_1, true);
 
 const Opcodes = {
   JMP_Abs: 0x4C,
+  CMP_Immediate: 0xC9,
+  AND_Immediate: 0x29,
   LDX_Immediate: 0xA2,
   LDA_Immediate: 0xA9,
   STX_ZeroPage: 0x86,
@@ -61,8 +66,12 @@ const Opcodes = {
   BMI: 0x30,
   RTS: 0x60,
   SEI: 0x78,
-  SED: 0xF8
-
+  SED: 0xF8,
+  PHP: 0x08,
+  PHA: 0x48,
+  PLA: 0x68,
+  PLP: 0x28,
+  CLD: 0xD8
 };
 
 const PAGE_SIZE = 256;
@@ -82,6 +91,23 @@ opcodeHandlers[Opcodes.LDX_Immediate] = state => {
   state.X = state.readMem(state.PC + 1);
   setZero(state, state.X);
   setNegative(state, state.X);
+  state.PC+=2;
+  addCycles(state, 2);
+};
+
+opcodeHandlers[Opcodes.AND_Immediate] = state => {
+  state.A = state.A & state.readMem(state.PC + 1);
+  setZero(state, state.A);
+  setNegative(state, state.A);
+  state.PC+=2;
+  addCycles(state, 2);
+};
+
+opcodeHandlers[Opcodes.CMP_Immediate] = state => {
+  const diff = state.A - state.readMem(state.PC + 1);
+  setZero(state, diff);
+  setNegativeNativeNumber(state, diff);
+  setCarry(state, diff >= 0);
   state.PC+=2;
   addCycles(state, 2);
 };
@@ -112,16 +138,49 @@ opcodeHandlers[Opcodes.STA_ZeroPage] = state => {
 
 opcodeHandlers[Opcodes.JSR] = state => {
   const addr = state.PC + 2; // Next instruction - 1
-  state.setMem(state.SP, addr >> 8);
-  state.setMem(state.SP - 1, addr & 0xFF);
+  state.setStack(state.SP, addr >> 8);
+  state.setStack(state.SP - 1, addr & 0xFF);
   state.SP -= 2;
   state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
   addCycles(state, 6);
 };
 
+opcodeHandlers[Opcodes.PHP] = state => {
+  const pCopy = state.P | P_REG_BREAK;
+  state.setStack(state.SP, pCopy);
+  state.SP -= 1;
+  state.PC += 1;
+  addCycles(state, 3);
+};
+
+opcodeHandlers[Opcodes.PHA] = state => {
+  state.setStack(state.SP, state.A);
+  state.SP -= 1;
+  state.PC += 1;
+  addCycles(state, 3);
+};
+
+opcodeHandlers[Opcodes.PLP] = state => {
+  state.P = state.readStack(state.SP + 1);
+  setBreak(state, false); // See http://wiki.nesdev.com/w/index.php/Status_flags
+  setAlwaysOne(state);
+  state.SP += 1;
+  state.PC += 1;
+  addCycles(state, 4);
+};
+
+opcodeHandlers[Opcodes.PLA] = state => {
+  state.A = state.readStack(state.SP + 1);
+  state.SP += 1;
+  state.PC += 1;
+  setZero(state, state.A);
+  setNegative(state, state.A);
+  addCycles(state, 4);
+};
+
 opcodeHandlers[Opcodes.RTS] = state => {
-  const low = state.readMem(state.SP + 1);
-  const high = state.readMem(state.SP + 2);
+  const low = state.readStack(state.SP + 1);
+  const high = state.readStack(state.SP + 2);
   state.SP += 2;
   state.PC = (low | (high << 8)) + 1;
   addCycles(state, 6);
@@ -174,6 +233,12 @@ opcodeHandlers[Opcodes.BPL] = state => {
 
 opcodeHandlers[Opcodes.BMI] = state => {
   branchOpcode(state, state.P & P_REG_NEGATIVE);
+}
+
+opcodeHandlers[Opcodes.CLD] = state => {
+  setDecimal(state, false);
+  addCycles(state, 2);
+  state.PC += 1;
 }
 
 opcodeHandlers[Opcodes.SEI] = state => {
@@ -243,6 +308,10 @@ export const initMachine = (rom) => {
     CYC: 0,
     CHR: rom.chrData,
     settings: rom.settings,
+    readStack: sp => memory[0x100 + sp],
+    setStack: (sp, value) => {
+      memory[0x100 + sp] = value;
+    },
     readMem: addr => memory[addr],
     setMem: (addr, value) => {
       memory[addr] = value;
