@@ -1,6 +1,7 @@
 import { parseROM } from '../emulator/parseROM';
-import { addCycles, initMachine, step } from '../emulator/emulator';
+import { initMachine, step } from '../emulator/emulator';
 import { stateToString } from '../emulator/stateLogging';
+import {addCycles} from '../emulator/opcodes/utils';
 
 const parseLog = (data) => data.toString().split('\n');
 
