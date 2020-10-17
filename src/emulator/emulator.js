@@ -43,36 +43,8 @@ const setDecimal = (state, on) => setFlag(state, P_REG_DECIMAL, P_MASK_DECIMAL, 
 const setBreak = (state, on) => setFlag(state, P_REG_BREAK, P_MASK_BREAK, on);
 const setAlwaysOne = (state) => setFlag(state, P_REG_ALWAYS_1, P_MASK_ALWAYS_1, true);
 
-const Opcodes = {
-  JMP_Abs: 0x4C,
-  CMP_Immediate: 0xC9,
-  AND_Immediate: 0x29,
-  LDX_Immediate: 0xA2,
-  LDA_Immediate: 0xA9,
-  STX_ZeroPage: 0x86,
-  STA_ZeroPage: 0x85,
-  JSR: 0x20,
-  NOP: 0xEA,
-  SEC: 0x38,
-  CLC: 0x18,
-  BCS: 0xB0,
-  BCC: 0x90,
-  BEQ: 0xF0,
-  BNE: 0xD0,
-  BIT_ZeroPage: 0x24,
-  BVS: 0x70,
-  BVC: 0x50,
-  BPL: 0x10,
-  BMI: 0x30,
-  RTS: 0x60,
-  SEI: 0x78,
-  SED: 0xF8,
-  PHP: 0x08,
-  PHA: 0x48,
-  PLA: 0x68,
-  PLP: 0x28,
-  CLD: 0xD8
-};
+const readZeroPage = (state, addr) => state.readMem(state.readMem(addr));
+const readZeroPageY = (state, addr) => (state.readMem(addr) + state.Y) % 256
 
 const PAGE_SIZE = 256;
 
@@ -82,20 +54,12 @@ const onSamePageBoundary = (a1, a2) => {
 
 const opcodeHandlers = new Array(255);
 
-opcodeHandlers[Opcodes.JMP_Abs] = state => {
+opcodeHandlers[0x4C] = state => { // JMP Absolute
   state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
   addCycles(state, 3);
 };
 
-opcodeHandlers[Opcodes.LDX_Immediate] = state => {
-  state.X = state.readMem(state.PC + 1);
-  setZero(state, state.X);
-  setNegative(state, state.X);
-  state.PC+=2;
-  addCycles(state, 2);
-};
-
-opcodeHandlers[Opcodes.AND_Immediate] = state => {
+opcodeHandlers[0x29] = state => { // AND Immediate
   state.A = state.A & state.readMem(state.PC + 1);
   setZero(state, state.A);
   setNegative(state, state.A);
@@ -103,7 +67,7 @@ opcodeHandlers[Opcodes.AND_Immediate] = state => {
   addCycles(state, 2);
 };
 
-opcodeHandlers[Opcodes.CMP_Immediate] = state => {
+opcodeHandlers[0xC9] = state => { // CMP Immediate
   const diff = state.A - state.readMem(state.PC + 1);
   setZero(state, diff);
   setNegativeNativeNumber(state, diff);
@@ -112,7 +76,15 @@ opcodeHandlers[Opcodes.CMP_Immediate] = state => {
   addCycles(state, 2);
 };
 
-opcodeHandlers[Opcodes.LDA_Immediate] = state => {
+opcodeHandlers[0xA2] = state => { // LDX Immediate
+  state.X = state.readMem(state.PC + 1);
+  setZero(state, state.X);
+  setNegative(state, state.X);
+  state.PC+=2;
+  addCycles(state, 2);
+};
+
+opcodeHandlers[0xA9] = state => { // LDA Immediate
   state.A = state.readMem(state.PC + 1);
   setZero(state, state.A);
   setNegative(state, state.A);
@@ -120,7 +92,7 @@ opcodeHandlers[Opcodes.LDA_Immediate] = state => {
   addCycles(state, 2);
 };
 
-opcodeHandlers[Opcodes.STX_ZeroPage] = state => {
+opcodeHandlers[0x86] = state => { // STX Zero Page
   const address = state.readMem(state.PC + 1);
   state.setMem(address, state.X);
   state.PC+=2;
@@ -128,7 +100,7 @@ opcodeHandlers[Opcodes.STX_ZeroPage] = state => {
 };
 
 
-opcodeHandlers[Opcodes.STA_ZeroPage] = state => {
+opcodeHandlers[0x85] = state => { // STA Zero Page
   const address = state.readMem(state.PC + 1);
   state.setMem(address, state.A);
   state.PC+=2;
@@ -136,7 +108,7 @@ opcodeHandlers[Opcodes.STA_ZeroPage] = state => {
 };
 
 
-opcodeHandlers[Opcodes.JSR] = state => {
+opcodeHandlers[0x20] = state => { // JSR
   const addr = state.PC + 2; // Next instruction - 1
   state.setStack(state.SP, addr >> 8);
   state.setStack(state.SP - 1, addr & 0xFF);
@@ -145,7 +117,7 @@ opcodeHandlers[Opcodes.JSR] = state => {
   addCycles(state, 6);
 };
 
-opcodeHandlers[Opcodes.PHP] = state => {
+opcodeHandlers[0x08] = state => { // PHP
   const pCopy = state.P | P_REG_BREAK;
   state.setStack(state.SP, pCopy);
   state.SP -= 1;
@@ -153,14 +125,14 @@ opcodeHandlers[Opcodes.PHP] = state => {
   addCycles(state, 3);
 };
 
-opcodeHandlers[Opcodes.PHA] = state => {
+opcodeHandlers[0x48] = state => { // PHA
   state.setStack(state.SP, state.A);
   state.SP -= 1;
   state.PC += 1;
   addCycles(state, 3);
 };
 
-opcodeHandlers[Opcodes.PLP] = state => {
+opcodeHandlers[0x28] = state => { // PLP
   state.P = state.readStack(state.SP + 1);
   setBreak(state, false); // See http://wiki.nesdev.com/w/index.php/Status_flags
   setAlwaysOne(state);
@@ -169,7 +141,7 @@ opcodeHandlers[Opcodes.PLP] = state => {
   addCycles(state, 4);
 };
 
-opcodeHandlers[Opcodes.PLA] = state => {
+opcodeHandlers[0x68] = state => { // PLA
   state.A = state.readStack(state.SP + 1);
   state.SP += 1;
   state.PC += 1;
@@ -178,7 +150,7 @@ opcodeHandlers[Opcodes.PLA] = state => {
   addCycles(state, 4);
 };
 
-opcodeHandlers[Opcodes.RTS] = state => {
+opcodeHandlers[0x60] = state => { // RTS
   const low = state.readStack(state.SP + 1);
   const high = state.readStack(state.SP + 2);
   state.SP += 2;
@@ -186,74 +158,51 @@ opcodeHandlers[Opcodes.RTS] = state => {
   addCycles(state, 6);
 };
 
-opcodeHandlers[Opcodes.NOP] = state => {
+opcodeHandlers[0xEA] = state => { // NOP
   state.PC += 1;
   addCycles(state, 2);
 }
 
-opcodeHandlers[Opcodes.SEC] = state => {
+opcodeHandlers[0x38] = state => { // SEC
   setCarry(state, true);
   state.PC += 1;
   addCycles(state, 2);
 }
 
-opcodeHandlers[Opcodes.CLC] = state => {
+opcodeHandlers[0x18] = state => { // CLC
   setCarry(state, false);
   state.PC += 1;
   addCycles(state, 2);
 }
 
-opcodeHandlers[Opcodes.BCC] = state => {
-  branchOpcode(state, !(state.P & P_REG_CARRY ));
-}
+opcodeHandlers[0x90] = state => branchOpcode(state, !(state.P & P_REG_CARRY )); // BCC
+opcodeHandlers[0xF0] = state => branchOpcode(state, state.P & P_REG_ZERO); // BEQ
+opcodeHandlers[0xD0] = state => branchOpcode(state, !(state.P & P_REG_ZERO)); // BNE
+opcodeHandlers[0xB0] = state => branchOpcode(state, state.P & P_REG_CARRY); // BCS
+opcodeHandlers[0x50] = state => branchOpcode(state, !(state.P & P_REG_OVERFLOW)) // BVC
+opcodeHandlers[0x70] = state => branchOpcode(state, state.P & P_REG_OVERFLOW); // BVS
+opcodeHandlers[0x10] = state => branchOpcode(state, !(state.P & P_REG_NEGATIVE)); // BPL
+opcodeHandlers[0x30] = state => branchOpcode(state, state.P & P_REG_NEGATIVE); // BMI
 
-opcodeHandlers[Opcodes.BEQ] = state => {
-  branchOpcode(state, state.P & P_REG_ZERO);
-}
-
-opcodeHandlers[Opcodes.BNE] = state => {
-  branchOpcode(state, !(state.P & P_REG_ZERO));
-}
-
-opcodeHandlers[Opcodes.BCS] = state => {
-  branchOpcode(state, state.P & P_REG_CARRY);
-}
-
-opcodeHandlers[Opcodes.BVC] = state => {
-  branchOpcode(state, !(state.P & P_REG_OVERFLOW));
-}
-
-opcodeHandlers[Opcodes.BVS] = state => {
-  branchOpcode(state, state.P & P_REG_OVERFLOW);
-}
-
-opcodeHandlers[Opcodes.BPL] = state => {
-  branchOpcode(state, !(state.P & P_REG_NEGATIVE));
-}
-
-opcodeHandlers[Opcodes.BMI] = state => {
-  branchOpcode(state, state.P & P_REG_NEGATIVE);
-}
-
-opcodeHandlers[Opcodes.CLD] = state => {
+opcodeHandlers[0xD8] = state => { // CLD
   setDecimal(state, false);
   addCycles(state, 2);
   state.PC += 1;
 }
 
-opcodeHandlers[Opcodes.SEI] = state => {
+opcodeHandlers[0x78] = state => { // SEI
   setInterrupt(state, true);
   addCycles(state, 2);
   state.PC += 1;
 }
 
-opcodeHandlers[Opcodes.SED] = state => {
+opcodeHandlers[0xF8] = state => { // SED
   setDecimal(state, true);
   addCycles(state, 2);
   state.PC += 1;
 }
 
-opcodeHandlers[Opcodes.BIT_ZeroPage] = state => {
+opcodeHandlers[0x24] = state => { // BIT ZeroPage
   const memoryValue = state.readMem(state.readMem(state.PC + 1));
 
   if (memoryValue & state.A) {
@@ -269,7 +218,6 @@ opcodeHandlers[Opcodes.BIT_ZeroPage] = state => {
   state.PC += 2;
   addCycles(state, 3);
 }
-
 
 const branchOpcode = (state, shouldBranch) => {
   const offset = state.readMem(state.PC + 1);
@@ -329,5 +277,4 @@ export const step = (state) => {
   } else {
     console.error('No handler found for opcode $' + hex(opcode), opcodeMetadata[opcode].name);
   }
-
 };
