@@ -28,6 +28,7 @@ import { registerSTX } from './opcodes/stx';
 import { registerJump } from './opcodes/jump';
 import { registerSTY } from './opcodes/sty';
 import { registerLDY } from './opcodes/ldy';
+import { registerORA } from './opcodes/ora';
 
 const opcodeHandlers = new Array(255);
 
@@ -56,7 +57,7 @@ registerSTX(opcodeHandlers);
 registerSTY(opcodeHandlers);
 registerBranch(opcodeHandlers);
 registerJump(opcodeHandlers);
-
+registerORA(opcodeHandlers);
 
 
 opcodeHandlers[0x08] = state => { // PHP
