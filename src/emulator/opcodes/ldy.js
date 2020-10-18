@@ -7,13 +7,13 @@ import {
   setZero
 } from './utils';
 
-export const registerLDY = opcodeHandlers => {
-  const ldy = (state, value) => {
-    state.Y = value;
-    setZero(state, value);
-    setNegative(state, value);
-  };
+const ldy = (state, value) => {
+  state.Y = value;
+  setZero(state, value);
+  setNegative(state, value);
+};
 
+export const registerLDY = opcodeHandlers => {
   opcodeHandlers[0xA0] = state => ldy(state, readImmediate2Cycles(state));
   opcodeHandlers[0xA4] = state => ldy(state, readZeroPage3Cycles(state)) ;
   opcodeHandlers[0xB4] = state => ldy(state, readZeroPageX4Cycles(state));

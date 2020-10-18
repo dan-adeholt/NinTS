@@ -1,26 +1,26 @@
 import { onSamePageBoundary, P_REG_CARRY, P_REG_NEGATIVE, P_REG_OVERFLOW, P_REG_ZERO } from './utils';
 
-export const registerBranch = opcodeHandlers => {
-  const branch = (state, shouldBranch) => {
-    const offset = state.readMem(state.PC + 1);
-    const nextInstruction = state.PC + 2;
-    const jumpInstruction = state.PC + 2 + offset;
+const branch = (state, shouldBranch) => {
+  const offset = state.readMem(state.PC + 1);
+  const nextInstruction = state.PC + 2;
+  const jumpInstruction = state.PC + 2 + offset;
 
-    state.CYC += 2;
+  state.CYC += 2;
 
-    if (shouldBranch) {
+  if (shouldBranch) {
+    state.CYC += 1;
+
+    if (!onSamePageBoundary(nextInstruction, jumpInstruction)) {
       state.CYC += 1;
-
-      if (!onSamePageBoundary(nextInstruction, jumpInstruction)) {
-        state.CYC += 1;
-      }
-
-      state.PC = jumpInstruction;
-    } else {
-      state.PC = nextInstruction;
     }
-  }
 
+    state.PC = jumpInstruction;
+  } else {
+    state.PC = nextInstruction;
+  }
+}
+
+export const registerBranch = opcodeHandlers => {
   opcodeHandlers[0x90] = state => branch(state, !(state.P & P_REG_CARRY )); // BCC
   opcodeHandlers[0xF0] = state => branch(state, state.P & P_REG_ZERO); // BEQ
   opcodeHandlers[0xD0] = state => branch(state, !(state.P & P_REG_ZERO)); // BNE

@@ -29,16 +29,9 @@ import { registerJump } from './opcodes/jump';
 import { registerSTY } from './opcodes/sty';
 import { registerLDY } from './opcodes/ldy';
 import { registerORA } from './opcodes/ora';
+import { registerAND } from './opcodes/and';
 
 const opcodeHandlers = new Array(255);
-
-opcodeHandlers[0x29] = state => { // AND Immediate
-  state.A = state.A & state.readMem(state.PC + 1);
-  setZero(state, state.A);
-  setNegative(state, state.A);
-  state.PC+=2;
-  state.CYC += 2;
-};
 
 opcodeHandlers[0xC9] = state => { // CMP Immediate
   const diff = state.A - state.readMem(state.PC + 1);
@@ -49,6 +42,7 @@ opcodeHandlers[0xC9] = state => { // CMP Immediate
   state.CYC += 2;
 };
 
+registerAND(opcodeHandlers);
 registerLDA(opcodeHandlers);
 registerLDX(opcodeHandlers);
 registerLDY(opcodeHandlers);

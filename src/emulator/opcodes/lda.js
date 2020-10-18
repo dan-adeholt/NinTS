@@ -8,13 +8,13 @@ import {
   setZero
 } from './utils';
 
-export const registerLDA = opcodeHandlers => {
-  const lda = (state, value) => {
-    state.A = value;
-    setZero(state, value);
-    setNegative(state, value);
-  };
+const lda = (state, value) => {
+  state.A = value;
+  setZero(state, value);
+  setNegative(state, value);
+};
 
+export const registerLDA = opcodeHandlers => {
   opcodeHandlers[0xA9] = state => lda(state, readImmediate2Cycles(state));
   opcodeHandlers[0xA5] = state => lda(state, readZeroPage3Cycles(state));
   opcodeHandlers[0xB5] = state => lda(state, readZeroPageX4Cycles(state));

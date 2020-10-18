@@ -7,13 +7,14 @@ import {
   setZero
 } from './utils';
 
-export const registerORA = opcodeHandlers => {
-  const ora = (state, value) => {
-    state.A = state.A | value;
-    setZero(state, value);
-    setNegative(state, value);
-  };
+const ora = (state, value) => {
+  const result = state.A | value;
+  state.A = result;
+  setZero(state, result);
+  setNegative(state, result);
+};
 
+export const registerORA = opcodeHandlers => {
   opcodeHandlers[0x09] = state => ora(state, readImmediate2Cycles(state));
   opcodeHandlers[0x05] = state => ora(state, readZeroPage3Cycles(state)) ;
   opcodeHandlers[0x15] = state => ora(state, readZeroPageX4Cycles(state));
