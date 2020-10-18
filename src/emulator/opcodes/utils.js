@@ -128,6 +128,7 @@ export const getAddressIndirect6Cycles = (state, cycles) => {
 // Read functions
 export const readImmediate2Cycles = state => state.readMem(getAddressImmediate2Cycles(state))
 
+export const readAbsolute3Cycles = state => state.readMem(getAddressAbsolute(state, 3))
 export const readAbsolute4Cycles = state => state.readMem(getAddressAbsolute(state, 4))
 export const readAbsolute6Cycles = state => state.readMem(getAddressAbsolute(state, 6))
 

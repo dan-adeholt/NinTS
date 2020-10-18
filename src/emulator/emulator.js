@@ -25,13 +25,11 @@ import { registerLDA } from './opcodes/lda';
 import { registerBranch } from './opcodes/branch';
 import { registerSTA } from './opcodes/sta';
 import { registerSTX } from './opcodes/stx';
+import { registerJump } from './opcodes/jump';
+import { registerSTY } from './opcodes/sty';
+import { registerLDY } from './opcodes/ldy';
 
 const opcodeHandlers = new Array(255);
-
-opcodeHandlers[0x4C] = state => { // JMP Absolute
-  state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
-  state.CYC += 3;
-};
 
 opcodeHandlers[0x29] = state => { // AND Immediate
   state.A = state.A & state.readMem(state.PC + 1);
@@ -50,20 +48,16 @@ opcodeHandlers[0xC9] = state => { // CMP Immediate
   state.CYC += 2;
 };
 
-registerLDX(opcodeHandlers);
 registerLDA(opcodeHandlers);
+registerLDX(opcodeHandlers);
+registerLDY(opcodeHandlers);
 registerSTA(opcodeHandlers);
 registerSTX(opcodeHandlers);
+registerSTY(opcodeHandlers);
 registerBranch(opcodeHandlers);
+registerJump(opcodeHandlers);
 
-opcodeHandlers[0x20] = state => { // JSR
-  const addr = state.PC + 2; // Next instruction - 1
-  state.setStack(state.SP, addr >> 8);
-  state.setStack(state.SP - 1, addr & 0xFF);
-  state.SP -= 2;
-  state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
-  state.CYC += 6;
-};
+
 
 opcodeHandlers[0x08] = state => { // PHP
   const pCopy = state.P | P_REG_BREAK;
