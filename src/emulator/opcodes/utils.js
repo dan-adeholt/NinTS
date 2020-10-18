@@ -24,9 +24,6 @@ const P_MASK_ALWAYS_1 = ~P_REG_ALWAYS_1;
 const P_MASK_OVERFLOW = ~P_REG_OVERFLOW;
 const P_MASK_NEGATIVE = ~P_REG_NEGATIVE;
 
-export const addCycles = (state, cycles) => {
-  state.CYC += cycles;
-}
 const setFlag = (state, flag, mask, on) => {
   if (on) {
     state.P = state.P | flag;

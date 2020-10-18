@@ -1,7 +1,6 @@
 import { hex } from './stateLogging';
 import opcodeMetadata from './opcodeMetadata';
 import {
-  addCycles,
   branchOpcode,
   P_MASK_OVERFLOW_AND_NEGATIVE,
   P_REG_BREAK,
@@ -29,7 +28,7 @@ const opcodeHandlers = new Array(255);
 
 opcodeHandlers[0x4C] = state => { // JMP Absolute
   state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
-  addCycles(state, 3);
+  state.CYC += 3;
 };
 
 opcodeHandlers[0x29] = state => { // AND Immediate
@@ -37,7 +36,7 @@ opcodeHandlers[0x29] = state => { // AND Immediate
   setZero(state, state.A);
   setNegative(state, state.A);
   state.PC+=2;
-  addCycles(state, 2);
+  state.CYC += 2;
 };
 
 opcodeHandlers[0xC9] = state => { // CMP Immediate
@@ -46,7 +45,7 @@ opcodeHandlers[0xC9] = state => { // CMP Immediate
   setNegativeNativeNumber(state, diff);
   setCarry(state, diff >= 0);
   state.PC+=2;
-  addCycles(state, 2);
+  state.CYC += 2;
 };
 
 registerLDX(opcodeHandlers);
@@ -57,14 +56,14 @@ opcodeHandlers[0x86] = state => { // STX Zero Page
   const address = state.readMem(state.PC + 1);
   state.setMem(address, state.X);
   state.PC+=2;
-  addCycles(state, 3);
+  state.CYC += 3;
 };
 
 opcodeHandlers[0x85] = state => { // STA Zero Page
   const address = state.readMem(state.PC + 1);
   state.setMem(address, state.A);
   state.PC+=2;
-  addCycles(state, 3);
+  state.CYC += 3;
 };
 
 opcodeHandlers[0x20] = state => { // JSR
@@ -73,7 +72,7 @@ opcodeHandlers[0x20] = state => { // JSR
   state.setStack(state.SP - 1, addr & 0xFF);
   state.SP -= 2;
   state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
-  addCycles(state, 6);
+  state.CYC += 6;
 };
 
 opcodeHandlers[0x08] = state => { // PHP
@@ -81,14 +80,14 @@ opcodeHandlers[0x08] = state => { // PHP
   state.setStack(state.SP, pCopy);
   state.SP -= 1;
   state.PC += 1;
-  addCycles(state, 3);
+  state.CYC += 3;
 };
 
 opcodeHandlers[0x48] = state => { // PHA
   state.setStack(state.SP, state.A);
   state.SP -= 1;
   state.PC += 1;
-  addCycles(state, 3);
+  state.CYC += 3;
 };
 
 opcodeHandlers[0x28] = state => { // PLP
@@ -97,7 +96,7 @@ opcodeHandlers[0x28] = state => { // PLP
   setAlwaysOne(state);
   state.SP += 1;
   state.PC += 1;
-  addCycles(state, 4);
+  state.CYC += 4;
 };
 
 opcodeHandlers[0x68] = state => { // PLA
@@ -106,7 +105,7 @@ opcodeHandlers[0x68] = state => { // PLA
   state.PC += 1;
   setZero(state, state.A);
   setNegative(state, state.A);
-  addCycles(state, 4);
+  state.CYC += 4;
 };
 
 opcodeHandlers[0x60] = state => { // RTS
@@ -114,43 +113,43 @@ opcodeHandlers[0x60] = state => { // RTS
   const high = state.readStack(state.SP + 2);
   state.SP += 2;
   state.PC = (low | (high << 8)) + 1;
-  addCycles(state, 6);
+  state.CYC += 6;
 };
 
 opcodeHandlers[0xEA] = state => { // NOP
   state.PC += 1;
-  addCycles(state, 2);
+  state.CYC += 2;
 }
 
 opcodeHandlers[0x38] = state => { // SEC
   setCarry(state, true);
   state.PC += 1;
-  addCycles(state, 2);
+  state.CYC += 2;
 }
 
 opcodeHandlers[0x18] = state => { // CLC
   setCarry(state, false);
   state.PC += 1;
-  addCycles(state, 2);
+  state.CYC += 2;
 }
 
 
 
 opcodeHandlers[0xD8] = state => { // CLD
   setDecimal(state, false);
-  addCycles(state, 2);
+  state.CYC += 2;
   state.PC += 1;
 }
 
 opcodeHandlers[0x78] = state => { // SEI
   setInterrupt(state, true);
-  addCycles(state, 2);
+  state.CYC += 2;
   state.PC += 1;
 }
 
 opcodeHandlers[0xF8] = state => { // SED
   setDecimal(state, true);
-  addCycles(state, 2);
+  state.CYC += 2;
   state.PC += 1;
 }
 
@@ -168,7 +167,7 @@ opcodeHandlers[0x24] = state => { // BIT ZeroPage
   state.P = upperBits | lowerBits;
 
   state.PC += 2;
-  addCycles(state, 3);
+  state.CYC += 3;
 }
 
 export const initMachine = (rom) => {

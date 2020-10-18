@@ -1,4 +1,4 @@
-import { addCycles, onSamePageBoundary, P_REG_CARRY, P_REG_NEGATIVE, P_REG_OVERFLOW, P_REG_ZERO } from './utils';
+import { onSamePageBoundary, P_REG_CARRY, P_REG_NEGATIVE, P_REG_OVERFLOW, P_REG_ZERO } from './utils';
 
 export const registerBranch = opcodeHandlers => {
   const branch = (state, shouldBranch) => {
@@ -6,12 +6,13 @@ export const registerBranch = opcodeHandlers => {
     const nextInstruction = state.PC + 2;
     const jumpInstruction = state.PC + 2 + offset;
 
-    addCycles(state, 2);
+    state.CYC += 2;
+
     if (shouldBranch) {
-      addCycles(state, 1);
+      state.CYC += 1;
 
       if (!onSamePageBoundary(nextInstruction, jumpInstruction)) {
-        addCycles(state, 1);
+        state.CYC += 1;
       }
 
       state.PC = jumpInstruction;
