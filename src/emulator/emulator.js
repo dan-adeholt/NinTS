@@ -10,8 +10,8 @@ import {
   P_REG_OVERFLOW,
   P_REG_ZERO,
   P_REGS_OVERFLOW_AND_NEGATIVE,
-  readImmediate,
-  readZeroPage,
+  readImmediate2Cycles,
+  readZeroPage3Cycles,
   setAlwaysOne,
   setBreak,
   setCarry,
@@ -19,8 +19,7 @@ import {
   setInterrupt,
   setNegative,
   setNegativeNativeNumber,
-  setZero,
-  setZeroAndNegative
+  setZero
 } from './opcodes/utils';
 import { registerLDX } from './opcodes/ldx';
 import { registerLDA } from './opcodes/lda';
