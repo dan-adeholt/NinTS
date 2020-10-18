@@ -23,6 +23,8 @@ import {
 import { registerLDX } from './opcodes/ldx';
 import { registerLDA } from './opcodes/lda';
 import { registerBranch } from './opcodes/branch';
+import { registerSTA } from './opcodes/sta';
+import { registerSTX } from './opcodes/stx';
 
 const opcodeHandlers = new Array(255);
 
@@ -50,21 +52,9 @@ opcodeHandlers[0xC9] = state => { // CMP Immediate
 
 registerLDX(opcodeHandlers);
 registerLDA(opcodeHandlers);
+registerSTA(opcodeHandlers);
+registerSTX(opcodeHandlers);
 registerBranch(opcodeHandlers);
-
-opcodeHandlers[0x86] = state => { // STX Zero Page
-  const address = state.readMem(state.PC + 1);
-  state.setMem(address, state.X);
-  state.PC+=2;
-  state.CYC += 3;
-};
-
-opcodeHandlers[0x85] = state => { // STA Zero Page
-  const address = state.readMem(state.PC + 1);
-  state.setMem(address, state.A);
-  state.PC+=2;
-  state.CYC += 3;
-};
 
 opcodeHandlers[0x20] = state => { // JSR
   const addr = state.PC + 2; // Next instruction - 1
