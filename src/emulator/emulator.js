@@ -24,6 +24,7 @@ import { registerLDY } from './opcodes/ldy';
 import { registerORA } from './opcodes/ora';
 import { registerAND } from './opcodes/and';
 import { registerClear } from './opcodes/clear';
+import { registerEOR } from './opcodes/eor';
 
 const opcodeHandlers = new Array(255);
 
@@ -38,6 +39,7 @@ opcodeHandlers[0xC9] = state => { // CMP Immediate
 
 registerClear(opcodeHandlers);
 registerAND(opcodeHandlers);
+registerEOR(opcodeHandlers);
 registerLDA(opcodeHandlers);
 registerLDX(opcodeHandlers);
 registerLDY(opcodeHandlers);
