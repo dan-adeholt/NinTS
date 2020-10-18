@@ -1,16 +1,9 @@
 import { hex } from './stateLogging';
 import opcodeMetadata from './opcodeMetadata';
 import {
-  branchOpcode,
   P_MASK_OVERFLOW_AND_NEGATIVE,
   P_REG_BREAK,
-  P_REG_CARRY,
-  P_REG_NEGATIVE,
-  P_REG_OVERFLOW,
-  P_REG_ZERO,
   P_REGS_OVERFLOW_AND_NEGATIVE,
-  readImmediate2Cycles,
-  readZeroPage3Cycles,
   setAlwaysOne,
   setBreak,
   setCarry,
@@ -30,6 +23,7 @@ import { registerSTY } from './opcodes/sty';
 import { registerLDY } from './opcodes/ldy';
 import { registerORA } from './opcodes/ora';
 import { registerAND } from './opcodes/and';
+import { registerClear } from './opcodes/clear';
 
 const opcodeHandlers = new Array(255);
 
@@ -42,6 +36,7 @@ opcodeHandlers[0xC9] = state => { // CMP Immediate
   state.CYC += 2;
 };
 
+registerClear(opcodeHandlers);
 registerAND(opcodeHandlers);
 registerLDA(opcodeHandlers);
 registerLDX(opcodeHandlers);
@@ -104,20 +99,6 @@ opcodeHandlers[0x38] = state => { // SEC
   setCarry(state, true);
   state.PC += 1;
   state.CYC += 2;
-}
-
-opcodeHandlers[0x18] = state => { // CLC
-  setCarry(state, false);
-  state.PC += 1;
-  state.CYC += 2;
-}
-
-
-
-opcodeHandlers[0xD8] = state => { // CLD
-  setDecimal(state, false);
-  state.CYC += 2;
-  state.PC += 1;
 }
 
 opcodeHandlers[0x78] = state => { // SEI

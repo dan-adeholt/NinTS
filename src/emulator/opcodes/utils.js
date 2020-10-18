@@ -15,14 +15,14 @@ export const P_REG_NEGATIVE = 1 << 7;
 export const P_REGS_OVERFLOW_AND_NEGATIVE = P_REG_NEGATIVE | P_REG_OVERFLOW;
 export const P_MASK_OVERFLOW_AND_NEGATIVE = ~P_REGS_OVERFLOW_AND_NEGATIVE;
 
-const P_MASK_CARRY = ~P_REG_CARRY;
-const P_MASK_ZERO = ~P_REG_ZERO;
-const P_MASK_INTERRUPT = ~P_REG_INTERRUPT;
-const P_MASK_DECIMAL = ~P_REG_DECIMAL;
-const P_MASK_BREAK = ~P_REG_BREAK;
-const P_MASK_ALWAYS_1 = ~P_REG_ALWAYS_1;
-const P_MASK_OVERFLOW = ~P_REG_OVERFLOW;
-const P_MASK_NEGATIVE = ~P_REG_NEGATIVE;
+export const P_MASK_CARRY = ~P_REG_CARRY;
+export const P_MASK_ZERO = ~P_REG_ZERO;
+export const P_MASK_INTERRUPT = ~P_REG_INTERRUPT;
+export const P_MASK_DECIMAL = ~P_REG_DECIMAL;
+export const P_MASK_BREAK = ~P_REG_BREAK;
+export const P_MASK_ALWAYS_1 = ~P_REG_ALWAYS_1;
+export const P_MASK_OVERFLOW = ~P_REG_OVERFLOW;
+export const P_MASK_NEGATIVE = ~P_REG_NEGATIVE;
 
 const setFlag = (state, flag, mask, on) => {
   if (on) {
@@ -31,6 +31,7 @@ const setFlag = (state, flag, mask, on) => {
     state.P = state.P & mask;
   }
 }
+
 export const setCarry = (state, on) => setFlag(state, P_REG_CARRY, P_MASK_CARRY, on);
 export const setZero = (state, value) => setFlag(state, P_REG_ZERO, P_MASK_ZERO, value === 0);
 export const setNegative = (state, value) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value > 0x7F);
