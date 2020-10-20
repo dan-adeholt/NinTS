@@ -35,6 +35,10 @@ const setFlag = (state, flag, mask, on) => {
 export const setCarry = (state, on) => setFlag(state, P_REG_CARRY, P_MASK_CARRY, on);
 export const setZero = (state, value) => setFlag(state, P_REG_ZERO, P_MASK_ZERO, value === 0);
 export const setNegative = (state, value) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value > 0x7F);
+
+// Overflow is set if Positive + Positive = Negative or Negative + Negative = Positive
+// Check this by comparing the high bits of the result.
+export const setOverflow = (state, accumulator, value, result) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, (accumulator ^ result) & (value ^ result) & 0x80);
 export const setNegativeNativeNumber = (state, value) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value < 0);
 export const setInterrupt = (state, on) => setFlag(state, P_REG_INTERRUPT, P_MASK_INTERRUPT, on);
 export const setDecimal = (state, on) => setFlag(state, P_REG_DECIMAL, P_MASK_DECIMAL, on);
@@ -49,8 +53,8 @@ const getAddressImmediate2Cycles = state => {
 }
 
 const getAddressAbsolute = (state, cycles) => {
-  const address = state.readMem(state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8));
-  state.PC += 2;
+  const address = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
+  state.PC += 3;
   state.CYC += cycles;
   return address;
 }
@@ -63,7 +67,7 @@ const getAddressZeroPage = (state, cycles) => {
 }
 
 const getAddressZeroPageOffset = (state, offset, cycles) => {
-  const address = state.readMem((state.readMem(state.PC + 1) + offset) % 256);
+  const address = (state.readMem(state.PC + 1) + offset) % 256;
   state.PC += 2;
   state.CYC += cycles;
   return address;

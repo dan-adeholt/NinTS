@@ -158,6 +158,16 @@ Implied       PHA           $48  1   3
 Implied       PLA           $68  1   4
 Implied       PHP           $08  1   3
 Implied       PLP           $28  1   4
+
+
+Implied       TAX           $AA  1   2
+Implied       TXA           $8A  1   2
+Implied       DEX           $CA  1   2
+Implied       INX           $E8  1   2
+Implied       TAY           $A8  1   2
+Implied       TYA           $98  1   2
+Implied       DEY           $88  1   2
+Implied       INY           $C8  1   2
 `
 
 const lines = data.split("\n");
@@ -166,13 +176,13 @@ let opcodeData = new Array(255);
 
 for (var line of lines) {
     const elems = line.split(" ").filter(s => s != "");
-    
+
     if (elems.length == 0) {
         continue;
     } else if (elems.length == 5) {
         elems.splice(2, 0, '');
     }
-    
+
 
     let [mode, name, example, opcode, instructionSize] = elems;
 

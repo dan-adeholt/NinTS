@@ -510,9 +510,19 @@ const opcodeMetadata = [
     "opcode": "$86"
   },
   null,
+  {
+    "name": "DEY",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$88"
+  },
   null,
-  null,
-  null,
+  {
+    "name": "TXA",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$8A"
+  },
   null,
   {
     "name": "STY",
@@ -561,7 +571,12 @@ const opcodeMetadata = [
   },
   null,
   null,
-  null,
+  {
+    "name": "TYA",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$98"
+  },
   {
     "name": "STA",
     "mode": "AbsoluteY",
@@ -622,14 +637,24 @@ const opcodeMetadata = [
     "opcode": "$A6"
   },
   null,
-  null,
+  {
+    "name": "TAY",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$A8"
+  },
   {
     "name": "LDA",
     "mode": "Immediate",
     "instructionSize": "2",
     "opcode": "$A9"
   },
-  null,
+  {
+    "name": "TAX",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$AA"
+  },
   null,
   {
     "name": "LDY",
@@ -749,14 +774,24 @@ const opcodeMetadata = [
     "opcode": "$C6"
   },
   null,
-  null,
+  {
+    "name": "INY",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$C8"
+  },
   {
     "name": "CMP",
     "mode": "Immediate",
     "instructionSize": "2",
     "opcode": "$C9"
   },
-  null,
+  {
+    "name": "DEX",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$CA"
+  },
   null,
   {
     "name": "CPY",
@@ -866,7 +901,12 @@ const opcodeMetadata = [
     "opcode": "$E6"
   },
   null,
-  null,
+  {
+    "name": "INX",
+    "mode": "Implied",
+    "instructionSize": "1",
+    "opcode": "$E8"
+  },
   {
     "name": "SBC",
     "mode": "Immediate",

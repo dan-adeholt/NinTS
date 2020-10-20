@@ -1,10 +1,16 @@
 import { parseROM } from '../emulator/parseROM';
 import { initMachine, step } from '../emulator/emulator';
-import { stateToString } from '../emulator/stateLogging';
+import { procFlagsToString, stateToString } from '../emulator/stateLogging';
 
 const parseLog = (data) => data.toString().split('\n');
 
 const fs = require('fs');
+
+const prefixLine = (idx, str) => {
+  return '[' + idx + '] ' + str;
+}
+
+const procRegex = / P:([0-9A-F][0-9A-F])/;
 
 test('Nes test rom executes properly', () => {
   const data = fs.readFileSync('public/tests/nestest.nes');
@@ -15,15 +21,31 @@ test('Nes test rom executes properly', () => {
   machine.PC = 0xC000;
   machine.CYC += 7; // For some reason the logs start at 7 ? Perhaps has to do with reset vector or something
 
-  log.forEach(entry => {
-    expect(stateToString(machine)).toEqual(entry);
-    step(machine);
-  })
+  let prevStateString = '';
+  let prevFlagString = '';
 
+  for (var i = 0; i < log.length; i++) {
+    const entry = log[i];
 
+    const entryLine = prefixLine(i, entry);
+    const stateString = prefixLine(i, stateToString(machine));
+    let flagsString = procFlagsToString(machine.P);
 
+    if (stateString !== entryLine) {
+      console.log(prevStateString);
+      const match = procRegex.exec(entryLine);
+      const expectedP = parseInt(match[1], 16);
+      if (expectedP !== machine.P) {
+        console.log('PRV: ' + prevFlagString + "\nNEW: " + flagsString + "\nEXP:", procFlagsToString(expectedP));
+      }
+    }
 
-  console.log(rom);
-
+    prevStateString = stateString;
+    prevFlagString = flagsString;
+    expect(stateString).toEqual(entryLine);
+    if (!step(machine)) {
+      break;
+    }
+  }
 });
 

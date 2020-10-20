@@ -25,20 +25,23 @@ import { registerORA } from './opcodes/ora';
 import { registerAND } from './opcodes/and';
 import { registerClear } from './opcodes/clear';
 import { registerEOR } from './opcodes/eor';
+import { registerADC } from './opcodes/adc';
+import { registerCMP } from './opcodes/cmp';
+import { registerCPX } from './opcodes/cpx';
+import { registerCPY } from './opcodes/cpy';
+import { registerSBC } from './opcodes/sbc';
+import { registerRegister } from './opcodes/register';
+import { registerStack } from './opcodes/stack';
 
 const opcodeHandlers = new Array(255);
 
-opcodeHandlers[0xC9] = state => { // CMP Immediate
-  const diff = state.A - state.readMem(state.PC + 1);
-  setZero(state, diff);
-  setNegativeNativeNumber(state, diff);
-  setCarry(state, diff >= 0);
-  state.PC+=2;
-  state.CYC += 2;
-};
-
+registerCMP(opcodeHandlers);
+registerCPX(opcodeHandlers);
+registerCPY(opcodeHandlers);
 registerClear(opcodeHandlers);
 registerAND(opcodeHandlers);
+registerADC(opcodeHandlers);
+registerSBC(opcodeHandlers);
 registerEOR(opcodeHandlers);
 registerLDA(opcodeHandlers);
 registerLDX(opcodeHandlers);
@@ -48,49 +51,11 @@ registerSTX(opcodeHandlers);
 registerSTY(opcodeHandlers);
 registerBranch(opcodeHandlers);
 registerJump(opcodeHandlers);
+registerRegister(opcodeHandlers);
 registerORA(opcodeHandlers);
+registerStack(opcodeHandlers);
 
-
-opcodeHandlers[0x08] = state => { // PHP
-  const pCopy = state.P | P_REG_BREAK;
-  state.setStack(state.SP, pCopy);
-  state.SP -= 1;
-  state.PC += 1;
-  state.CYC += 3;
-};
-
-opcodeHandlers[0x48] = state => { // PHA
-  state.setStack(state.SP, state.A);
-  state.SP -= 1;
-  state.PC += 1;
-  state.CYC += 3;
-};
-
-opcodeHandlers[0x28] = state => { // PLP
-  state.P = state.readStack(state.SP + 1);
-  setBreak(state, false); // See http://wiki.nesdev.com/w/index.php/Status_flags
-  setAlwaysOne(state);
-  state.SP += 1;
-  state.PC += 1;
-  state.CYC += 4;
-};
-
-opcodeHandlers[0x68] = state => { // PLA
-  state.A = state.readStack(state.SP + 1);
-  state.SP += 1;
-  state.PC += 1;
-  setZero(state, state.A);
-  setNegative(state, state.A);
-  state.CYC += 4;
-};
-
-opcodeHandlers[0x60] = state => { // RTS
-  const low = state.readStack(state.SP + 1);
-  const high = state.readStack(state.SP + 2);
-  state.SP += 2;
-  state.PC = (low | (high << 8)) + 1;
-  state.CYC += 6;
-};
+console.log(opcodeHandlers.filter(x => x!= null).length, 'opcodes handled');
 
 opcodeHandlers[0xEA] = state => { // NOP
   state.PC += 1;
@@ -170,5 +135,8 @@ export const step = (state) => {
     opcodeHandlers[opcode](state);
   } else {
     console.error('No handler found for opcode $' + hex(opcode), opcodeMetadata[opcode].name);
+    return false;
   }
+
+  return true;
 };
