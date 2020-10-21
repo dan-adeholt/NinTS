@@ -1,18 +1,6 @@
 import { hex } from './stateLogging';
 import opcodeMetadata from './opcodeMetadata';
-import {
-  P_MASK_OVERFLOW_AND_NEGATIVE,
-  P_REG_BREAK,
-  P_REGS_OVERFLOW_AND_NEGATIVE,
-  setAlwaysOne,
-  setBreak,
-  setCarry,
-  setDecimal,
-  setInterrupt,
-  setNegative,
-  setNegativeNativeNumber,
-  setZero
-} from './opcodes/utils';
+
 import { registerLDX } from './opcodes/ldx';
 import { registerLDA } from './opcodes/lda';
 import { registerBranch } from './opcodes/branch';
@@ -32,6 +20,15 @@ import { registerCPY } from './opcodes/cpy';
 import { registerSBC } from './opcodes/sbc';
 import { registerRegister } from './opcodes/register';
 import { registerStack } from './opcodes/stack';
+import { registerLSR } from './opcodes/lsr';
+import { registerSet } from './opcodes/set';
+import { registerBIT } from './opcodes/bit';
+import { registerASL } from './opcodes/asl';
+import { registerNOP } from './opcodes/nop';
+import { registerROR } from './opcodes/ror';
+import { registerROL } from './opcodes/rol';
+import { registerINC } from './opcodes/inc';
+import { registerDEC } from './opcodes/dec';
 
 const opcodeHandlers = new Array(255);
 
@@ -54,48 +51,17 @@ registerJump(opcodeHandlers);
 registerRegister(opcodeHandlers);
 registerORA(opcodeHandlers);
 registerStack(opcodeHandlers);
+registerLSR(opcodeHandlers);
+registerSet(opcodeHandlers);
+registerBIT(opcodeHandlers);
+registerASL(opcodeHandlers);
+registerNOP(opcodeHandlers);
+registerROR(opcodeHandlers);
+registerROL(opcodeHandlers);
+registerINC(opcodeHandlers);
+registerDEC(opcodeHandlers);
 
 console.log(opcodeHandlers.filter(x => x!= null).length, 'opcodes handled');
-
-opcodeHandlers[0xEA] = state => { // NOP
-  state.PC += 1;
-  state.CYC += 2;
-}
-
-opcodeHandlers[0x38] = state => { // SEC
-  setCarry(state, true);
-  state.PC += 1;
-  state.CYC += 2;
-}
-
-opcodeHandlers[0x78] = state => { // SEI
-  setInterrupt(state, true);
-  state.CYC += 2;
-  state.PC += 1;
-}
-
-opcodeHandlers[0xF8] = state => { // SED
-  setDecimal(state, true);
-  state.CYC += 2;
-  state.PC += 1;
-}
-
-opcodeHandlers[0x24] = state => { // BIT ZeroPage
-  const memoryValue = state.readMem(state.readMem(state.PC + 1));
-
-  if (memoryValue & state.A) {
-    setZero(state, 1);
-  } else {
-    setZero(state, 0);
-  }
-
-  const upperBits = memoryValue & P_REGS_OVERFLOW_AND_NEGATIVE;
-  const lowerBits = state.P & P_MASK_OVERFLOW_AND_NEGATIVE;
-  state.P = upperBits | lowerBits;
-
-  state.PC += 2;
-  state.CYC += 3;
-}
 
 export const initMachine = (rom) => {
   let memory = new Uint8Array(1 << 16);

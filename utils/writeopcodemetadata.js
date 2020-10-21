@@ -14,6 +14,35 @@ Immediate     LDY #$44      $A0  2   2
 Immediate     ORA #$44      $09  2   2
 Immediate     SBC #$44      $E9  2   2
 
+ZeroPage     *NOP $A9      $04  2   3
+ZeroPage     *NOP $A9      $44  2   3
+ZeroPage     *NOP $A9      $64  2   3
+
+Absolute     *NOP $A9A9    $0C  3   4
+
+ZeroPageX    *NOP $A9,X    $14  2   4
+ZeroPageX    *NOP $A9,X    $34  2   4
+ZeroPageX    *NOP $A9,X    $54  2   4
+ZeroPageX    *NOP $A9,X    $74  2   4
+ZeroPageX    *NOP $A9,X    $D4  2   4
+ZeroPageX    *NOP $A9,X    $F4  2   4
+
+AbsoluteX    *NOP $A9A9,X  $1C  3   5
+AbsoluteX    *NOP $A9A9,X  $3C  3   5
+AbsoluteX    *NOP $A9A9,X  $5C  3   5
+AbsoluteX    *NOP $A9A9,X  $7C  3   5
+AbsoluteX    *NOP $A9A9,X  $DC  3   5
+AbsoluteX    *NOP $A9A9,X  $FC  3   5
+
+Immediate    *NOP #$89     $80  2   2
+
+Implied      *NOP          $1A  1   2
+Implied      *NOP          $3A  1   2
+Implied      *NOP          $5A  1   2
+Implied      *NOP          $7A  1   2
+Implied      *NOP          $DA  1   2
+Implied      *NOP          $FA  1   2
+
 ZeroPage     ADC $44       $65  2   3
 ZeroPage     AND $44       $25  2   3
 ZeroPage     ASL $44       $06  2   5
@@ -54,6 +83,8 @@ ZeroPageX   SBC $44,X     $F5  2   4
 ZeroPageX   STA $44,X     $95  2   4
 ZeroPageX   STY $44,X     $94  2   4
 
+ZeroPageY   LDX $44,Y     $B6  2   4
+ZeroPageY   STX $44,Y     $96  2   4
 
 Absolute      ADC $4400     $6D  3   4
 Absolute      AND $4400     $2D  3   4
@@ -106,6 +137,7 @@ AbsoluteY    ORA $4400,Y   $19  3   4+
 AbsoluteY    SBC $4400,Y   $F9  3   4+
 AbsoluteY    STA $4400,Y   $99  3   5
 
+Indirect     JMP ($5597)   $6C  3   5
 
 IndirectX    ADC ($44,X)   $61  2   6
 IndirectX    AND ($44,X)   $21  2   6

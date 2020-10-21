@@ -1,4 +1,5 @@
 const PAGE_SIZE = 256;
+export const PAGE_MASK = ~(0xFF);
 
 export const onSamePageBoundary = (a1, a2) => {
   return (a1 ^ a2) < PAGE_SIZE;
@@ -52,14 +53,14 @@ const getAddressImmediate2Cycles = state => {
   return address;
 }
 
-const getAddressAbsolute = (state, cycles) => {
-  const address = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
+export const getAddressAbsolute = (state, cycles) => {
+  const address = getAbsoluteAddress(state);
   state.PC += 3;
   state.CYC += cycles;
   return address;
 }
 
-const getAddressZeroPage = (state, cycles) => {
+export const getAddressZeroPage = (state, cycles) => {
   const address = state.readMem(state.PC + 1);
   state.PC += 2;
   state.CYC += cycles;
@@ -73,9 +74,17 @@ const getAddressZeroPageOffset = (state, offset, cycles) => {
   return address;
 }
 
+export const getAddressZeroPageX = (state, cycles) => getAddressZeroPageOffset(state, state.X, cycles)
+export const getAddressZeroPageY = (state, cycles) => getAddressZeroPageOffset(state, state.Y, cycles)
+
+export const getAbsoluteAddress = state => {
+  return state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
+}
+
+
 const getAddressAbsoluteWithOffset4PlusCycles = (state, offset) => {
-  const base = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
-  const address = base + offset;
+  const base = getAbsoluteAddress(state);
+  const address = (base + offset) & 0xFFFF;
 
   state.CYC += 4;
 
@@ -83,17 +92,17 @@ const getAddressAbsoluteWithOffset4PlusCycles = (state, offset) => {
     state.CYC += 1;
   }
 
-  state.PC += 2;
+  state.PC += 3;
 
   return address;
 }
 
-const getAddressAbsoluteWithOffset = (state, offset, cycles) => {
-  const base = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
-  const address = base + offset;
+export const getAddressAbsoluteWithOffset = (state, offset, cycles) => {
+  const base = getAbsoluteAddress(state);
+  const address = (base + offset) & 0xFFFF;
 
   state.CYC += cycles;
-  state.PC += 2;
+  state.PC += 3;
 
   return address;
 }
@@ -102,18 +111,20 @@ const getAddressAbsoluteWithOffset = (state, offset, cycles) => {
 export const getAddressIndirectX6Cycles = (state) => {
   const offset = state.readMem(state.PC + 1);
   const addressLocation = (state.X + offset) % 256;
-  const address = state.readMem(addressLocation + 1) + (state.readMem(addressLocation + 2) << 8);
+  const address = state.readMem(addressLocation) + (state.readMem((addressLocation + 1) % 256) << 8);
 
   state.CYC += 6;
+  state.PC += 2;
 
   return address;
 }
 
 export const getAddressIndirectY5PlusCycles = (state) => {
   const zeroPageAddress = state.readMem(state.PC + 1);
-  const base = state.readMem(zeroPageAddress + 1) + (state.readMem(zeroPageAddress + 2) << 8);
-  const address = base + state.Y;
+  const base = state.readMem(zeroPageAddress) + (state.readMem((zeroPageAddress + 1) % 256) << 8);
+  const address = (base + state.Y) & 0xFFFF;
   state.CYC += 5;
+  state.PC += 2;
 
   if (!onSamePageBoundary(base, address)) {
     state.CYC += 1;
@@ -122,11 +133,12 @@ export const getAddressIndirectY5PlusCycles = (state) => {
   return address;
 }
 
-export const getAddressIndirect6Cycles = (state, cycles) => {
+export const getAddressIndirectY6Cycles = (state) => {
   const zeroPageAddress = state.readMem(state.PC + 1);
-  const base = state.readMem(zeroPageAddress + 1) + (state.readMem(zeroPageAddress + 2) << 8);
-  const address = base + state.Y;
-  state.CYC += cycles
+  const base = state.readMem(zeroPageAddress) + (state.readMem((zeroPageAddress + 1) % 256) << 8);
+  const address = (base + state.Y) & 0xFFFF;
+  state.CYC += 6;
+  state.PC += 2;
   return address;
 }
 
@@ -140,10 +152,10 @@ export const readAbsolute6Cycles = state => state.readMem(getAddressAbsolute(sta
 export const readZeroPage3Cycles = state => state.readMem(getAddressZeroPage(state, 3))
 export const readZeroPage5Cycles = state => state.readMem(getAddressZeroPage(state, 5))
 
-export const readZeroPageX4Cycles = state => state.readMem(getAddressZeroPageOffset(state, state.X, 4))
-export const readZeroPageX6Cycles = state => state.readMem(getAddressZeroPageOffset(state, state.X, 6))
+export const readZeroPageX4Cycles = state => state.readMem(getAddressZeroPageX(state, 4))
+export const readZeroPageX6Cycles = state => state.readMem(getAddressZeroPageX(state, 6))
 
-export const readZeroPageY4Cycles = state => state.readMem(getAddressZeroPageOffset(state, state.Y, 4))
+export const readZeroPageY4Cycles = state => state.readMem(getAddressZeroPageY(state, 4))
 
 
 export const readAbsoluteX4PlusCycles = state => state.readMem(getAddressAbsoluteWithOffset4PlusCycles(state, state.X))
@@ -156,7 +168,7 @@ export const readAbsoluteY5Cycles = state => state.readMem(getAddressAbsoluteWit
 export const readIndirectX6Cycles = state => state.readMem(getAddressIndirectX6Cycles(state))
 
 export const readIndirectY5PlusCycles = state => state.readMem(getAddressIndirectY5PlusCycles(state))
-export const readIndirectY6Cycles = state => state.readMem(getAddressIndirect6Cycles(state))
+export const readIndirectY6Cycles = state => state.readMem(getAddressIndirectY6Cycles(state))
 
 // Write functions
 
@@ -168,10 +180,10 @@ export const writeAbsolute6Cycles = (state, value) => state.setMem(getAddressAbs
 export const writeZeroPage3Cycles = (state, value) => state.setMem(getAddressZeroPage(state, 3), value)
 export const writeZeroPage5Cycles = (state, value) => state.setMem(getAddressZeroPage(state, 5), value)
 
-export const writeZeroPageX4Cycles = (state, value) => state.setMem(getAddressZeroPageOffset(state, state.X, 4), value)
-export const writeZeroPageX6Cycles = (state, value) => state.setMem(getAddressZeroPageOffset(state, state.X, 6), value)
+export const writeZeroPageX4Cycles = (state, value) => state.setMem(getAddressZeroPageX(state, 4), value)
+export const writeZeroPageX6Cycles = (state, value) => state.setMem(getAddressZeroPageX(state, 6), value)
 
-export const writeZeroPageYCycles = (state, value) => state.setMem(getAddressZeroPageOffset(state, state.Y, 4), value)
+export const writeZeroPageYCycles = (state, value) => state.setMem(getAddressZeroPageY(state, 4), value)
 
 export const writeAbsoluteX4PlusCycles = (state, value) => state.setMem(getAddressAbsoluteWithOffset4PlusCycles(state, state.X), value)
 export const writeAbsoluteX5Cycles = (state, value) => state.setMem(getAddressAbsoluteWithOffset(state, state.X, 5), value)
@@ -183,4 +195,4 @@ export const writeAbsoluteY5Cycles = (state, value) => state.setMem(getAddressAb
 export const writeIndirectX6Cycles = (state, value) => state.setMem(getAddressIndirectX6Cycles(state), value)
 
 export const writeIndirectY5PlusCycles = (state, value) => state.setMem(getAddressIndirectY5PlusCycles(state), value)
-export const writeIndirectY6Cycles = (state, value) => state.setMem(getAddressIndirect6Cycles(state), value)
+export const writeIndirectY6Cycles = (state, value) => state.setMem(getAddressIndirectY6Cycles(state), value)

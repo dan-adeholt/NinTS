@@ -1,5 +1,5 @@
 import {
-  writeAbsolute4Cycles, writeAbsoluteX5Cycles, writeAbsoluteY5Cycles, writeIndirectX6Cycles,
+  writeAbsolute4Cycles, writeAbsoluteX5Cycles, writeAbsoluteY5Cycles, writeIndirectX6Cycles, writeIndirectY6Cycles,
   writeZeroPage3Cycles, writeZeroPageX4Cycles
 } from './utils';
 

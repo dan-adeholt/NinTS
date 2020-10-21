@@ -1,11 +1,13 @@
 import opcodeMetadata from './opcodeMetadata';
 import {
+  getAbsoluteAddress,
+  onSamePageBoundary,
   P_REG_ALWAYS_1,
   P_REG_BREAK, P_REG_CARRY,
   P_REG_DECIMAL,
   P_REG_INTERRUPT,
   P_REG_NEGATIVE, P_REG_OVERFLOW,
-  P_REG_ZERO
+  P_REG_ZERO, PAGE_MASK
 } from './opcodes/utils';
 
 const branchInstructions = {"JMP": 1, "JSR": 1, "BPL": 1, "BMI": 1, "BVC": 1, "BVS": 1, "BCC": 1, "BCS": 1, "BNE": 1, "BEQ": 1};
@@ -16,7 +18,7 @@ const formatters = {
   Absolute: state => {
     const opcode = state.readMem(state.PC);
     const { name } = opcodeMetadata[opcode];
-    const address = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
+    const address = getAbsoluteAddress(state);
     if (name in branchInstructions) {
       return "$" + hex16(address);
     } else {
@@ -24,14 +26,67 @@ const formatters = {
       return "$" + hex16(address) + " = " + hex(byte);
     }
   },
+  AbsoluteX: state => {
+    const base = getAbsoluteAddress(state);
+    const address = (base + state.X) & 0xFFFF;
+    const byte = state.readMem(address);
+    return "$" + hex16(base) + ",X @ " + hex16(address) + ' = ' + hex(byte);
+  },
+  AbsoluteY: state => {
+    const base = getAbsoluteAddress(state);
+    const address = (base + state.Y) & 0xFFFF;
+    const byte = state.readMem(address);
+    return "$" + hex16(base) + ",Y @ " + hex16(address) + ' = ' + hex(byte);
+  },
   ZeroPage: state => {
     const offset = state.readMem(state.PC + 1);
-    return "$" + hex(offset) + " = " + hex(state.memory[offset]);
+    return "$" + hex(offset) + " = " + hex(state.readMem(offset));
+  },
+  ZeroPageX: state => {
+    const base = state.readMem(state.PC + 1);
+    const address = (base + state.X) % 256;
+    return "$" + hex(base) + ",X @ " + hex(address) + " = " + hex(state.readMem(address));
+  },
+  ZeroPageY: state => {
+    const base = state.readMem(state.PC + 1);
+    const address = (base + state.Y) % 256;
+    return "$" + hex(base) + ",Y @ " + hex(address) + " = " + hex(state.readMem(address));
   },
   Implied: state => "",
+  Indirect: state => {
+    const address = getAbsoluteAddress(state);
+
+    const lo = address;
+    let hi = address + 1;
+
+    if (!onSamePageBoundary(lo, hi)) {
+      hi = (lo & PAGE_MASK);
+    }
+
+    const target = state.readMem(lo) + (state.readMem(hi) << 8);
+    return "($" + hex16(address) + ") = " + hex16(target);
+  },
+  IndirectX: state => {
+    const offset = state.readMem(state.PC + 1);
+    const addressLocation = (state.X + offset) % 256;
+
+    const address = state.readMem(addressLocation) + (state.readMem((addressLocation + 1) % 256) << 8);
+    const value = state.readMem(address);
+
+    return "($" + hex(offset) + ",X) @ " + hex(addressLocation) + " = " + hex16(address) + " = " + hex(value);
+  },
+  IndirectY: state => {
+    const zeroPageAddress = state.readMem(state.PC + 1);
+    const base = state.readMem(zeroPageAddress) + (state.readMem((zeroPageAddress + 1) % 256) << 8);
+    const address = (base + state.Y) & 0xFFFF;
+
+    let value = state.readMem(address);
+    return "($" + hex(zeroPageAddress) + "),Y = " + hex16(base) + " @ " + hex16(address) + " = " + hex(value);
+  },
   Relative: state => "$" + hex(state.PC + state.readMem(state.PC + 1) + 2)
 };
 
+export const bin = num => num.toString(2).padStart(8, '0');
 export const hex = num => num.toString(16).toUpperCase().padStart(2, '0');
 export const hex16 = num => num.toString(16).toUpperCase().padStart(4, '0');
 
@@ -50,8 +105,7 @@ export const procFlagsToString = (P) => {
 }
 
 export const stateToString = (state) => {
-
-  let str = state.PC.toString(16).toUpperCase();
+  let str = hex16(state.PC)
   str += '  ';
   const opcode = state.readMem(state.PC);
 
@@ -69,7 +123,7 @@ export const stateToString = (state) => {
       str += hex(state.readMem(state.PC + 1 + i)) + ' ';
     }
 
-    str = str.padEnd(16, ' ');
+    str = str.padEnd(16 + (3 - name.length), ' ');
 
     if (formatters[mode] == null) {
       str += name + ' UNSUPPORTED ' + mode;

@@ -1,4 +1,4 @@
-import { P_REG_BREAK, setAlwaysOne, setBreak, setNegative, setZero } from './utils';
+import { getAbsoluteAddress, P_REG_BREAK, setAlwaysOne, setBreak, setNegative, setZero } from './utils';
 
 export const registerStack = opcodeHandlers => {
   opcodeHandlers[0x20] = state => { // JSR
@@ -6,7 +6,7 @@ export const registerStack = opcodeHandlers => {
     state.setStack(state.SP, addr >> 8);
     state.setStack(state.SP - 1, addr & 0xFF);
     state.SP -= 2;
-    state.PC = state.readMem(state.PC + 1) + (state.readMem(state.PC + 2) << 8);
+    state.PC = getAbsoluteAddress(state);
     state.CYC += 6;
   };
 
