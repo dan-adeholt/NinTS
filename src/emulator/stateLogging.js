@@ -83,7 +83,14 @@ const formatters = {
     let value = state.readMem(address);
     return "($" + hex(zeroPageAddress) + "),Y = " + hex16(base) + " @ " + hex16(address) + " = " + hex(value);
   },
-  Relative: state => "$" + hex(state.PC + state.readMem(state.PC + 1) + 2)
+  Relative: state => {
+    let offset = state.readMem(state.PC + 1);
+    if (offset > 0x7F) {
+      offset -= 256;
+    }
+
+    return "$" + hex(state.PC + offset + 2)
+  }
 };
 
 export const bin = num => num.toString(2).padStart(8, '0');

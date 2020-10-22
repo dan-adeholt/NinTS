@@ -1,7 +1,12 @@
 import { onSamePageBoundary, P_REG_CARRY, P_REG_NEGATIVE, P_REG_OVERFLOW, P_REG_ZERO } from './utils';
 
 const branch = (state, shouldBranch) => {
-  const offset = state.readMem(state.PC + 1);
+  let offset = state.readMem(state.PC + 1);
+
+  if (offset > 0x7F) {
+    offset -= 256;
+  }
+
   const nextInstruction = state.PC + 2;
   const jumpInstruction = state.PC + 2 + offset;
 

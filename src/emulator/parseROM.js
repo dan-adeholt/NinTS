@@ -2,14 +2,10 @@ export function ascii(a) {
   return a.charCodeAt(0);
 }
 
-const BIT_1 = 1;
-const BIT_2 = 1 << 1;
-const BIT_3 = 1 << 2;
-const BIT_4 = 1 << 3;
-const BIT_5 = 1 << 4;
-const BIT_6 = 1 << 5;
-const BIT_7 = 1 << 6;
-const BIT_8 = 1 << 7;
+const BIT_0 = 1;
+const BIT_1 = 1 << 1;
+const BIT_2 = 1 << 2;
+const BIT_3 = 1 << 3;
 
 export const parseROM = buffer => {
   let index = 0;
@@ -36,10 +32,10 @@ export const parseROM = buffer => {
   const settings = {
     prgRomSize,
     chrRomSize,
-    mirroringVertical: (flags[0] & BIT_1) === 1,
-    batteryBackedPRGRam: (flags[0] & BIT_2) === 1,
-    hasTrainer: (flags[0] & BIT_3) === 1,
-    useFourScreenVRAM: (flags[0] & BIT_4) === 1,
+    mirroringVertical: (flags[0] & BIT_0) === 1,
+    batteryBackedPRGRam: (flags[0] & BIT_1) === 1,
+    hasTrainer: (flags[0] & BIT_2) === 1,
+    useFourScreenVRAM: (flags[0] & BIT_3) === 1,
     mapper: (flags[0] >> 4) | ((flags[1] >> 4) << 4),
     prgRamSize: flags[2],
   };

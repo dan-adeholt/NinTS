@@ -1,12 +1,11 @@
 import {
+  BIT_7,
   getAddressAbsolute, getAddressAbsoluteWithOffset,
   getAddressZeroPage, getAddressZeroPageX,
   setCarry,
   setNegative,
   setZero
 } from './utils';
-
-const BIT_7 = 1 << 7;
 
 const aslA = (state) => {
   setCarry(state, state.A & BIT_7);
@@ -17,13 +16,14 @@ const aslA = (state) => {
   state.PC += 1;
 }
 
-const asl = (state, address) => {
+export const asl = (state, address) => {
   const value = state.readMem(address);
   setCarry(state, value & BIT_7);
   const newValue = (value << 1) & 0xFF;
   state.setMem(address, newValue);
   setZero(state, newValue);
   setNegative(state, newValue);
+  return newValue;
 }
 
 export const registerASL = opcodeHandlers => {

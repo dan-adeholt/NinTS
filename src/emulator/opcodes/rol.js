@@ -1,4 +1,5 @@
 import {
+  BIT_7,
   getAddressAbsolute, getAddressAbsoluteWithOffset,
   getAddressZeroPage, getAddressZeroPageX, P_REG_CARRY,
   setCarry,
@@ -6,8 +7,6 @@ import {
   setZero
 } from './utils';
 
-const BIT_7 = 1 << 7;
-const BIT_7_MASK = ~BIT_7;
 
 const rolA = (state) => {
   const oldCarry = state.P & P_REG_CARRY;

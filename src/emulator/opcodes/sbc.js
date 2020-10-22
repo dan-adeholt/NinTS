@@ -6,10 +6,12 @@ import {
 } from './utils';
 import { adc } from './adc';
 
-const sbc = (state, value) => adc(state, value ^ 0xFF)
+export const sbc = (state, value) => adc(state, value ^ 0xFF)
 
 export const registerSBC = opcodeHandlers => {
   opcodeHandlers[0xE9] = state => sbc(state, readImmediate2Cycles(state));
+  opcodeHandlers[0xEB] = state => sbc(state, readImmediate2Cycles(state)); // *SBC
+
   opcodeHandlers[0xE5] = state => sbc(state, readZeroPage3Cycles(state)) ;
   opcodeHandlers[0xF5] = state => sbc(state, readZeroPageX4Cycles(state));
   opcodeHandlers[0xED] = state => sbc(state, readAbsolute4Cycles(state));

@@ -29,6 +29,11 @@ import { registerROR } from './opcodes/ror';
 import { registerROL } from './opcodes/rol';
 import { registerINC } from './opcodes/inc';
 import { registerDEC } from './opcodes/dec';
+import { registerLAX } from './opcodes/lax';
+import { registerSAX } from './opcodes/sax';
+import { registerDCP } from './opcodes/dcp';
+import { registerISB } from './opcodes/isb';
+import { registerSLO } from './opcodes/slo';
 
 const opcodeHandlers = new Array(255);
 
@@ -60,6 +65,11 @@ registerROR(opcodeHandlers);
 registerROL(opcodeHandlers);
 registerINC(opcodeHandlers);
 registerDEC(opcodeHandlers);
+registerLAX(opcodeHandlers);
+registerSAX(opcodeHandlers);
+registerDCP(opcodeHandlers);
+registerISB(opcodeHandlers);
+registerSLO(opcodeHandlers);
 
 console.log(opcodeHandlers.filter(x => x!= null).length, 'opcodes handled');
 

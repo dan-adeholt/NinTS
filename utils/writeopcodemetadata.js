@@ -14,6 +14,66 @@ Immediate     LDY #$44      $A0  2   2
 Immediate     ORA #$44      $09  2   2
 Immediate     SBC #$44      $E9  2   2
 
+Immediate    *SBC #$44      $EB  2   2
+
+
+ZeroPage     *SLO arg       $07  2   5
+ZeroPageX    *SLO arg,X     $17  2   6
+Absolute     *SLO arg       $0F  3   6
+AbsoluteX    *SLO arg,X     $1F  3   7
+AbsoluteY    *SLO arg,Y     $1B  3   7
+IndirectX    *SLO (arg,X)   $03  2   8
+IndirectY    *SLO (arg),Y   $13  2   8
+
+ZeroPage     *RLA arg       $27  2   5
+ZeroPageX    *RLA arg,X     $37  2   6
+Absolute     *RLA arg       $2F  3   6
+AbsoluteX    *RLA arg,X     $3F  3   7
+AbsoluteY    *RLA arg,Y     $3B  3   7
+IndirectX    *RLA (arg,X)   $23  2   8
+IndirectY    *RLA (arg),Y   $33  2   8
+
+ZeroPage     *RRA arg       $67  2   5
+ZeroPageX    *RRA arg,X     $77  2   6
+Absolute     *RRA arg       $6F  3   6
+AbsoluteX    *RRA arg,X     $7F  3   7
+AbsoluteY    *RRA arg,Y     $7B  3   7
+IndirectX    *RRA (arg,X)   $63  2   8
+IndirectY    *RRA (arg),Y   $73  2   8
+
+AbsoluteY    *LAR arg,Y     $BB  3   4*
+
+ZeroPage     *ISB arg       $E7  2   5
+ZeroPageX    *ISB arg,X     $F7  2   6
+Absolute     *ISB arg       $EF  3   6
+AbsoluteX    *ISB arg,X     $FF  3   7
+AbsoluteY    *ISB arg,Y     $FB  3   7
+IndirectX    *ISB (arg,X)   $E3  2   8
+IndirectY    *ISB (arg),Y   $F3  2   8
+
+
+ZeroPageX    *LAX (d,X)     $A3  2   6
+Absolute     *LAX abcd      $AF  3   4
+AbsoluteY    *LAX abcd,Y    $BF  3   4+
+ZeroPage     *LAX ab        $A7  2   3
+ZeroPageY    *LAX ab,Y      $B7  2   4
+IndirectX    *LAX (ab,X)    $A3  2   6
+IndirectY    *LAX (ab),Y    $B3  2   5+
+
+ZeroPage     *DCP arg       $C7  2   5
+ZeroPageX    *DCP arg,X     $D7  2   6
+Absolute     *DCP arg       $CF  3   6
+AbsoluteX    *DCP arg,X     $DF  3   7
+AbsoluteY    *DCP arg,Y     $DB  3   7
+IndirectX    *DCP (arg,X)   $C3  2   8
+IndirectY    *DCP (arg),Y   $D3  2   8
+
+ZeroPage    *SAX arg        $87  2   3
+ZeroPageY   *SAX arg,Y      $97  2   4
+IndirectX   *SAX (arg,X)    $83  2   6
+Absolute    *SAX arg        $8F  3   4
+
+
 ZeroPage     *NOP $A9      $04  2   3
 ZeroPage     *NOP $A9      $44  2   3
 ZeroPage     *NOP $A9      $64  2   3

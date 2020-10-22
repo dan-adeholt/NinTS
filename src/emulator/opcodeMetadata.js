@@ -12,7 +12,12 @@ const opcodeMetadata = [
     "opcode": "$01"
   },
   null,
-  null,
+  {
+    "name": "*SLO",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$03"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPage",
@@ -31,7 +36,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$06"
   },
-  null,
+  {
+    "name": "*SLO",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$07"
+  },
   {
     "name": "PHP",
     "mode": "Implied",
@@ -69,7 +79,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$0E"
   },
-  null,
+  {
+    "name": "*SLO",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$0F"
+  },
   {
     "name": "BPL",
     "mode": "Relative",
@@ -83,7 +98,12 @@ const opcodeMetadata = [
     "opcode": "$11"
   },
   null,
-  null,
+  {
+    "name": "*SLO",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$13"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPageX",
@@ -102,7 +122,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$16"
   },
-  null,
+  {
+    "name": "*SLO",
+    "mode": "ZeroPageX",
+    "instructionSize": "2",
+    "opcode": "$17"
+  },
   {
     "name": "CLC",
     "mode": "Implied",
@@ -121,7 +146,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$1A"
   },
-  null,
+  {
+    "name": "*SLO",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$1B"
+  },
   {
     "name": "*NOP",
     "mode": "AbsoluteX",
@@ -140,7 +170,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$1E"
   },
-  null,
+  {
+    "name": "*SLO",
+    "mode": "AbsoluteX",
+    "instructionSize": "3",
+    "opcode": "$1F"
+  },
   {
     "name": "JSR",
     "mode": "Absolute",
@@ -154,7 +189,12 @@ const opcodeMetadata = [
     "opcode": "$21"
   },
   null,
-  null,
+  {
+    "name": "*RLA",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$23"
+  },
   {
     "name": "BIT",
     "mode": "ZeroPage",
@@ -173,7 +213,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$26"
   },
-  null,
+  {
+    "name": "*RLA",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$27"
+  },
   {
     "name": "PLP",
     "mode": "Implied",
@@ -211,7 +256,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$2E"
   },
-  null,
+  {
+    "name": "*RLA",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$2F"
+  },
   {
     "name": "BMI",
     "mode": "Relative",
@@ -225,7 +275,12 @@ const opcodeMetadata = [
     "opcode": "$31"
   },
   null,
-  null,
+  {
+    "name": "*RLA",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$33"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPageX",
@@ -244,7 +299,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$36"
   },
-  null,
+  {
+    "name": "*RLA",
+    "mode": "ZeroPageX",
+    "instructionSize": "2",
+    "opcode": "$37"
+  },
   {
     "name": "SEC",
     "mode": "Implied",
@@ -263,7 +323,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$3A"
   },
-  null,
+  {
+    "name": "*RLA",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$3B"
+  },
   {
     "name": "*NOP",
     "mode": "AbsoluteX",
@@ -282,7 +347,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$3E"
   },
-  null,
+  {
+    "name": "*RLA",
+    "mode": "AbsoluteX",
+    "instructionSize": "3",
+    "opcode": "$3F"
+  },
   {
     "name": "RTI",
     "mode": "Implied",
@@ -438,7 +508,12 @@ const opcodeMetadata = [
     "opcode": "$61"
   },
   null,
-  null,
+  {
+    "name": "*RRA",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$63"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPage",
@@ -457,7 +532,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$66"
   },
-  null,
+  {
+    "name": "*RRA",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$67"
+  },
   {
     "name": "PLA",
     "mode": "Implied",
@@ -495,7 +575,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$6E"
   },
-  null,
+  {
+    "name": "*RRA",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$6F"
+  },
   {
     "name": "BVS",
     "mode": "Relative",
@@ -509,7 +594,12 @@ const opcodeMetadata = [
     "opcode": "$71"
   },
   null,
-  null,
+  {
+    "name": "*RRA",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$73"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPageX",
@@ -528,7 +618,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$76"
   },
-  null,
+  {
+    "name": "*RRA",
+    "mode": "ZeroPageX",
+    "instructionSize": "2",
+    "opcode": "$77"
+  },
   {
     "name": "SEI",
     "mode": "Implied",
@@ -547,7 +642,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$7A"
   },
-  null,
+  {
+    "name": "*RRA",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$7B"
+  },
   {
     "name": "*NOP",
     "mode": "AbsoluteX",
@@ -566,7 +666,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$7E"
   },
-  null,
+  {
+    "name": "*RRA",
+    "mode": "AbsoluteX",
+    "instructionSize": "3",
+    "opcode": "$7F"
+  },
   {
     "name": "*NOP",
     "mode": "Immediate",
@@ -580,7 +685,12 @@ const opcodeMetadata = [
     "opcode": "$81"
   },
   null,
-  null,
+  {
+    "name": "*SAX",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$83"
+  },
   {
     "name": "STY",
     "mode": "ZeroPage",
@@ -599,7 +709,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$86"
   },
-  null,
+  {
+    "name": "*SAX",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$87"
+  },
   {
     "name": "DEY",
     "mode": "Implied",
@@ -632,7 +747,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$8E"
   },
-  null,
+  {
+    "name": "*SAX",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$8F"
+  },
   {
     "name": "BCC",
     "mode": "Relative",
@@ -665,7 +785,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$96"
   },
-  null,
+  {
+    "name": "*SAX",
+    "mode": "ZeroPageY",
+    "instructionSize": "2",
+    "opcode": "$97"
+  },
   {
     "name": "TYA",
     "mode": "Implied",
@@ -712,7 +837,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$A2"
   },
-  null,
+  {
+    "name": "*LAX",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$A3"
+  },
   {
     "name": "LDY",
     "mode": "ZeroPage",
@@ -731,7 +861,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$A6"
   },
-  null,
+  {
+    "name": "*LAX",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$A7"
+  },
   {
     "name": "TAY",
     "mode": "Implied",
@@ -769,7 +904,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$AE"
   },
-  null,
+  {
+    "name": "*LAX",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$AF"
+  },
   {
     "name": "BCS",
     "mode": "Relative",
@@ -783,7 +923,12 @@ const opcodeMetadata = [
     "opcode": "$B1"
   },
   null,
-  null,
+  {
+    "name": "*LAX",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$B3"
+  },
   {
     "name": "LDY",
     "mode": "ZeroPageX",
@@ -802,7 +947,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$B6"
   },
-  null,
+  {
+    "name": "*LAX",
+    "mode": "ZeroPageY",
+    "instructionSize": "2",
+    "opcode": "$B7"
+  },
   {
     "name": "CLV",
     "mode": "Implied",
@@ -821,7 +971,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$BA"
   },
-  null,
+  {
+    "name": "*LAR",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$BB"
+  },
   {
     "name": "LDY",
     "mode": "AbsoluteX",
@@ -840,7 +995,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$BE"
   },
-  null,
+  {
+    "name": "*LAX",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$BF"
+  },
   {
     "name": "CPY",
     "mode": "Immediate",
@@ -854,7 +1014,12 @@ const opcodeMetadata = [
     "opcode": "$C1"
   },
   null,
-  null,
+  {
+    "name": "*DCP",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$C3"
+  },
   {
     "name": "CPY",
     "mode": "ZeroPage",
@@ -873,7 +1038,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$C6"
   },
-  null,
+  {
+    "name": "*DCP",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$C7"
+  },
   {
     "name": "INY",
     "mode": "Implied",
@@ -911,7 +1081,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$CE"
   },
-  null,
+  {
+    "name": "*DCP",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$CF"
+  },
   {
     "name": "BNE",
     "mode": "Relative",
@@ -925,7 +1100,12 @@ const opcodeMetadata = [
     "opcode": "$D1"
   },
   null,
-  null,
+  {
+    "name": "*DCP",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$D3"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPageX",
@@ -944,7 +1124,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$D6"
   },
-  null,
+  {
+    "name": "*DCP",
+    "mode": "ZeroPageX",
+    "instructionSize": "2",
+    "opcode": "$D7"
+  },
   {
     "name": "CLD",
     "mode": "Implied",
@@ -963,7 +1148,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$DA"
   },
-  null,
+  {
+    "name": "*DCP",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$DB"
+  },
   {
     "name": "*NOP",
     "mode": "AbsoluteX",
@@ -982,7 +1172,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$DE"
   },
-  null,
+  {
+    "name": "*DCP",
+    "mode": "AbsoluteX",
+    "instructionSize": "3",
+    "opcode": "$DF"
+  },
   {
     "name": "CPX",
     "mode": "Immediate",
@@ -996,7 +1191,12 @@ const opcodeMetadata = [
     "opcode": "$E1"
   },
   null,
-  null,
+  {
+    "name": "*ISB",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$E3"
+  },
   {
     "name": "CPX",
     "mode": "ZeroPage",
@@ -1015,7 +1215,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$E6"
   },
-  null,
+  {
+    "name": "*ISB",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$E7"
+  },
   {
     "name": "INX",
     "mode": "Implied",
@@ -1034,7 +1239,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$EA"
   },
-  null,
+  {
+    "name": "*SBC",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$EB"
+  },
   {
     "name": "CPX",
     "mode": "Absolute",
@@ -1053,7 +1263,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$EE"
   },
-  null,
+  {
+    "name": "*ISB",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$EF"
+  },
   {
     "name": "BEQ",
     "mode": "Relative",
@@ -1067,7 +1282,12 @@ const opcodeMetadata = [
     "opcode": "$F1"
   },
   null,
-  null,
+  {
+    "name": "*ISB",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$F3"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPageX",
@@ -1086,7 +1306,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$F6"
   },
-  null,
+  {
+    "name": "*ISB",
+    "mode": "ZeroPageX",
+    "instructionSize": "2",
+    "opcode": "$F7"
+  },
   {
     "name": "SED",
     "mode": "Implied",
@@ -1105,7 +1330,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$FA"
   },
-  null,
+  {
+    "name": "*ISB",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$FB"
+  },
   {
     "name": "*NOP",
     "mode": "AbsoluteX",
@@ -1123,6 +1353,12 @@ const opcodeMetadata = [
     "mode": "AbsoluteX",
     "instructionSize": "3",
     "opcode": "$FE"
+  },
+  {
+    "name": "*ISB",
+    "mode": "AbsoluteX",
+    "instructionSize": "3",
+    "opcode": "$FF"
   }
 ];
 

@@ -11,7 +11,7 @@ const cpx = (state, value) => {
   let diff = state.X - value;
   let diffBytes = diff;
   if (diff < 0) {
-    diffBytes += 0xFF;
+    diffBytes += 256;
   }
 
   setZero(state, diffBytes);

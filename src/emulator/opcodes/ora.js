@@ -7,7 +7,7 @@ import {
   setZero
 } from './utils';
 
-const ora = (state, value) => {
+export const ora = (state, value) => {
   const result = state.A | value;
   state.A = result;
   setZero(state, result);
