@@ -1,6 +1,6 @@
 import {
-  getAddressAbsolute, getAddressAbsoluteWithOffset,
-  getAddressZeroPage, getAddressZeroPageX,
+  readAddressAbsolute, readAddressAbsoluteWithOffset,
+  readAddressZeroPage, readAddressZeroPageX,
   setCarry,
   setNegative,
   setZero
@@ -27,8 +27,8 @@ export const lsr = (state, address) => {
 
 export const registerLSR = opcodeHandlers => {
   opcodeHandlers[0x4A] = state => lsrA(state);
-  opcodeHandlers[0x46] = state => lsr(state, getAddressZeroPage(state, 5));
-  opcodeHandlers[0x56] = state => lsr(state, getAddressZeroPageX(state, 6));
-  opcodeHandlers[0x4E] = state => lsr(state, getAddressAbsolute(state, 6));
-  opcodeHandlers[0x5E] = state => lsr(state, getAddressAbsoluteWithOffset(state, state.X, 7));
+  opcodeHandlers[0x46] = state => lsr(state, readAddressZeroPage(state, 5));
+  opcodeHandlers[0x56] = state => lsr(state, readAddressZeroPageX(state, 6));
+  opcodeHandlers[0x4E] = state => lsr(state, readAddressAbsolute(state, 6));
+  opcodeHandlers[0x5E] = state => lsr(state, readAddressAbsoluteWithOffset(state, state.X, 7));
 }

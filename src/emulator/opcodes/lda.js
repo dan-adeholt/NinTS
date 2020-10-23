@@ -1,9 +1,9 @@
 import {
-  readAbsolute4Cycles, readAbsoluteX4PlusCycles,
-  readAbsoluteY4PlusCycles,
-  readImmediate2Cycles, readIndirectX6Cycles, readIndirectY5PlusCycles,
-  readZeroPage3Cycles,
-  readZeroPageX4Cycles,
+  readValueAbsolute, readValueAbsoluteXWithPageBoundaryCycle,
+  readValueAbsoluteYWithPageBoundaryCycle,
+  readValueImmediate, readValueIndirectX, readValueIndirectYWithPageBoundaryCycle,
+  readValueZeroPage,
+  readValueZeroPageX,
   setNegative,
   setZero
 } from './utils';
@@ -15,12 +15,12 @@ const lda = (state, value) => {
 };
 
 export const registerLDA = opcodeHandlers => {
-  opcodeHandlers[0xA9] = state => lda(state, readImmediate2Cycles(state));
-  opcodeHandlers[0xA5] = state => lda(state, readZeroPage3Cycles(state));
-  opcodeHandlers[0xB5] = state => lda(state, readZeroPageX4Cycles(state));
-  opcodeHandlers[0xAD] = state => lda(state, readAbsolute4Cycles(state));
-  opcodeHandlers[0xBD] = state => lda(state, readAbsoluteX4PlusCycles(state));
-  opcodeHandlers[0xB9] = state => lda(state, readAbsoluteY4PlusCycles(state));
-  opcodeHandlers[0xA1] = state => lda(state, readIndirectX6Cycles(state));
-  opcodeHandlers[0xB1] = state => lda(state, readIndirectY5PlusCycles(state));
+  opcodeHandlers[0xA9] = state => lda(state, readValueImmediate(state, 2));
+  opcodeHandlers[0xA5] = state => lda(state, readValueZeroPage(state, 3));
+  opcodeHandlers[0xB5] = state => lda(state, readValueZeroPageX(state, 4));
+  opcodeHandlers[0xAD] = state => lda(state, readValueAbsolute(state, 4));
+  opcodeHandlers[0xBD] = state => lda(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
+  opcodeHandlers[0xB9] = state => lda(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
+  opcodeHandlers[0xA1] = state => lda(state, readValueIndirectX(state, 6));
+  opcodeHandlers[0xB1] = state => lda(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
 }

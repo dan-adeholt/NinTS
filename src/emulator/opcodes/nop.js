@@ -1,9 +1,9 @@
 import {
-  readAbsolute4Cycles,
-  readAbsoluteX4PlusCycles,
-  readImmediate2Cycles,
-  readZeroPage3Cycles,
-  readZeroPageX4Cycles
+  readValueAbsolute,
+  readValueAbsoluteXWithPageBoundaryCycle,
+  readValueImmediate,
+  readValueZeroPage,
+  readValueZeroPageX
 } from './utils';
 
 const nopHelper = (state, length, cycles) => {
@@ -12,11 +12,11 @@ const nopHelper = (state, length, cycles) => {
 }
 
 const nop = state => nopHelper(state, 1, 2)
-const unofficialNopZeroPage = state => readZeroPage3Cycles(state)
-const unofficialNopImmediate = state => readImmediate2Cycles(state)
-const unofficialNopZeroPageX = state => readZeroPageX4Cycles(state)
-const unofficialNopAbsolute = state => readAbsolute4Cycles(state)
-const unofficialNopAbsoluteX = state => readAbsoluteX4PlusCycles(state)
+const unofficialNopZeroPage = state => readValueZeroPage(state, 3)
+const unofficialNopImmediate = state => readValueImmediate(state, 2)
+const unofficialNopZeroPageX = state => readValueZeroPageX(state, 4)
+const unofficialNopAbsolute = state => readValueAbsolute(state, 4)
+const unofficialNopAbsoluteX = state => readValueAbsoluteXWithPageBoundaryCycle(state, 4)
 
 export const registerNOP = opcodeHandlers => {
   opcodeHandlers[0xEA] = state => { // NOP

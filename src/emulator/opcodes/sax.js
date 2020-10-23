@@ -1,6 +1,6 @@
 import {
-  getAddressAbsolute, getAddressIndirectX,
-  getAddressZeroPage, getAddressZeroPageY
+  readAddressAbsolute, readAddressIndirectX,
+  readAddressZeroPage, readAddressZeroPageY
 } from './utils';
 
 const sax = (state, address) => {
@@ -8,8 +8,8 @@ const sax = (state, address) => {
 }
 
 export const registerSAX = opcodeHandlers => {
-  opcodeHandlers[0x87] = state => sax(state, getAddressZeroPage(state, 3));
-  opcodeHandlers[0x97] = state => sax(state, getAddressZeroPageY(state, 4));
-  opcodeHandlers[0x83] = state => sax(state, getAddressIndirectX(state, 6))
-  opcodeHandlers[0x8F] = state => sax(state, getAddressAbsolute(state, 4))
+  opcodeHandlers[0x87] = state => sax(state, readAddressZeroPage(state, 3));
+  opcodeHandlers[0x97] = state => sax(state, readAddressZeroPageY(state, 4));
+  opcodeHandlers[0x83] = state => sax(state, readAddressIndirectX(state, 6))
+  opcodeHandlers[0x8F] = state => sax(state, readAddressAbsolute(state, 4))
 }

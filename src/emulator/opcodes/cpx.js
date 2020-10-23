@@ -1,7 +1,7 @@
 import {
-  readAbsolute4Cycles, readAbsoluteX4PlusCycles, readAbsoluteY4PlusCycles,
-  readImmediate2Cycles, readIndirectX6Cycles, readIndirectY5PlusCycles,
-  readZeroPage3Cycles, readZeroPageX4Cycles,
+  readValueAbsolute,
+  readValueImmediate,
+  readValueZeroPage,
   setCarry,
   setNegative,
   setZero
@@ -21,7 +21,7 @@ const cpx = (state, value) => {
 
 export const registerCPX = (opcodeHandlers) => {
 
-  opcodeHandlers[0xE0] = state => cpx(state, readImmediate2Cycles(state));
-  opcodeHandlers[0xE4] = state => cpx(state, readZeroPage3Cycles(state));
-  opcodeHandlers[0xEC] = state => cpx(state, readAbsolute4Cycles(state));
+  opcodeHandlers[0xE0] = state => cpx(state, readValueImmediate(state, 2));
+  opcodeHandlers[0xE4] = state => cpx(state, readValueZeroPage(state, 3));
+  opcodeHandlers[0xEC] = state => cpx(state, readValueAbsolute(state, 4));
 }

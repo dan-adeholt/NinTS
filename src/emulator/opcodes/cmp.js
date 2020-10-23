@@ -1,7 +1,7 @@
 import {
-  readAbsolute4Cycles, readAbsoluteX4PlusCycles, readAbsoluteY4PlusCycles,
-  readImmediate2Cycles, readIndirectX6Cycles, readIndirectY5PlusCycles,
-  readZeroPage3Cycles, readZeroPageX4Cycles,
+  readValueAbsolute, readValueAbsoluteXWithPageBoundaryCycle, readValueAbsoluteYWithPageBoundaryCycle,
+  readValueImmediate, readValueIndirectX, readValueIndirectYWithPageBoundaryCycle,
+  readValueZeroPage, readValueZeroPageX,
   setCarry,
   setNegative,
   setZero
@@ -20,12 +20,12 @@ export const registerCMP = (opcodeHandlers) => {
     setCarry(state, diff >= 0);
   }
 
-  opcodeHandlers[0xC9] = state => cmp(state, readImmediate2Cycles(state));
-  opcodeHandlers[0xC5] = state => cmp(state, readZeroPage3Cycles(state));
-  opcodeHandlers[0xD5] = state => cmp(state, readZeroPageX4Cycles(state));
-  opcodeHandlers[0xCD] = state => cmp(state, readAbsolute4Cycles(state));
-  opcodeHandlers[0xDD] = state => cmp(state, readAbsoluteX4PlusCycles(state));
-  opcodeHandlers[0xD9] = state => cmp(state, readAbsoluteY4PlusCycles(state));
-  opcodeHandlers[0xC1] = state => cmp(state, readIndirectX6Cycles(state));
-  opcodeHandlers[0xD1] = state => cmp(state, readIndirectY5PlusCycles(state));
+  opcodeHandlers[0xC9] = state => cmp(state, readValueImmediate(state, 2));
+  opcodeHandlers[0xC5] = state => cmp(state, readValueZeroPage(state, 3));
+  opcodeHandlers[0xD5] = state => cmp(state, readValueZeroPageX(state, 4));
+  opcodeHandlers[0xCD] = state => cmp(state, readValueAbsolute(state, 4));
+  opcodeHandlers[0xDD] = state => cmp(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
+  opcodeHandlers[0xD9] = state => cmp(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
+  opcodeHandlers[0xC1] = state => cmp(state, readValueIndirectX(state, 6));
+  opcodeHandlers[0xD1] = state => cmp(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
 }

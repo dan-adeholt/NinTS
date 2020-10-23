@@ -1,8 +1,8 @@
 import {
-  readAbsolute4Cycles,
-  readAbsoluteX4PlusCycles,
-  readImmediate2Cycles,
-  readZeroPage3Cycles, readZeroPageX4Cycles,
+  readValueAbsolute,
+  readValueAbsoluteXWithPageBoundaryCycle,
+  readValueImmediate,
+  readValueZeroPage, readValueZeroPageX,
   setNegative,
   setZero
 } from './utils';
@@ -14,9 +14,9 @@ const ldy = (state, value) => {
 };
 
 export const registerLDY = opcodeHandlers => {
-  opcodeHandlers[0xA0] = state => ldy(state, readImmediate2Cycles(state));
-  opcodeHandlers[0xA4] = state => ldy(state, readZeroPage3Cycles(state)) ;
-  opcodeHandlers[0xB4] = state => ldy(state, readZeroPageX4Cycles(state));
-  opcodeHandlers[0xAC] = state => ldy(state, readAbsolute4Cycles(state));
-  opcodeHandlers[0xBC] = state => ldy(state, readAbsoluteX4PlusCycles(state));
+  opcodeHandlers[0xA0] = state => ldy(state, readValueImmediate(state, 2));
+  opcodeHandlers[0xA4] = state => ldy(state, readValueZeroPage(state, 3)) ;
+  opcodeHandlers[0xB4] = state => ldy(state, readValueZeroPageX(state, 4));
+  opcodeHandlers[0xAC] = state => ldy(state, readValueAbsolute(state, 4));
+  opcodeHandlers[0xBC] = state => ldy(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
 }

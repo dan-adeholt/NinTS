@@ -1,13 +1,11 @@
 import {
   BIT_7,
-  getAddressAbsolute, getAddressAbsoluteWithOffset,
-  getAddressZeroPage, getAddressZeroPageX, P_REG_CARRY,
+  readAddressAbsolute, readAddressAbsoluteWithOffset,
+  readAddressZeroPage, readAddressZeroPageX, P_REG_CARRY,
   setCarry,
   setNegative,
   setZero
 } from './utils';
-import { hex } from '../stateLogging';
-
 
 const rolA = (state) => {
   const oldCarry = state.P & P_REG_CARRY;
@@ -32,8 +30,8 @@ export const rol = (state, address) => {
 
 export const registerROL = opcodeHandlers => {
   opcodeHandlers[0x2A] = state => rolA(state);
-  opcodeHandlers[0x26] = state => rol(state, getAddressZeroPage(state, 5));
-  opcodeHandlers[0x36] = state => rol(state, getAddressZeroPageX(state, 6));
-  opcodeHandlers[0x2E] = state => rol(state, getAddressAbsolute(state, 6));
-  opcodeHandlers[0x3E] = state => rol(state, getAddressAbsoluteWithOffset(state, state.X, 7));
+  opcodeHandlers[0x26] = state => rol(state, readAddressZeroPage(state, 5));
+  opcodeHandlers[0x36] = state => rol(state, readAddressZeroPageX(state, 6));
+  opcodeHandlers[0x2E] = state => rol(state, readAddressAbsolute(state, 6));
+  opcodeHandlers[0x3E] = state => rol(state, readAddressAbsoluteWithOffset(state, state.X, 7));
 }

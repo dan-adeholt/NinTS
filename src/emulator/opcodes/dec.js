@@ -1,6 +1,6 @@
 import {
-  getAddressAbsolute, getAddressAbsoluteWithOffset,
-  getAddressZeroPage, getAddressZeroPageX,
+  readAddressAbsolute, readAddressAbsoluteWithOffset,
+  readAddressZeroPage, readAddressZeroPageX,
   setNegative, setZero
 } from './utils';
 
@@ -17,8 +17,8 @@ const dec = (state, address) => {
 }
 
 export const registerDEC = opcodeHandlers => {
-  opcodeHandlers[0xC6] = state => dec(state, getAddressZeroPage(state, 5));
-  opcodeHandlers[0xD6] = state => dec(state, getAddressZeroPageX(state, 6));
-  opcodeHandlers[0xCE] = state => dec(state, getAddressAbsolute(state, 6));
-  opcodeHandlers[0xDE] = state => dec(state, getAddressAbsoluteWithOffset(state, state.X, 7));
+  opcodeHandlers[0xC6] = state => dec(state, readAddressZeroPage(state, 5));
+  opcodeHandlers[0xD6] = state => dec(state, readAddressZeroPageX(state, 6));
+  opcodeHandlers[0xCE] = state => dec(state, readAddressAbsolute(state, 6));
+  opcodeHandlers[0xDE] = state => dec(state, readAddressAbsoluteWithOffset(state, state.X, 7));
 }

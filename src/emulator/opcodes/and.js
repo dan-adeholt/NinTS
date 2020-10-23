@@ -1,8 +1,8 @@
 import {
-  readAbsolute4Cycles, readAbsoluteX4PlusCycles, readAbsoluteY4PlusCycles,
-  readImmediate2Cycles, readIndirectX6Cycles, readIndirectY5PlusCycles,
-  readZeroPage3Cycles,
-  readZeroPageX4Cycles,
+  readValueAbsolute, readValueAbsoluteXWithPageBoundaryCycle, readValueAbsoluteYWithPageBoundaryCycle,
+  readValueImmediate, readValueIndirectX, readValueIndirectYWithPageBoundaryCycle,
+  readValueZeroPage,
+  readValueZeroPageX,
   setNegative,
   setZero
 } from './utils';
@@ -15,12 +15,12 @@ export const and = (state, value) => {
 };
 
 export const registerAND = opcodeHandlers => {
-  opcodeHandlers[0x29] = state => and(state, readImmediate2Cycles(state));
-  opcodeHandlers[0x25] = state => and(state, readZeroPage3Cycles(state)) ;
-  opcodeHandlers[0x35] = state => and(state, readZeroPageX4Cycles(state));
-  opcodeHandlers[0x2D] = state => and(state, readAbsolute4Cycles(state));
-  opcodeHandlers[0x3D] = state => and(state, readAbsoluteX4PlusCycles(state));
-  opcodeHandlers[0x39] = state => and(state, readAbsoluteY4PlusCycles(state));
-  opcodeHandlers[0x21] = state => and(state, readIndirectX6Cycles(state));
-  opcodeHandlers[0x31] = state => and(state, readIndirectY5PlusCycles(state));
+  opcodeHandlers[0x29] = state => and(state, readValueImmediate(state, 2));
+  opcodeHandlers[0x25] = state => and(state, readValueZeroPage(state, 3)) ;
+  opcodeHandlers[0x35] = state => and(state, readValueZeroPageX(state, 4));
+  opcodeHandlers[0x2D] = state => and(state, readValueAbsolute(state, 4));
+  opcodeHandlers[0x3D] = state => and(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
+  opcodeHandlers[0x39] = state => and(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
+  opcodeHandlers[0x21] = state => and(state, readValueIndirectX(state, 6));
+  opcodeHandlers[0x31] = state => and(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
 }

@@ -1,8 +1,8 @@
 import {
   P_MASK_OVERFLOW_AND_NEGATIVE,
   P_REGS_OVERFLOW_AND_NEGATIVE,
-  readAbsolute4Cycles,
-  readZeroPage3Cycles,
+  readValueAbsolute,
+  readValueZeroPage,
   setZero
 } from './utils';
 
@@ -20,6 +20,6 @@ const bit = (state, memoryValue) => {
 
 
 export const registerBIT = opcodeHandlers => {
-  opcodeHandlers[0x24] = state => bit(state, readZeroPage3Cycles(state))
-  opcodeHandlers[0x2C] = state => bit(state, readAbsolute4Cycles(state))
+  opcodeHandlers[0x24] = state => bit(state, readValueZeroPage(state, 3))
+  opcodeHandlers[0x2C] = state => bit(state, readValueAbsolute(state, 4))
 }

@@ -1,9 +1,9 @@
 import {
-  writeAbsolute4Cycles, writeZeroPage3Cycles, writeZeroPageYCycles
+  writeValueAbsolute, writeValueZeroPage, writeValueZeroPageY
 } from './utils';
 
 export const registerSTX = opcodeHandlers => {
-  opcodeHandlers[0x86] = state => writeZeroPage3Cycles(state, state.X);
-  opcodeHandlers[0x96] = state => writeZeroPageYCycles(state, state.X);
-  opcodeHandlers[0x8E] = state => writeAbsolute4Cycles(state, state.X);
+  opcodeHandlers[0x86] = state => writeValueZeroPage(state, state.X, 3);
+  opcodeHandlers[0x96] = state => writeValueZeroPageY(state, state.X, 4);
+  opcodeHandlers[0x8E] = state => writeValueAbsolute(state, state.X, 4);
 }

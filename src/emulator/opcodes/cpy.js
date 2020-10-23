@@ -1,7 +1,7 @@
 import {
-  readAbsolute4Cycles, readAbsoluteX4PlusCycles, readAbsoluteY4PlusCycles,
-  readImmediate2Cycles, readIndirectX6Cycles, readIndirectY5PlusCycles,
-  readZeroPage3Cycles, readZeroPageX4Cycles,
+  readValueAbsolute,
+  readValueImmediate,
+  readValueZeroPage,
   setCarry,
   setNegative,
   setZero
@@ -20,7 +20,7 @@ export const registerCPY = (opcodeHandlers) => {
     setCarry(state, diff >= 0);
   }
 
-  opcodeHandlers[0xC0] = state => cpy(state, readImmediate2Cycles(state));
-  opcodeHandlers[0xC4] = state => cpy(state, readZeroPage3Cycles(state));
-  opcodeHandlers[0xCC] = state => cpy(state, readAbsolute4Cycles(state));
+  opcodeHandlers[0xC0] = state => cpy(state, readValueImmediate(state, 2));
+  opcodeHandlers[0xC4] = state => cpy(state, readValueZeroPage(state, 3));
+  opcodeHandlers[0xCC] = state => cpy(state, readValueAbsolute(state, 4));
 }
