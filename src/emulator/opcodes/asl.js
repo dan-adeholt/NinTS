@@ -1,6 +1,6 @@
 import {
   BIT_7,
-  readAddressAbsolute, readAddressAbsoluteWithOffset,
+  readAddressAbsolute, readAddressAbsoluteX,
   readAddressZeroPage, readAddressZeroPageX,
   setCarry,
   setNegative,
@@ -31,5 +31,5 @@ export const registerASL = opcodeHandlers => {
   opcodeHandlers[0x06] = state => asl(state, readAddressZeroPage(state, 5));
   opcodeHandlers[0x16] = state => asl(state, readAddressZeroPageX(state, 6));
   opcodeHandlers[0x0E] = state => asl(state, readAddressAbsolute(state, 6));
-  opcodeHandlers[0x1E] = state => asl(state, readAddressAbsoluteWithOffset(state, state.X, 7));
+  opcodeHandlers[0x1E] = state => asl(state, readAddressAbsoluteX(state, 7));
 }

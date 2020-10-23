@@ -1,5 +1,5 @@
 import {
-  readAddressAbsolute, readAddressAbsoluteWithOffset,
+  readAddressAbsolute, readAddressAbsoluteX,
   readAddressZeroPage, readAddressZeroPageX,
   setNegative, setZero
 } from './utils';
@@ -20,5 +20,5 @@ export const registerDEC = opcodeHandlers => {
   opcodeHandlers[0xC6] = state => dec(state, readAddressZeroPage(state, 5));
   opcodeHandlers[0xD6] = state => dec(state, readAddressZeroPageX(state, 6));
   opcodeHandlers[0xCE] = state => dec(state, readAddressAbsolute(state, 6));
-  opcodeHandlers[0xDE] = state => dec(state, readAddressAbsoluteWithOffset(state, state.X, 7));
+  opcodeHandlers[0xDE] = state => dec(state, readAddressAbsoluteX(state, 7));
 }

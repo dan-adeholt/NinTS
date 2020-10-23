@@ -1,13 +1,13 @@
-import { getAbsoluteAddress, onSamePageBoundary, PAGE_MASK } from './utils';
+import { getAddressAbsolute, onSamePageBoundary, PAGE_MASK } from './utils';
 
 export const registerJump = opcodeHandlers => {
   opcodeHandlers[0x4C] = state => { // JMP Absolute
-    state.PC = getAbsoluteAddress(state);
+    state.PC = getAddressAbsolute(state);
     state.CYC += 3;
   };
 
   opcodeHandlers[0x6C] = state => { // JMP Indirect
-    const address = getAbsoluteAddress(state);
+    const address = getAddressAbsolute(state);
 
     const lo = address;
     let hi = address + 1;

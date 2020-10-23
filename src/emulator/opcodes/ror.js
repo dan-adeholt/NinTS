@@ -1,10 +1,10 @@
 import {
   BIT_7_MASK,
-  readAddressAbsolute, readAddressAbsoluteWithOffset,
+  readAddressAbsolute,
   readAddressZeroPage, readAddressZeroPageX, P_REG_CARRY,
   setCarry,
   setNegative,
-  setZero
+  setZero, readAddressAbsoluteX
 } from './utils';
 
 const rorA = (state) => {
@@ -33,5 +33,5 @@ export const registerROR = opcodeHandlers => {
   opcodeHandlers[0x66] = state => ror(state, readAddressZeroPage(state, 5));
   opcodeHandlers[0x76] = state => ror(state, readAddressZeroPageX(state, 6));
   opcodeHandlers[0x6E] = state => ror(state, readAddressAbsolute(state, 6));
-  opcodeHandlers[0x7E] = state => ror(state, readAddressAbsoluteWithOffset(state, state.X, 7));
+  opcodeHandlers[0x7E] = state => ror(state, readAddressAbsoluteX(state, 7));
 }

@@ -1,6 +1,6 @@
 import opcodeMetadata from './opcodeMetadata';
 import {
-  getAbsoluteAddress,
+  getAddressAbsolute,
   onSamePageBoundary,
   P_REG_ALWAYS_1,
   P_REG_BREAK, P_REG_CARRY,
@@ -18,7 +18,7 @@ const formatters = {
   Absolute: state => {
     const opcode = state.readMem(state.PC);
     const { name } = opcodeMetadata[opcode];
-    const address = getAbsoluteAddress(state);
+    const address = getAddressAbsolute(state);
     if (name in branchInstructions) {
       return "$" + hex16(address);
     } else {
@@ -27,13 +27,13 @@ const formatters = {
     }
   },
   AbsoluteX: state => {
-    const base = getAbsoluteAddress(state);
+    const base = getAddressAbsolute(state);
     const address = (base + state.X) & 0xFFFF;
     const byte = state.readMem(address);
     return "$" + hex16(base) + ",X @ " + hex16(address) + ' = ' + hex(byte);
   },
   AbsoluteY: state => {
-    const base = getAbsoluteAddress(state);
+    const base = getAddressAbsolute(state);
     const address = (base + state.Y) & 0xFFFF;
     const byte = state.readMem(address);
     return "$" + hex16(base) + ",Y @ " + hex16(address) + ' = ' + hex(byte);
@@ -54,7 +54,7 @@ const formatters = {
   },
   Implied: state => "",
   Indirect: state => {
-    const address = getAbsoluteAddress(state);
+    const address = getAddressAbsolute(state);
 
     const lo = address;
     let hi = address + 1;
