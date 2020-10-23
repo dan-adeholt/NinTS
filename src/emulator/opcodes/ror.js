@@ -17,7 +17,7 @@ const rorA = (state) => {
   state.PC += 1;
 }
 
-const ror = (state, address) => {
+export const ror = (state, address) => {
   const value = state.readMem(address);
   const oldCarry = state.P & P_REG_CARRY;
   setCarry(state, value & 0x1);
@@ -25,6 +25,7 @@ const ror = (state, address) => {
   state.setMem(address, newValue);
   setZero(state, newValue);
   setNegative(state, newValue);
+  return newValue;
 }
 
 export const registerROR = opcodeHandlers => {

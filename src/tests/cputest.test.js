@@ -26,6 +26,9 @@ test('Nes test rom executes properly', () => {
 
   for (var i = 0; i < log.length; i++) {
     const entry = log[i];
+    if (entry.trim() === '') {
+      break;
+    }
 
     const entryLine = prefixLine(i, entry);
     const stateString = prefixLine(i, stateToString(machine));
@@ -34,9 +37,13 @@ test('Nes test rom executes properly', () => {
     if (stateString !== entryLine) {
       console.log(prevStateString);
       const match = procRegex.exec(entryLine);
-      const expectedP = parseInt(match[1], 16);
-      if (expectedP !== machine.P) {
-        console.log('PRV: ' + prevFlagString + "\nNEW: " + flagsString + "\nEXP:", procFlagsToString(expectedP));
+
+      if (match?.length > 0) {
+        const expectedP = parseInt(match[1], 16);
+
+        if (expectedP !== machine.P) {
+          console.log('PRV: ' + prevFlagString + "\nNEW: " + flagsString + "\nEXP:", procFlagsToString(expectedP));
+        }
       }
     }
 

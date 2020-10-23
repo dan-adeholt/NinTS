@@ -79,6 +79,8 @@ export const getAddressAbsolute = (state, cycles) => {
   state.CYC += cycles;
   return address;
 }
+export const getAddressAbsoluteX = (state, cycles) => getAddressAbsoluteWithOffset(state, state.X, cycles)
+export const getAddressAbsoluteY = (state, cycles) => getAddressAbsoluteWithOffset(state, state.Y, cycles)
 
 export const getAddressZeroPage = (state, cycles) => {
   const address = state.readMem(state.PC + 1);

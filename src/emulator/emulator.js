@@ -34,6 +34,9 @@ import { registerSAX } from './opcodes/sax';
 import { registerDCP } from './opcodes/dcp';
 import { registerISB } from './opcodes/isb';
 import { registerSLO } from './opcodes/slo';
+import { registerRLA } from './opcodes/rla';
+import { registerSRE } from './opcodes/sre';
+import { registerRRA } from './opcodes/rra';
 
 const opcodeHandlers = new Array(255);
 
@@ -70,6 +73,9 @@ registerSAX(opcodeHandlers);
 registerDCP(opcodeHandlers);
 registerISB(opcodeHandlers);
 registerSLO(opcodeHandlers);
+registerRLA(opcodeHandlers);
+registerSRE(opcodeHandlers);
+registerRRA(opcodeHandlers);
 
 console.log(opcodeHandlers.filter(x => x!= null).length, 'opcodes handled');
 
@@ -80,6 +86,12 @@ export const initMachine = (rom) => {
   if (rom.prgData.length <= 0x4000) {
     memory.set(rom.prgData, 0xC000);
   }
+
+  memory[0x4015] = 0xFF;
+  memory[0x4004] = 0xFF;
+  memory[0x4005] = 0xFF;
+  memory[0x4006] = 0xFF;
+  memory[0x4007] = 0xFF;
 
   return {
     A: 0,

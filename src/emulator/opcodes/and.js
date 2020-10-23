@@ -7,7 +7,7 @@ import {
   setZero
 } from './utils';
 
-const and = (state, value) => {
+export const and = (state, value) => {
   const result = state.A & value;
   state.A = result;
   setZero(state, result);

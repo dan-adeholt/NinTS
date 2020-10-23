@@ -15,13 +15,14 @@ const lsrA = (state) => {
   state.PC += 1;
 }
 
-const lsr = (state, address) => {
+export const lsr = (state, address) => {
   const value = state.readMem(address);
   setCarry(state, value & 0x1);
   const newValue = value >> 1;
   state.setMem(address, newValue);
   setZero(state, newValue);
   setNegative(state, newValue);
+  return newValue;
 }
 
 export const registerLSR = opcodeHandlers => {

@@ -6,6 +6,7 @@ import {
   setNegative,
   setZero
 } from './utils';
+import { hex } from '../stateLogging';
 
 
 const rolA = (state) => {
@@ -18,7 +19,7 @@ const rolA = (state) => {
   state.PC += 1;
 }
 
-const rol = (state, address) => {
+export const rol = (state, address) => {
   const value = state.readMem(address);
   const oldCarry = state.P & P_REG_CARRY;
   setCarry(state, (state.A & BIT_7) >> 7);
@@ -26,6 +27,7 @@ const rol = (state, address) => {
   state.setMem(address, newValue);
   setZero(state, newValue);
   setNegative(state, newValue);
+  return newValue;
 }
 
 export const registerROL = opcodeHandlers => {

@@ -41,8 +41,7 @@ AbsoluteY    *RRA arg,Y     $7B  3   7
 IndirectX    *RRA (arg,X)   $63  2   8
 IndirectY    *RRA (arg),Y   $73  2   8
 
-AbsoluteY    *LAR arg,Y     $BB  3   4*
-
+Absolute,Y  |LAR arg,Y  |$BB| 3 | 4 *
 ZeroPage     *ISB arg       $E7  2   5
 ZeroPageX    *ISB arg,X     $F7  2   6
 Absolute     *ISB arg       $EF  3   6
@@ -50,6 +49,15 @@ AbsoluteX    *ISB arg,X     $FF  3   7
 AbsoluteY    *ISB arg,Y     $FB  3   7
 IndirectX    *ISB (arg,X)   $E3  2   8
 IndirectY    *ISB (arg),Y   $F3  2   8
+
+
+ZeroPage     *SRE arg       $47  2   5
+ZeroPageX    *SRE arg,X     $57  2   6
+Absolute     *SRE arg       $4F  3   6
+AbsoluteX    *SRE arg,X     $5F  3   7
+AbsoluteY    *SRE arg,Y     $5B  3   7
+IndirectX    *SRE (arg,X)   $43  2   8
+IndirectY    *SRE (arg),Y   $53  2   8
 
 
 ZeroPageX    *LAX (d,X)     $A3  2   6

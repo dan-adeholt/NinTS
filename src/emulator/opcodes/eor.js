@@ -7,7 +7,7 @@ import {
   setZero
 } from './utils';
 
-const eor = (state, value) => {
+export const eor = (state, value) => {
   const result = state.A ^ value;
   state.A = result;
   setZero(state, result);

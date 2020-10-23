@@ -366,7 +366,12 @@ const opcodeMetadata = [
     "opcode": "$41"
   },
   null,
-  null,
+  {
+    "name": "*SRE",
+    "mode": "IndirectX",
+    "instructionSize": "2",
+    "opcode": "$43"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPage",
@@ -385,7 +390,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$46"
   },
-  null,
+  {
+    "name": "*SRE",
+    "mode": "ZeroPage",
+    "instructionSize": "2",
+    "opcode": "$47"
+  },
   {
     "name": "PHA",
     "mode": "Implied",
@@ -423,7 +433,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$4E"
   },
-  null,
+  {
+    "name": "*SRE",
+    "mode": "Absolute",
+    "instructionSize": "3",
+    "opcode": "$4F"
+  },
   {
     "name": "BVC",
     "mode": "Relative",
@@ -437,7 +452,12 @@ const opcodeMetadata = [
     "opcode": "$51"
   },
   null,
-  null,
+  {
+    "name": "*SRE",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$53"
+  },
   {
     "name": "*NOP",
     "mode": "ZeroPageX",
@@ -456,7 +476,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$56"
   },
-  null,
+  {
+    "name": "*SRE",
+    "mode": "ZeroPageX",
+    "instructionSize": "2",
+    "opcode": "$57"
+  },
   {
     "name": "CLI",
     "mode": "Implied",
@@ -475,7 +500,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$5A"
   },
-  null,
+  {
+    "name": "*SRE",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$5B"
+  },
   {
     "name": "*NOP",
     "mode": "AbsoluteX",
@@ -494,7 +524,12 @@ const opcodeMetadata = [
     "instructionSize": "3",
     "opcode": "$5E"
   },
-  null,
+  {
+    "name": "*SRE",
+    "mode": "AbsoluteX",
+    "instructionSize": "3",
+    "opcode": "$5F"
+  },
   {
     "name": "RTS",
     "mode": "Implied",
@@ -971,12 +1006,7 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$BA"
   },
-  {
-    "name": "*LAR",
-    "mode": "AbsoluteY",
-    "instructionSize": "3",
-    "opcode": "$BB"
-  },
+  null,
   {
     "name": "LDY",
     "mode": "AbsoluteX",
