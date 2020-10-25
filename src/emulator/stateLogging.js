@@ -12,6 +12,18 @@ import {
 
 const branchInstructions = {"JMP": 1, "JSR": 1, "BPL": 1, "BMI": 1, "BVC": 1, "BVS": 1, "BCC": 1, "BCS": 1, "BNE": 1, "BEQ": 1};
 
+const readLogMem = (state, address) => {
+  // Don't preview values for MMIO registers ($2000-$401F) - just return 0xFF. Aligns with Nintendulator's debugger,
+  // it assumes the value $FF whenever it is told to "preview" the value at any memory address
+  // for which a special "Debug" (side-effect-free) read handler has not been assigned.
+
+  if (address >= 0x2000 && address <= 0x401F) {
+    return 0xFF;
+  } else {
+    return state.readMem(address);
+  }
+}
+
 const formatters = {
   Accumulator: state => "A",
   Immediate: state => "#$" + hex(state.readMem(state.PC + 1)),
@@ -22,20 +34,20 @@ const formatters = {
     if (name in branchInstructions) {
       return "$" + hex16(address);
     } else {
-      const byte = state.readMem(address);
+      const byte = readLogMem(state, address);
       return "$" + hex16(address) + " = " + hex(byte);
     }
   },
   AbsoluteX: state => {
     const base = getAddressAbsolute(state);
     const address = (base + state.X) & 0xFFFF;
-    const byte = state.readMem(address);
+    const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",X @ " + hex16(address) + ' = ' + hex(byte);
   },
   AbsoluteY: state => {
     const base = getAddressAbsolute(state);
     const address = (base + state.Y) & 0xFFFF;
-    const byte = state.readMem(address);
+    const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",Y @ " + hex16(address) + ' = ' + hex(byte);
   },
   ZeroPage: state => {
@@ -45,12 +57,12 @@ const formatters = {
   ZeroPageX: state => {
     const base = state.readMem(state.PC + 1);
     const address = (base + state.X) % 256;
-    return "$" + hex(base) + ",X @ " + hex(address) + " = " + hex(state.readMem(address));
+    return "$" + hex(base) + ",X @ " + hex(address) + " = " + hex(readLogMem(state, address));
   },
   ZeroPageY: state => {
     const base = state.readMem(state.PC + 1);
     const address = (base + state.Y) % 256;
-    return "$" + hex(base) + ",Y @ " + hex(address) + " = " + hex(state.readMem(address));
+    return "$" + hex(base) + ",Y @ " + hex(address) + " = " + hex(readLogMem(state, address));
   },
   Implied: state => "",
   Indirect: state => {
@@ -71,7 +83,7 @@ const formatters = {
     const addressLocation = (state.X + offset) % 256;
 
     const address = state.readMem(addressLocation) + (state.readMem((addressLocation + 1) % 256) << 8);
-    const value = state.readMem(address);
+    const value = readLogMem(state, address);
 
     return "($" + hex(offset) + ",X) @ " + hex(addressLocation) + " = " + hex16(address) + " = " + hex(value);
   },
@@ -80,7 +92,7 @@ const formatters = {
     const base = state.readMem(zeroPageAddress) + (state.readMem((zeroPageAddress + 1) % 256) << 8);
     const address = (base + state.Y) & 0xFFFF;
 
-    let value = state.readMem(address);
+    let value = readLogMem(state, address);
     return "($" + hex(zeroPageAddress) + "),Y = " + hex16(base) + " @ " + hex16(address) + " = " + hex(value);
   },
   Relative: state => {
@@ -111,7 +123,7 @@ export const procFlagsToString = (P) => {
     ' CARR:' + toBinary(P_REG_CARRY);
 }
 
-export const stateToString = (state) => {
+export const stateToString = (state, swapPPU) => {
   let str = hex16(state.PC)
   str += '  ';
   const opcode = state.readMem(state.PC);
@@ -150,9 +162,16 @@ export const stateToString = (state) => {
   // Figure which PPU state ([scanline, pixel]) by deriving from cycle count
   const PIXELS_PER_SCANLINE = 341;
   const NUM_SCANLINES = 262;
-  const scanline = Math.floor((state.CYC * 3) / PIXELS_PER_SCANLINE) % NUM_SCANLINES;
-  const pixel = (state.CYC * 3) % PIXELS_PER_SCANLINE;
-  str += 'PPU:' + scanline.toString(10).padStart(3, ' ') +',' + pixel.toString(10).padStart(3, ' ') + ' ';
+
+  const scanline = Math.floor((state.PPU_CYC) / PIXELS_PER_SCANLINE) % NUM_SCANLINES;
+  const pixel = (state.PPU_CYC) % PIXELS_PER_SCANLINE;
+
+  if (swapPPU) {
+    str += 'PPU:' + pixel.toString(10).padStart(3, ' ') +',' + scanline.toString(10).padStart(3, ' ') + ' ';
+  } else {
+    str += 'PPU:' + scanline.toString(10).padStart(3, ' ') +',' + pixel.toString(10).padStart(3, ' ') + ' ';
+  }
+
   str += 'CYC:' + state.CYC.toString(10);
 
   return str;

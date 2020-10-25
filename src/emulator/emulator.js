@@ -37,6 +37,12 @@ import { registerSLO } from './opcodes/slo';
 import { registerRLA } from './opcodes/rla';
 import { registerSRE } from './opcodes/sre';
 import { registerRRA } from './opcodes/rra';
+import { getResetVectorAddress } from './opcodes/utils';
+import { registerAAC } from './opcodes/aac';
+import { registerASR } from './opcodes/asr';
+import { registerARR } from './opcodes/arr';
+import { registerATX } from './opcodes/atx';
+import { registerAXS } from './opcodes/axs';
 
 const opcodeHandlers = new Array(255);
 
@@ -76,6 +82,11 @@ registerSLO(opcodeHandlers);
 registerRLA(opcodeHandlers);
 registerSRE(opcodeHandlers);
 registerRRA(opcodeHandlers);
+registerAAC(opcodeHandlers);
+registerASR(opcodeHandlers);
+registerARR(opcodeHandlers);
+registerATX(opcodeHandlers);
+registerAXS(opcodeHandlers);
 
 console.log(opcodeHandlers.filter(x => x!= null).length, 'opcodes handled');
 
@@ -93,12 +104,26 @@ export const initMachine = (rom) => {
   memory[0x4006] = 0xFF;
   memory[0x4007] = 0xFF;
 
+
+  // PPU Registers
+  memory[0x2000] = 0xFF;
+  memory[0x2001] = 0xFF;
+  memory[0x2002] = 0xFF;
+  memory[0x2003] = 0xFF;
+  memory[0x2004] = 0xFF;
+  memory[0x2005] = 0xFF;
+  memory[0x2006] = 0xFF;
+  memory[0x2007] = 0xFF;
+
+  // Reset vector
+  const startingLocation = memory[0xFFFC] + (memory[0xFFFD] << 8);
+
   return {
     A: 0,
     X: 0,
     Y: 0,
     P: 0x24,
-    PC: 0,
+    PC: startingLocation,
     SP: 0xFD,
     CYC: 0,
     CHR: rom.chrData,
@@ -111,20 +136,35 @@ export const initMachine = (rom) => {
     setMem: (addr, value) => {
       memory[addr] = value;
     },
+    PPU_CYC: 0,
     memory,
   };
 }
 
+export const reset = (state) => {
+  const startingLocation = getResetVectorAddress(state);
+  state.PC = startingLocation;
+}
+
+const updatePPU = (state, cycles) => {
+  state.PPU_CYC += cycles * 3;
+}
+
 export const step = (state) => {
   const opcode = state.readMem(state.PC);
-
+  const oldCycles = state.CYC;
   if (opcode in opcodeHandlers) {
     // console.log('Executing $' + hex(opcode));
     opcodeHandlers[opcode](state);
   } else {
-    console.error('No handler found for opcode $' + hex(opcode), opcodeMetadata[opcode].name);
+
+    console.error('No handler found for opcode $' + hex(opcode), opcodeMetadata[opcode]?.name ?? '');
+
     return false;
   }
+
+  const executedCycles = state.CYC - oldCycles;
+  updatePPU(state, executedCycles);
 
   return true;
 };

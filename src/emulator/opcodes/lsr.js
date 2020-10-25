@@ -6,11 +6,16 @@ import {
   setZero
 } from './utils';
 
+export const performLSR = (state, value) => {
+  setCarry(state, value & 0x1);
+  const newValue = value >> 1;
+  setZero(state, newValue);
+  setNegative(state, newValue);
+  return newValue;
+}
+
 const lsrA = (state) => {
-  setCarry(state, state.A & 0x1);
-  state.A = (state.A >> 1);
-  setZero(state, state.A);
-  setNegative(state, state.A);
+  state.A = performLSR(state, state.A);
   state.CYC += 2;
   state.PC += 1;
 }
@@ -18,10 +23,8 @@ const lsrA = (state) => {
 export const lsr = (state, address) => {
   const value = state.readMem(address);
   setCarry(state, value & 0x1);
-  const newValue = value >> 1;
+  const newValue = performLSR(state, value);
   state.setMem(address, newValue);
-  setZero(state, newValue);
-  setNegative(state, newValue);
   return newValue;
 }
 

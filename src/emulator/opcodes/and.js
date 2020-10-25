@@ -12,6 +12,7 @@ export const and = (state, value) => {
   state.A = result;
   setZero(state, result);
   setNegative(state, result);
+  return result;
 };
 
 export const registerAND = opcodeHandlers => {

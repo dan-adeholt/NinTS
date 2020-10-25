@@ -60,7 +60,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$0A"
   },
-  null,
+  {
+    "name": "*AAC",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$0B"
+  },
   {
     "name": "*NOP",
     "mode": "Absolute",
@@ -237,7 +242,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$2A"
   },
-  null,
+  {
+    "name": "*AAC",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$2B"
+  },
   {
     "name": "BIT",
     "mode": "Absolute",
@@ -414,7 +424,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$4A"
   },
-  null,
+  {
+    "name": "*ASR",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$4B"
+  },
   {
     "name": "JMP",
     "mode": "Absolute",
@@ -591,7 +606,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$6A"
   },
-  null,
+  {
+    "name": "*ARR",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$6B"
+  },
   {
     "name": "JMP",
     "mode": "Indirect",
@@ -719,7 +739,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$81"
   },
-  null,
+  {
+    "name": "*DOP",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$82"
+  },
   {
     "name": "*SAX",
     "mode": "IndirectX",
@@ -756,14 +781,24 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$88"
   },
-  null,
+  {
+    "name": "*DOP",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$89"
+  },
   {
     "name": "TXA",
     "mode": "Implied",
     "instructionSize": "1",
     "opcode": "$8A"
   },
-  null,
+  {
+    "name": "*XAA",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$8B"
+  },
   {
     "name": "STY",
     "mode": "Absolute",
@@ -801,7 +836,12 @@ const opcodeMetadata = [
     "opcode": "$91"
   },
   null,
-  null,
+  {
+    "name": "*AXA",
+    "mode": "IndirectY",
+    "instructionSize": "2",
+    "opcode": "$93"
+  },
   {
     "name": "STY",
     "mode": "ZeroPageX",
@@ -844,16 +884,36 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$9A"
   },
-  null,
-  null,
+  {
+    "name": "*XAS",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$9B"
+  },
+  {
+    "name": "*SYA",
+    "mode": "AbsoluteX",
+    "instructionSize": "3",
+    "opcode": "$9C"
+  },
   {
     "name": "STA",
     "mode": "AbsoluteX",
     "instructionSize": "3",
     "opcode": "$9D"
   },
-  null,
-  null,
+  {
+    "name": "*SXA",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$9E"
+  },
+  {
+    "name": "*AXA",
+    "mode": "AbsoluteY",
+    "instructionSize": "3",
+    "opcode": "$9F"
+  },
   {
     "name": "LDY",
     "mode": "Immediate",
@@ -920,7 +980,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$AA"
   },
-  null,
+  {
+    "name": "*ATX",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$AB"
+  },
   {
     "name": "LDY",
     "mode": "Absolute",
@@ -1006,7 +1071,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$BA"
   },
-  null,
+  {
+    "name": "*LAR",
+    "mode": "Absolute,Y",
+    "instructionSize": "3",
+    "opcode": "$BB"
+  },
   {
     "name": "LDY",
     "mode": "AbsoluteX",
@@ -1043,7 +1113,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$C1"
   },
-  null,
+  {
+    "name": "*DOP",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$C2"
+  },
   {
     "name": "*DCP",
     "mode": "IndirectX",
@@ -1092,7 +1167,12 @@ const opcodeMetadata = [
     "instructionSize": "1",
     "opcode": "$CA"
   },
-  null,
+  {
+    "name": "*AXS",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$CB"
+  },
   {
     "name": "CPY",
     "mode": "Absolute",
@@ -1220,7 +1300,12 @@ const opcodeMetadata = [
     "instructionSize": "2",
     "opcode": "$E1"
   },
-  null,
+  {
+    "name": "*DOP",
+    "mode": "Immediate",
+    "instructionSize": "2",
+    "opcode": "$E2"
+  },
   {
     "name": "*ISB",
     "mode": "IndirectX",

@@ -18,7 +18,6 @@ const bit = (state, memoryValue) => {
   state.P = upperBits | lowerBits;
 }
 
-
 export const registerBIT = opcodeHandlers => {
   opcodeHandlers[0x24] = state => bit(state, readValueZeroPage(state, 3))
   opcodeHandlers[0x2C] = state => bit(state, readValueAbsolute(state, 4))

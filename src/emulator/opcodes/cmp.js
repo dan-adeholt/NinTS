@@ -9,15 +9,11 @@ import {
 
 export const registerCMP = (opcodeHandlers) => {
   const cmp = (state, value) => {
-    let diff = state.A - value;
-    let diffBytes = diff;
-    if (diff < 0) {
-      diffBytes += 0xFF;
-    }
-
-    setZero(state, diffBytes);
-    setNegative(state, diffBytes);
-    setCarry(state, diff >= 0);
+    let diff = state.A + (value ^ 0xFF) + 1
+    const diffByte = (diff & 0xFF);
+    setCarry(state, diff > 0xFF);
+    setZero(state, diffByte);
+    setNegative(state, diffByte);
   }
 
   opcodeHandlers[0xC9] = state => cmp(state, readValueImmediate(state, 2));

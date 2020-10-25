@@ -20,6 +20,7 @@ export const parseROM = buffer => {
   index++;
 
   const prgRomSize = buffer[index++];
+
   const chrRomSize = buffer[index++];
   const flags = [
     buffer[index++], // Flags 6: Mapper, mirroring, battery, trainer

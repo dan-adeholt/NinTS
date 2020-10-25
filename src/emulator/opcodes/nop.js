@@ -6,12 +6,11 @@ import {
   readValueZeroPageX
 } from './utils';
 
-const nopHelper = (state, length, cycles) => {
-  state.PC += length;
-  state.CYC += cycles;
+const nop = (state, length) => {
+  state.PC += 1;
+  state.CYC += 2;
 }
 
-const nop = state => nopHelper(state, 1, 2)
 const unofficialNopZeroPage = state => readValueZeroPage(state, 3)
 const unofficialNopImmediate = state => readValueImmediate(state, 2)
 const unofficialNopZeroPageX = state => readValueZeroPageX(state, 4)
@@ -31,6 +30,10 @@ export const registerNOP = opcodeHandlers => {
   opcodeHandlers[0xDA] = state => nop(state)
   opcodeHandlers[0xFA] = state => nop(state)
   opcodeHandlers[0x80] = state => unofficialNopImmediate(state)
+  opcodeHandlers[0x82] = state => unofficialNopImmediate(state)
+  opcodeHandlers[0x89] = state => unofficialNopImmediate(state)
+  opcodeHandlers[0xC2] = state => unofficialNopImmediate(state)
+  opcodeHandlers[0xE2] = state => unofficialNopImmediate(state)
   opcodeHandlers[0x04] = state => unofficialNopZeroPage(state)
   opcodeHandlers[0x44] = state => unofficialNopZeroPage(state)
   opcodeHandlers[0x64] = state => unofficialNopZeroPage(state)

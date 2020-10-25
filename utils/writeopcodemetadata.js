@@ -16,6 +16,38 @@ Immediate     SBC #$44      $E9  2   2
 
 Immediate    *SBC #$44      $EB  2   2
 
+Immediate    *AAC #arg      $0B  2   2
+Immediate    *AAC #arg      $2B  2   2
+
+Immediate    *ASR #arg      $4B  2   2
+
+Immediate    *ARR #arg      $6B  2   2
+Immediate    *AXS #arg      $CB  2   2
+Immediate    *ATX #arg      $AB  2   2
+
+
+AbsoluteY    *AXA arg,Y     $9F  3   5
+IndirectY    *AXA arg       $93  2   6
+
+Immediate    *NOP #arg      $80  2   2
+Immediate    *DOP #arg      $82  2   2
+Immediate    *DOP #arg      $89  2   2
+Immediate    *DOP #arg      $C2  2   2
+Immediate    *DOP #arg      $E2  2   2
+
+
+
+Absolute     *NOP arg       $0C  3   4
+AbsoluteX    *NOP arg,X     $1C  3   4*
+AbsoluteX    *NOP arg,X     $3C  3   4*
+AbsoluteX    *NOP arg,X     $5C  3   4*
+AbsoluteX    *NOP arg,X     $7C  3   4*
+AbsoluteX    *NOP arg,X     $DC  3   4*
+AbsoluteX    *NOP arg,X     $FC  3   4*
+
+Immediate    *XAA #arg      $8B  2   2
+
+AbsoluteY    *XAS arg,Y     $9B  3   5
 
 ZeroPage     *SLO arg       $07  2   5
 ZeroPageX    *SLO arg,X     $17  2   6
@@ -41,7 +73,7 @@ AbsoluteY    *RRA arg,Y     $7B  3   7
 IndirectX    *RRA (arg,X)   $63  2   8
 IndirectY    *RRA (arg),Y   $73  2   8
 
-Absolute,Y  |LAR arg,Y  |$BB| 3 | 4 *
+Absolute,Y   *LAR arg,Y     $BB  3   4*
 ZeroPage     *ISB arg       $E7  2   5
 ZeroPageX    *ISB arg,X     $F7  2   6
 Absolute     *ISB arg       $EF  3   6
@@ -49,6 +81,11 @@ AbsoluteX    *ISB arg,X     $FF  3   7
 AbsoluteY    *ISB arg,Y     $FB  3   7
 IndirectX    *ISB (arg,X)   $E3  2   8
 IndirectY    *ISB (arg),Y   $F3  2   8
+
+
+AbsoluteY    *SXA arg,Y     $9E  3   5
+AbsoluteX    *SYA arg,X     $9C  3   5
+
 
 
 ZeroPage     *SRE arg       $47  2   5
@@ -60,7 +97,6 @@ IndirectX    *SRE (arg,X)   $43  2   8
 IndirectY    *SRE (arg),Y   $53  2   8
 
 
-ZeroPageX    *LAX (d,X)     $A3  2   6
 Absolute     *LAX abcd      $AF  3   4
 AbsoluteY    *LAX abcd,Y    $BF  3   4+
 ZeroPage     *LAX ab        $A7  2   3
@@ -86,23 +122,12 @@ ZeroPage     *NOP $A9      $04  2   3
 ZeroPage     *NOP $A9      $44  2   3
 ZeroPage     *NOP $A9      $64  2   3
 
-Absolute     *NOP $A9A9    $0C  3   4
-
 ZeroPageX    *NOP $A9,X    $14  2   4
 ZeroPageX    *NOP $A9,X    $34  2   4
 ZeroPageX    *NOP $A9,X    $54  2   4
 ZeroPageX    *NOP $A9,X    $74  2   4
 ZeroPageX    *NOP $A9,X    $D4  2   4
 ZeroPageX    *NOP $A9,X    $F4  2   4
-
-AbsoluteX    *NOP $A9A9,X  $1C  3   5
-AbsoluteX    *NOP $A9A9,X  $3C  3   5
-AbsoluteX    *NOP $A9A9,X  $5C  3   5
-AbsoluteX    *NOP $A9A9,X  $7C  3   5
-AbsoluteX    *NOP $A9A9,X  $DC  3   5
-AbsoluteX    *NOP $A9A9,X  $FC  3   5
-
-Immediate    *NOP #$89     $80  2   2
 
 Implied      *NOP          $1A  1   2
 Implied      *NOP          $3A  1   2
@@ -274,12 +299,12 @@ const lines = data.split("\n");
 
 let opcodeData = new Array(255);
 
-for (var line of lines) {
-    const elems = line.split(" ").filter(s => s != "");
+for (let line of lines) {
+    const elems = line.split(" ").filter(s => s !== "");
 
-    if (elems.length == 0) {
+    if (elems.length === 0) {
         continue;
-    } else if (elems.length == 5) {
+    } else if (elems.length === 5) {
         elems.splice(2, 0, '');
     }
 
@@ -287,6 +312,12 @@ for (var line of lines) {
     let [mode, name, example, opcode, instructionSize] = elems;
 
     const opcodeNum = parseInt(opcode.replace("$", ""), 16);
+
+    if (opcodeData[opcodeNum] != null) {
+        console.error('Opcode', opcodeNum, 'registered more than once!');
+        console.log(opcodeData[opcodeNum]);
+        process.exit(1);
+    }
 
     opcodeData[opcodeNum] = {
         name, mode, instructionSize, opcode
