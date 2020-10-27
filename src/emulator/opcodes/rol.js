@@ -20,7 +20,7 @@ const rolA = (state) => {
 export const rol = (state, address) => {
   const value = state.readMem(address);
   const oldCarry = state.P & P_REG_CARRY;
-  setCarry(state, (state.A & BIT_7) >> 7);
+  setCarry(state, (value & BIT_7) >> 7);
   const newValue = ((value << 1) & 0xFF) | oldCarry;
   state.setMem(address, newValue);
   setZero(state, newValue);

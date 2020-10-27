@@ -7,14 +7,15 @@ import {
   setZero
 } from './utils';
 
+export const cmp = (state, value) => {
+  let diff = state.A + (value ^ 0xFF) + 1;
+  const diffByte = (diff & 0xFF);
+  setCarry(state, diff > 0xFF);
+  setZero(state, diffByte);
+  setNegative(state, diffByte);
+}
+
 export const registerCMP = (opcodeHandlers) => {
-  const cmp = (state, value) => {
-    let diff = state.A + (value ^ 0xFF) + 1
-    const diffByte = (diff & 0xFF);
-    setCarry(state, diff > 0xFF);
-    setZero(state, diffByte);
-    setNegative(state, diffByte);
-  }
 
   opcodeHandlers[0xC9] = state => cmp(state, readValueImmediate(state, 2));
   opcodeHandlers[0xC5] = state => cmp(state, readValueZeroPage(state, 3));

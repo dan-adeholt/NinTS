@@ -60,7 +60,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
   }
 }
 
-export const testInstructionTestRom = (location, logOutputPath) => {
+export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruction = -1) => {
   const data = fs.readFileSync(location);
   const rom = parseROM(data);
   const state = initMachine(rom);
@@ -73,6 +73,13 @@ export const testInstructionTestRom = (location, logOutputPath) => {
 
     if (logOutputPath != null) {
       logLines.push(stateToString(state, true));
+    }
+
+    if (i === haltAfterInstruction) {
+      if (logOutputPath != null) {
+        fs.writeFileSync(logOutputPath, logLines.join("\n"), "utf-8");
+      }
+      break;
     }
 
     const emulatorStatus = step(state);
@@ -96,7 +103,7 @@ export const testInstructionTestRom = (location, logOutputPath) => {
             testText += String.fromCharCode(state.readMem(i));
           }
 
-          console.error('[' + i + '] Failed with status: ', hex(status) + '.' + testText);
+          console.error('[' + i + '] Failed with status: ', hex(status) + ' - ' + testText);
         }
 
         if (logOutputPath != null) {

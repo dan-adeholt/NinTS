@@ -1,28 +1,17 @@
 import {
-  clampToByte,
   readAddressAbsolute,
   readAddressAbsoluteX, readAddressAbsoluteY,
   readAddressIndirectX,
   readAddressIndirectY,
   readAddressZeroPage,
-  readAddressZeroPageX,
-  setCarry,
-  setNegative,
-  setZero
+  readAddressZeroPageX
 } from './utils';
+import { cmp } from './cmp';
+import { dec } from './dec';
 
 export const registerDCP = (opcodeHandlers) => {
   const dcp = (state, address) => {
-    let value = state.readMem(address) - 1;
-    let valueBytes = clampToByte(value);
-    state.setMem(address, valueBytes);
-
-    let diff = state.A - value;
-    let diffBytes = clampToByte(diff);
-
-    setZero(state, diffBytes);
-    setNegative(state, diffBytes);
-    setCarry(state, diff >= 0);
+    cmp(state, dec(state, address));
   }
 
   opcodeHandlers[0xC7] = state => dcp(state, readAddressZeroPage(state, 5));

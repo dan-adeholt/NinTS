@@ -4,7 +4,7 @@ import {
   setNegative, setZero
 } from './utils';
 
-const dec = (state, address) => {
+export const dec = (state, address) => {
   let value = (state.readMem(address) - 1);
 
   if (value < 0) {
@@ -14,6 +14,7 @@ const dec = (state, address) => {
   state.setMem(address, value);
   setZero(state, value);
   setNegative(state, value);
+  return value;
 }
 
 export const registerDEC = opcodeHandlers => {

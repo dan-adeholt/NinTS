@@ -43,6 +43,8 @@ import { registerASR } from './opcodes/asr';
 import { registerARR } from './opcodes/arr';
 import { registerATX } from './opcodes/atx';
 import { registerAXS } from './opcodes/axs';
+import { registerSXA } from './opcodes/sxa';
+import { registerSYA } from './opcodes/sya';
 
 const opcodeHandlers = new Array(255);
 
@@ -87,6 +89,8 @@ registerASR(opcodeHandlers);
 registerARR(opcodeHandlers);
 registerATX(opcodeHandlers);
 registerAXS(opcodeHandlers);
+registerSXA(opcodeHandlers);
+registerSYA(opcodeHandlers);
 
 console.log(opcodeHandlers.filter(x => x!= null).length, 'opcodes handled');
 
@@ -158,7 +162,7 @@ export const step = (state) => {
     opcodeHandlers[opcode](state);
   } else {
 
-    console.error('No handler found for opcode $' + hex(opcode), opcodeMetadata[opcode]?.name ?? '');
+    console.error('No handler found for opcode $' + hex(opcode === undefined ? -1 : opcode), opcodeMetadata[opcode]?.name ?? '', hex(state.PC));
 
     return false;
   }
