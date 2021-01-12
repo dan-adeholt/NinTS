@@ -310,8 +310,9 @@ for (let line of lines) {
 
 
     let [mode, name, example, opcode, instructionSize] = elems;
-
     const opcodeNum = parseInt(opcode.replace("$", ""), 16);
+    instructionSize = parseInt(instructionSize);
+
 
     if (opcodeData[opcodeNum] != null) {
         console.error('Opcode', opcodeNum, 'registered more than once!');
