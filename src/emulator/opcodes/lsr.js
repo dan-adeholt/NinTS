@@ -5,6 +5,7 @@ import {
   setNegative,
   setZero
 } from './utils';
+import { readMem, setMem } from '../emulator';
 
 export const performLSR = (state, value) => {
   setCarry(state, value & 0x1);
@@ -21,10 +22,10 @@ const lsrA = (state) => {
 }
 
 export const lsr = (state, address) => {
-  const value = state.readMem(address);
+  const value = readMem(state, address);
   setCarry(state, value & 0x1);
   const newValue = performLSR(state, value);
-  state.setMem(address, newValue);
+  setMem(state, address, newValue);
   return newValue;
 }
 

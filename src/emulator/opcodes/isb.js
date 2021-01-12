@@ -8,12 +8,13 @@ import {
   readAddressZeroPageX
 } from './utils';
 import { sbc } from './sbc';
+import { readMem, setMem } from '../emulator';
 
 export const registerISB = (opcodeHandlers) => {
   const isb = (state, address) => {
-    let value = state.readMem(address) + 1;
+    let value = readMem(state, address) + 1;
     let valueBytes = clampToByte(value);
-    state.setMem(address, valueBytes);
+    setMem(state, address, valueBytes);
     sbc(state, valueBytes);
   }
 

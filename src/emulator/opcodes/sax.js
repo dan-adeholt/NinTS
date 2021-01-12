@@ -2,9 +2,10 @@ import {
   readAddressAbsolute, readAddressIndirectX,
   readAddressZeroPage, readAddressZeroPageY
 } from './utils';
+import { setMem } from '../emulator';
 
 const sax = (state, address) => {
-  state.setMem(address, state.X & state.A);
+  setMem(state, address, state.X & state.A);
 }
 
 export const registerSAX = opcodeHandlers => {

@@ -1,7 +1,8 @@
 import { onSamePageBoundary, P_REG_CARRY, P_REG_NEGATIVE, P_REG_OVERFLOW, P_REG_ZERO } from './utils';
+import { readMem } from '../emulator';
 
 const branch = (state, shouldBranch) => {
-  let offset = state.readMem(state.PC + 1);
+  let offset = readMem(state, state.PC + 1);
 
   if (offset > 0x7F) {
     offset -= 256;

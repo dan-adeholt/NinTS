@@ -6,6 +6,7 @@ import {
   setNegative,
   setZero
 } from './utils';
+import { readMem, setMem } from '../emulator';
 
 const aslA = (state) => {
   setCarry(state, state.A & BIT_7);
@@ -17,10 +18,10 @@ const aslA = (state) => {
 }
 
 export const asl = (state, address) => {
-  const value = state.readMem(address);
+  const value = readMem(state, address);
   setCarry(state, value & BIT_7);
   const newValue = (value << 1) & 0xFF;
-  state.setMem(address, newValue);
+  setMem(state, address, newValue);
   setZero(state, newValue);
   setNegative(state, newValue);
   return newValue;

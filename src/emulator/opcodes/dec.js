@@ -3,15 +3,16 @@ import {
   readAddressZeroPage, readAddressZeroPageX,
   setNegative, setZero
 } from './utils';
+import { readMem, setMem } from '../emulator';
 
 export const dec = (state, address) => {
-  let value = (state.readMem(address) - 1);
+  let value = readMem(state, address) - 1;
 
   if (value < 0) {
     value = 0xFF;
   }
 
-  state.setMem(address, value);
+  setMem(state, address, value);
   setZero(state, value);
   setNegative(state, value);
   return value;

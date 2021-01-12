@@ -45,6 +45,7 @@ import { registerATX } from './opcodes/atx';
 import { registerAXS } from './opcodes/axs';
 import { registerSXA } from './opcodes/sxa';
 import { registerSYA } from './opcodes/sya';
+import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
 
 const opcodeHandlers = new Array(255);
 
@@ -92,11 +93,10 @@ registerAXS(opcodeHandlers);
 registerSXA(opcodeHandlers);
 registerSYA(opcodeHandlers);
 
-console.log(opcodeHandlers.filter(x => x!= null).length, 'opcodes handled');
-
 export const initMachine = (rom) => {
   let memory = new Uint8Array(1 << 16);
   memory.set(rom.prgData, 0x8000);
+  console.log(rom.prgData.length, 0x4000);
 
   if (rom.prgData.length <= 0x4000) {
     memory.set(rom.prgData, 0xC000);
@@ -107,7 +107,6 @@ export const initMachine = (rom) => {
   memory[0x4005] = 0xFF;
   memory[0x4006] = 0xFF;
   memory[0x4007] = 0xFF;
-
 
   // PPU Registers
   memory[0x2000] = 0xFF;
@@ -132,30 +131,55 @@ export const initMachine = (rom) => {
     CYC: 0,
     CHR: rom.chrData,
     settings: rom.settings,
-    readStack: sp => memory[0x100 + sp],
-    setStack: (sp, value) => {
-      memory[0x100 + sp] = value;
-    },
-    readMem: addr => memory[addr],
-    setMem: (addr, value) => {
-      memory[addr] = value;
-    },
-    PPU_CYC: 0,
+    breakpoints: {},
+    ppu: initPPU(),
     memory,
   };
 }
 
-export const reset = (state) => {
-  const startingLocation = getResetVectorAddress(state);
-  state.PC = startingLocation;
+export const readStack = (state, sp) => state.memory[0x100 + sp]
+
+export const setStack = (state, sp, value) => {
+  state.memory[0x100 + sp] = value;
+};
+
+export const readMem = (state, addr) => {
+  if (addr >= 0x2000 && addr <= 0x2007) {
+    return readPPUMem(state, addr);
+  } else {
+    return state.memory[addr];
+  }
 }
 
-const updatePPU = (state, cycles) => {
-  state.PPU_CYC += cycles * 3;
+export const setMem = (state, addr, value) => {
+  if (addr >= 0x2000 && addr <= 0x2007) {
+    setPPUMem(state, addr, value);
+  } else {
+    state.memory[addr] = value;
+  }
+};
+
+export const reset = (state) => {
+  state.PC = getResetVectorAddress(state);
+}
+
+export const stepFrame = (state) => {
+  let hitBreakpoint = false;
+  let vblankCount = state.ppu.vblankCount;
+
+  while (!hitBreakpoint && vblankCount === state.ppu.vblankCount) {
+    if (!step(state)) {
+      break;
+    }
+
+    hitBreakpoint = state.PC in state.breakpoints;
+  }
+
+  return hitBreakpoint;
 }
 
 export const step = (state) => {
-  const opcode = state.readMem(state.PC);
+  const opcode = readMem(state, state.PC);
   const oldCycles = state.CYC;
   if (opcode in opcodeHandlers) {
     // console.log('Executing $' + hex(opcode));

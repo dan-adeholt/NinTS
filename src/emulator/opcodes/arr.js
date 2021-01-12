@@ -1,6 +1,4 @@
 import {
-  BIT_5,
-  BIT_6,
   BIT_7_MASK,
   P_REG_CARRY,
   readValueImmediate,
@@ -17,8 +15,8 @@ export const registerARR = opcodeHandlers => {
     state.A = ((result >> 1) & BIT_7_MASK) | (oldCarry << 7);
     setZero(state, state.A);
     setNegative(state, state.A);
-    const bit5 = (state.A & BIT_5) >> 5;
-    const bit6 = (state.A & BIT_6) >> 6;
+    const bit5 = (state.A & 0b00100000) >> 5;
+    const bit6 = (state.A & 0b01000000) >> 6;
     setCarry(state, bit6);
     setOverflowValue(state, bit5 ^ bit6);
   }

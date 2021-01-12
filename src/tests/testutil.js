@@ -1,5 +1,5 @@
 import { parseROM } from '../emulator/parseROM';
-import { initMachine, reset, step } from '../emulator/emulator';
+import { initMachine, readMem, reset, step, stepFrame } from '../emulator/emulator';
 import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging';
 
 const parseLog = (data) => data.toString().split(/[\r\n]+/);
@@ -12,9 +12,11 @@ const prefixLine = (idx, str) => {
 
 const procRegex = / P:([0-9A-F][0-9A-F])/;
 
+const romRootPath = 'src/tests/roms/';
+
 export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
-  const data = fs.readFileSync(path);
-  const log = parseLog(fs.readFileSync(logPath));
+  const data = fs.readFileSync(romRootPath + path);
+  const log = parseLog(fs.readFileSync(romRootPath + logPath));
 
   const rom = parseROM(data);
   const machine = initMachine(rom);
@@ -61,7 +63,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
 }
 
 export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruction = -1) => {
-  const data = fs.readFileSync(location);
+  const data = fs.readFileSync(romRootPath + location);
   const rom = parseROM(data);
   const state = initMachine(rom);
 
@@ -88,7 +90,7 @@ export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruc
       expect(emulatorStatus).toEqual(true);
     }
 
-    const status = state.readMem(0x6000);
+    const status = readMem(state, 0x6000);
 
     if (hasBeenRunning) {
       if (status === 0x80) {
@@ -99,8 +101,8 @@ export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruc
         if (status !== 0x00) {
           let testText = '';
 
-          for (let i = 0x6004; state.readMem(i) !== 0; i++) {
-            testText += String.fromCharCode(state.readMem(i));
+          for (let i = 0x6004; readMem(state, i) !== 0; i++) {
+            testText += String.fromCharCode(readMem(state, i));
           }
 
           console.error('[' + i + '] Failed with status: ', hex(status) + ' - ' + testText);
@@ -117,5 +119,18 @@ export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruc
       hasBeenRunning = status === 0x80;
     }
   }
-
 }
+
+export const testPPURom = (location, testCase) => {
+  const romFile = romRootPath + location + '.nes';
+
+  const data = fs.readFileSync(romFile);
+  const rom = parseROM(data);
+  let state = initMachine(rom);
+
+  for (let i = 0; i < 2; i++) {
+    stepFrame(state);
+  }
+
+  testCase(state);
+};

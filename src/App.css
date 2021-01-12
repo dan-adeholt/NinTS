@@ -1,5 +1,87 @@
+body {
+  background: #1e1e1e;
+  color: white;
+  height: 100vh;
+  box-sizing: border-box;
+
+}
+
+.component {
+  margin-right: 10px;
+}
+
+.instructionBar {
+  width: 460px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace !important;
+}
+
+.breakpoint {
+  width: 35px;
+  height: 35px;
+  margin-left: -8px;
+  margin-top: -8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.breakpoint > div {
+  margin-top: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 7px;
+  flex-grow: 0;
+}
+
+.breakpoint:hover > div {
+  background: #ac0902;
+  opacity: 0.5;
+}
+
+
+.breakpoint.active > div {
+  opacity: 1.0;
+  background: #ac0902;
+}
+
+.row {
+  display: flex;
+  padding: 8px 0 0 8px;
+  height: 35px;
+  border-top: 1px solid black;
+  box-sizing: border-box;
+}
+
+.currentRow + .row {
+  border-top: 1px solid #569BD5;
+}
+
+.currentRow {
+  background: #3e3e3e;
+  border-top: 1px solid #569BD5;
+}
+
+.content {
+  flex-grow: 1;
+}
+
+.addressComponent {
+  color: #569BD5;
+}
+
+.opcodeComponent {
+  color: #CE9178;
+}
+
 .App {
-  text-align: center;
+  display: flex;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .App-logo {
@@ -35,4 +117,85 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+
+#root {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+
+* {
+  scrollbar-color: rgba(0, 0, 0, 0.18) #e5e5e5;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(240, 240, 240, 0.5);
+  border: 1px solid #ababab;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(240, 240, 240, 0.3);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(240, 240, 240, 0.2);
+}
+
+::-webkit-scrollbar-track:active,
+::-webkit-scrollbar-track:hover,
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border: 0;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.debugArea {
+  display: flex;
+}
+
+
+button {
+  flex-grow: 1;
+  height: 35px;
+  border: 0;
+  cursor: pointer;
+}
+
+button:focus {
+  outline: none;
+}
+
+button:hover {
+  background: #cacaca;
+}
+td {
+  padding: 7px;
+  min-width: 50px;
+}
+
+td label {
+  color: #569BD5;
+  clear:both;
+  display:block;
+  font-size: 0.8em;
+}
+
+.listContainer {
+  flex-grow: 1;
 }

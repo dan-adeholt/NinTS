@@ -6,6 +6,7 @@ import {
   setNegative,
   setZero, readAddressAbsoluteX
 } from './utils';
+import { readMem, setMem } from '../emulator';
 
 const rorA = (state) => {
   const oldCarry = state.P & P_REG_CARRY;
@@ -18,11 +19,11 @@ const rorA = (state) => {
 }
 
 export const ror = (state, address) => {
-  const value = state.readMem(address);
+  const value = readMem(state, address);
   const oldCarry = state.P & P_REG_CARRY;
   setCarry(state, value & 0x1);
   const newValue = ((value >> 1) & BIT_7_MASK) | (oldCarry << 7);
-  state.setMem(address, newValue);
+  setMem(state, address, newValue);
   setZero(state, newValue);
   setNegative(state, newValue);
   return newValue;

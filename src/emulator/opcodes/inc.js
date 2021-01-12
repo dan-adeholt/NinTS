@@ -3,10 +3,11 @@
   readAddressZeroPage, readAddressZeroPageX,
   setNegative, setZero
 } from './utils';
+ import { readMem, setMem } from '../emulator';
 
 const inc = (state, address) => {
-  const value = (state.readMem(address) + 1) & 0xFF;
-  state.setMem(address, value);
+  const value = (readMem(state, address) + 1) & 0xFF;
+  setMem(state, address, value);
   setZero(state, value);
   setNegative(state, value);
 }

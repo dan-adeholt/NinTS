@@ -1,7 +1,6 @@
 import {
-  P_REG_CARRY,
   readValueImmediate, setCarry,
-  setNegative, setOverflow,
+  setNegative,
   setZero
 } from './utils';
 

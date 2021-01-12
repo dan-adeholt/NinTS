@@ -1,14 +1,15 @@
-import { getAddressAbsolute, onSamePageBoundary, readAddressAbsoluteX } from './utils';
+import { getAddressAbsolute, onSamePageBoundary } from './utils';
+import { setMem } from '../emulator';
 
 export const s_a = (state, offset, register) => {
-  const base = getAddressAbsolute(state);
+  const base = getAddressAbsolute(state, state.PC);
   const address = (base + offset) & 0xFFFF;
 
   if (onSamePageBoundary(base, address)) {
     let hi = (address & 0xFF00) >> 8;
     hi = (hi + 1) & 0xFF;
     const result = register & hi;
-    state.setMem(address, result);
+    setMem(state, address, result);
   }
 
   state.CYC += 5;
