@@ -185,11 +185,3 @@ export const readValueIndirectX = (state, cycles) => readMem(state, readAddressI
 export const readValueIndirectYWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressIndirectYWithPageBoundaryCycle(state, cycles))
 
 // Write functions
-export const writeValueAbsolute = (state, value, cycles) => setMem(state, readAddressAbsolute(state, cycles), value)
-export const writeValueZeroPage = (state, value, cycles) => setMem(state, readAddressZeroPage(state, cycles), value)
-export const writeValueZeroPageX = (state, value, cycles) => setMem(state, readAddressZeroPageX(state, cycles), value)
-export const writeValueZeroPageY = (state, value, cycles) => setMem(state, readAddressZeroPageY(state, cycles), value)
-export const writeValueAbsoluteX = (state, value, cycles) => setMem(state, readAddressAbsoluteX(state, cycles), value)
-export const writeValueAbsoluteY = (state, value, cycles) => setMem(state, readAddressAbsoluteY(state, cycles), value)
-export const writeValueIndirectX = (state, value, cycles) => setMem(state, readAddressIndirectX(state, cycles), value)
-export const writeValueIndirectY = (state, value, cycles) => setMem(state, readAddressIndirectY(state, cycles), value)

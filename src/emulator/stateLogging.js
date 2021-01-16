@@ -8,7 +8,7 @@ import {
   P_REG_INTERRUPT,
   P_REG_NEGATIVE, P_REG_OVERFLOW,
   P_REG_ZERO, PAGE_MASK
-} from './opcodes/utils';
+} from './instructions/utils';
 import { readMem } from './emulator';
 import _ from 'lodash';
 
