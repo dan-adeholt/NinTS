@@ -1,4 +1,5 @@
-import opcodeMetadata from './opcodeMetadata';
+import { opcodeMetadata } from './cpu';
+
 import {
   getAddressAbsolute,
   onSamePageBoundary,

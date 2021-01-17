@@ -6,7 +6,7 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 import { disassemble, disassembleLine } from '../emulator/stateLogging';
 import classNames from 'classnames';
 import _ from 'lodash';
-import opcodeMetadata from '../emulator/opcodeMetadata';
+import { opcodeMetadata } from '../emulator/cpu';
 import { step } from '../emulator/emulator';
 import { RunModeType } from '../App';
 

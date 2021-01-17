@@ -1,7 +1,5 @@
 import { hex } from './stateLogging';
-import opcodeMetadata from './opcodeMetadata';
-
-import { opcodeTable } from './cpu';
+import { opcodeTable, opcodeMetadata } from './cpu';
 
 import { getResetVectorAddress } from './instructions/utils';
 import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
