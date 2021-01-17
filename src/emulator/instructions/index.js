@@ -30,7 +30,8 @@ import { readMem, readStack, setMem, setStack } from '../emulator';
  * AAC
  * Illegal opcode. AND:s byte with accumulator. If the result is negative then carry is set.
  */
-export const aac = (state, value) => {
+export const aac = (state, address) => {
+  const value = readMem(state, address);
   const result = state.A & value;
   state.A = result;
   setZero(state, result);
@@ -46,7 +47,8 @@ export const aac = (state, value) => {
  * This opcode adds the value of a memory address to the accumulator along with the carry bit.
  * If overflow occurs then the carry bit is set which enables multiple byte addition.
  */
-export const adc = (state, value) => {
+
+const performADC = (state, value) => {
   const result = state.A + value + (state.P & P_REG_CARRY);
   const resultByte = (result & 0xFF);
 
@@ -55,6 +57,11 @@ export const adc = (state, value) => {
   setCarry(state, result > 0xFF);
   setZero(state, resultByte);
   setNegative(state, resultByte);
+}
+
+export const adc = (state, address) => {
+  const value = readMem(state, address);
+  return performADC(state, value);
 };
 
 /**
@@ -63,12 +70,17 @@ export const adc = (state, value) => {
  *
  * A logical AND bit operation is executed bit by bit on the accumulator with the contents of a byte of memory.
  */
-export const and = (state, value) => {
+export const performAND = (state, value) => {
   const result = state.A & value;
   state.A = result;
   setZero(state, result);
   setNegative(state, result);
   return result;
+};
+
+export const and = (state, address) => {
+  const value = readMem(state, address);
+  return performAND(state, value);
 };
 
 /**
@@ -81,7 +93,8 @@ export const and = (state, value) => {
  * Bit 5 == 0 && Bit 6 === 1: set C and V.
  */
 
-export const arr = (state, value) => {
+export const arr = (state, address) => {
+  const value = readMem(state, address);
   const oldCarry = state.P & P_REG_CARRY;
   const result = state.A & value;
   state.A = ((result >> 1) & BIT_7_MASK) | (oldCarry << 7);
@@ -127,8 +140,9 @@ export const asl = (state, address) => {
  *
  * AND byte with accumulator then shift bits right one bit in accumulator.
  */
-export const asr = (state, value) => {
-  state.A = performLSR(state, and(state, value));
+export const asr = (state, address) => {
+  const value = readMem(state, address);
+  state.A = performLSR(state, performAND(state, value));
 }
 
 
@@ -138,7 +152,8 @@ export const asr = (state, value) => {
  * Some sites claims this opcode AND:s the value in A before transferring it to A and X.
  * However, blarggs instruction tests simply set the values. We match that behavior.
  */
-export const atx = (state, value) => {
+export const atx = (state, address) => {
+  const value = readMem(state, address);
   state.A = value;
   state.X = value;
   setZero(state, value);
@@ -151,7 +166,8 @@ export const atx = (state, value) => {
  * AND:s X register with the accumulator and stores result in X register, then
  * subtracts byte from the X register - without borrow.
  */
-export const axs = (state, value) => {
+export const axs = (state, address) => {
+  const value = readMem(state, address);
   let andResult = state.A & state.X;
   const result = andResult + (value ^ 0xFF) + 1;
   const resultByte = (result & 0xFF);
@@ -169,14 +185,15 @@ export const axs = (state, value) => {
  * or clear the zero flag. The result is not kept. Bits 7 and 6 of the memory value are copied into the N and V flags.
  */
 
-export const bit = (state, memoryValue) => {
-  if (memoryValue & state.A) {
+export const bit = (state, address) => {
+  const value = readMem(state, address);
+  if (value & state.A) {
     setZero(state, 1);
   } else {
     setZero(state, 0);
   }
 
-  const upperBits = memoryValue & P_REGS_OVERFLOW_AND_NEGATIVE;
+  const upperBits = value & P_REGS_OVERFLOW_AND_NEGATIVE;
   const lowerBits = state.P & P_MASK_OVERFLOW_AND_NEGATIVE;
   state.P = upperBits | lowerBits;
 }
@@ -259,7 +276,8 @@ export const clv = state => clear(state, P_MASK_OVERFLOW)
 /**
  * Helper function for various compare related options.
  */
-const compare = (state, value, register) => {
+
+const performCompare = (state, value, register) => {
   let diff = register + (value ^ 0xFF) + 1;
   const diffByte = (diff & 0xFF);
   setCarry(state, diff > 0xFF);
@@ -267,26 +285,31 @@ const compare = (state, value, register) => {
   setNegative(state, diffByte);
 }
 
+const compare = (state, address, register) => {
+  const value = readMem(state, address);
+  performCompare(state, value, register);
+}
+
 /**
  * CMP - Compare
  *
  * This instruction compares the accumulator value with another value in memory and then sets the zero and carry flags based on the result.
  */
-export const cmp = (state, value) => compare(state, value, state.A)
+export const cmp = (state, address) => compare(state, address, state.A)
 
 /**
  * CPX - Compare X Register
  *
  * This instruction compares the X register value with another value in memory and then sets the zero and carry flags based on the result.
  */
-export const cpx = (state, value) => compare(state, value, state.X)
+export const cpx = (state, address) => compare(state, address, state.X)
 
 /**
  * CPY - Compare Y Register
  *
  * This instruction compares the Y register value with another value in memory and then sets the zero and carry flags based on the result.
  */
-export const cpy = (state, value) => compare(state, value, state.Y)
+export const cpy = (state, address) => compare(state, address, state.Y)
 
 
 /**
@@ -313,7 +336,7 @@ export const dec = (state, address) => {
  * This opcode DEC:s the value at a memory location and then CMP:s the result.
  */
 export const dcp = (state, address) => {
-  compare(state, dec(state, address), state.A);
+  performCompare(state, dec(state, address), state.A);
 }
 
 
@@ -323,11 +346,16 @@ export const dcp = (state, address) => {
  An exclusive OR is performed, bit by bit, on the accumulator contents using the contents of a byte of memory.
  */
 
-export const eor = (state, value) => {
+const performEOR = (state, value) => {
   const result = state.A ^ value;
   state.A = result;
   setZero(state, result);
   setNegative(state, result);
+};
+
+export const eor = (state, address) => {
+  const value = readMem(state, address);
+  performEOR(state, value);
 };
 
 
@@ -354,7 +382,7 @@ export const isb = (state, address) => {
   let value = readMem(state, address) + 1;
   let valueBytes = clampToByte(value);
   setMem(state, address, valueBytes);
-  sbc(state, valueBytes);
+  performSBC(state, valueBytes);
 }
 
 
@@ -364,7 +392,8 @@ export const isb = (state, address) => {
  * Store value into A and X registers.
  */
 
-export const lax = (state, value) => {
+export const lax = (state, address) => {
+  const value = readMem(state, address);
   state.X = value;
   state.A = value;
   setNegative(state, value);
@@ -377,7 +406,8 @@ export const lax = (state, value) => {
  *
  * Loads a byte of memory into the accumulator register setting the zero and negative flags based on the value.
  */
-export const lda = (state, value) => {
+export const lda = (state, address) => {
+  const value = readMem(state, address);
   state.A = value;
   setZero(state, value);
   setNegative(state, value);
@@ -390,7 +420,8 @@ export const lda = (state, value) => {
  *
  * Loads a byte of memory into the X register setting the zero and negative flags based on the value.
  */
-export const ldx = (state, value) => {
+export const ldx = (state, address) => {
+  const value = readMem(state, address);
   state.X = value;
   setZero(state, value);
   setNegative(state, value);
@@ -402,7 +433,8 @@ export const ldx = (state, value) => {
  *
  * Loads a byte of memory into the Y register setting the zero and negative flags based on the value.
  */
-export const ldy = (state, value) => {
+export const ldy = (state, address) => {
+  const value = readMem(state, address);
   state.Y = value;
   setZero(state, value);
   setNegative(state, value);
@@ -457,11 +489,16 @@ export const nop = (state) => {
  * [A,Z,N] = A|M
  * Performs an inclusive OR on the accumulator value using the value of a byte of memory.
  */
-export const ora = (state, value) => {
+const performORA = (state, value) => {
   const result = state.A | value;
   state.A = result;
   setZero(state, result);
   setNegative(state, result);
+};
+
+export const ora = (state, address) => {
+  const value = readMem(state, address);
+  performORA(state, value);
 };
 
 // Helper method for various register transfer/increment instructions
@@ -549,7 +586,7 @@ const setA = (state, value) => state.A = value
 
 export const rla = (state, address) => {
   const val = rol(state, address);
-  and(state, val);
+  performAND(state, val);
 }
 
 
@@ -598,24 +635,25 @@ export const ror = (state, address) => {
 
 export const rra = (state, address) => {
   const value = ror(state, address);
-  adc(state, value);
+  performADC(state, value);
 }
 
 export const sax = (state, address) => {
   setMem(state, address, state.X & state.A);
 }
 
-export const sbc = (state, value) => adc(state, value ^ 0xFF)
+const performSBC = (state, value) => performADC(state, value ^ 0xFF)
+export const sbc = (state, address) => performSBC(state, readMem(state, address))
 
 
 export const slo = (state, address) => {
   const value = asl(state, address);
-  ora(state, value);
+  performORA(state, value);
 };
 
 export const sre = (state, address) => {
   const value = lsr(state, address);
-  eor(state, value);
+  performEOR(state, value);
 }
 
 export const sta = (state, address) => {

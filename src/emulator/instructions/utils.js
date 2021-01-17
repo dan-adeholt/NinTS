@@ -83,7 +83,7 @@ export const getAddressZeroPage = (state) => {
 }
 
 // Read address functions - these read an address and updates the PC and CYC values accordingly
-const readAddressImmediate = (state, cycles) => {
+export const readAddressImmediate = (state, cycles) => {
   const address = state.PC + 1;
   state.PC += 2;
   state.CYC += cycles;
@@ -142,8 +142,8 @@ const _readAddressAbsoluteWithOffsetAndPageBoundaryCycles = (state, offset, cycl
   return address;
 }
 
-const readAddressAbsoluteXWithBoundaryCycles = (state, cycles) => _readAddressAbsoluteWithOffsetAndPageBoundaryCycles(state, state.X, cycles)
-const readAddressAbsoluteYWithBoundaryCycles = (state, cycles) => _readAddressAbsoluteWithOffsetAndPageBoundaryCycles(state, state.Y, cycles)
+export const readAddressAbsoluteXWithPageBoundaryCycle = (state, cycles) => _readAddressAbsoluteWithOffsetAndPageBoundaryCycles(state, state.X, cycles)
+export const readAddressAbsoluteYWithPageBoundaryCycle = (state, cycles) => _readAddressAbsoluteWithOffsetAndPageBoundaryCycles(state, state.Y, cycles)
 
 export const readAddressIndirectX = (state, cycles) => {
   const offset = getAddressZeroPage(state);
@@ -179,8 +179,8 @@ export const readValueAbsolute = (state, cycles) => readMem(state, readAddressAb
 export const readValueZeroPage = (state, cycles) => readMem(state, readAddressZeroPage(state, cycles))
 export const readValueZeroPageX = (state, cycles) => readMem(state, readAddressZeroPageX(state, cycles))
 export const readValueZeroPageY = (state, cycles) => readMem(state, readAddressZeroPageY(state, cycles))
-export const readValueAbsoluteXWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressAbsoluteXWithBoundaryCycles(state, cycles))
-export const readValueAbsoluteYWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressAbsoluteYWithBoundaryCycles(state, cycles))
+export const readValueAbsoluteXWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressAbsoluteXWithPageBoundaryCycle(state, cycles))
+export const readValueAbsoluteYWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressAbsoluteYWithPageBoundaryCycle(state, cycles))
 export const readValueIndirectX = (state, cycles) => readMem(state, readAddressIndirectX(state, cycles))
 export const readValueIndirectYWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressIndirectYWithPageBoundaryCycle(state, cycles))
 

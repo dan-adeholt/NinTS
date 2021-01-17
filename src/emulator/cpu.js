@@ -1,348 +1,305 @@
 import {
-  readAddressAbsolute,
-  readAddressAbsoluteX,
-  readAddressAbsoluteY,
-  readAddressIndirectX,
-  readAddressIndirectY,
-  readAddressZeroPage,
-  readAddressZeroPageX,
-  readAddressZeroPageY,
-  readValueAbsolute,
-  readValueAbsoluteXWithPageBoundaryCycle,
-  readValueAbsoluteYWithPageBoundaryCycle,
-  readValueImmediate,
-  readValueIndirectX,
-  readValueIndirectYWithPageBoundaryCycle,
-  readValueZeroPage,
-  readValueZeroPageX,
-  readValueZeroPageY
+    readAddressAbsolute,
+    readAddressAbsoluteX, readAddressAbsoluteXWithPageBoundaryCycle,
+    readAddressAbsoluteY, readAddressAbsoluteYWithPageBoundaryCycle, readAddressImmediate,
+    readAddressIndirectX,
+    readAddressIndirectY, readAddressIndirectYWithPageBoundaryCycle,
+    readAddressZeroPage,
+    readAddressZeroPageX,
+    readAddressZeroPageY
 } from './instructions/utils';
 
-import * as instructions from './instructions'
-
-const opcodeHandlers = [];
-
-opcodeHandlers[0x0B] = state => instructions.aac(state, readValueImmediate(state, 2));
-opcodeHandlers[0x2B] = state => instructions.aac(state, readValueImmediate(state, 2));
-
-opcodeHandlers[0x69] = state => instructions.adc(state, readValueImmediate(state, 2));
-opcodeHandlers[0x65] = state => instructions.adc(state, readValueZeroPage(state, 3)) ;
-opcodeHandlers[0x75] = state => instructions.adc(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0x6D] = state => instructions.adc(state, readValueAbsolute(state, 4));
-opcodeHandlers[0x7D] = state => instructions.adc(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x79] = state => instructions.adc(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x61] = state => instructions.adc(state, readValueIndirectX(state, 6));
-opcodeHandlers[0x71] = state => instructions.adc(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
-
-
-opcodeHandlers[0x29] = state => instructions.and(state, readValueImmediate(state, 2));
-opcodeHandlers[0x25] = state => instructions.and(state, readValueZeroPage(state, 3)) ;
-opcodeHandlers[0x35] = state => instructions.and(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0x2D] = state => instructions.and(state, readValueAbsolute(state, 4));
-opcodeHandlers[0x3D] = state => instructions.and(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x39] = state => instructions.and(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x21] = state => instructions.and(state, readValueIndirectX(state, 6));
-opcodeHandlers[0x31] = state => instructions.and(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
-
-
-opcodeHandlers[0x6B] = state => instructions.arr(state, readValueImmediate(state, 2));
-
-
-
-opcodeHandlers[0x0A] = instructions.aslA;
-opcodeHandlers[0x06] = state => instructions.asl(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x16] = state => instructions.asl(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x0E] = state => instructions.asl(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x1E] = state => instructions.asl(state, readAddressAbsoluteX(state, 7));
-
-
-opcodeHandlers[0x4B] = state => instructions.asr(state, readValueImmediate(state, 2));
-
-
-opcodeHandlers[0xAB] = state => instructions.atx(state, readValueImmediate(state, 2));
-
-
-opcodeHandlers[0xCB] = state => instructions.axs(state, readValueImmediate(state, 2));
-
-
-opcodeHandlers[0x24] = state => instructions.bit(state, readValueZeroPage(state, 3))
-opcodeHandlers[0x2C] = state => instructions.bit(state, readValueAbsolute(state, 4))
-
-opcodeHandlers[0x90] = instructions.bcc;
-opcodeHandlers[0xF0] = instructions.beq;
-opcodeHandlers[0xD0] = instructions.bne;
-opcodeHandlers[0xB0] = instructions.bcs;
-opcodeHandlers[0x50] = instructions.bvc;
-opcodeHandlers[0x70] = instructions.bvs;
-opcodeHandlers[0x10] = instructions.bpl;
-opcodeHandlers[0x30] = instructions.bmi;
-
-
-opcodeHandlers[0x18] = instructions.clc;
-opcodeHandlers[0xD8] = instructions.cld;
-opcodeHandlers[0x58] = instructions.cli;
-opcodeHandlers[0xB8] = instructions.clv;
-
-
-
-opcodeHandlers[0xC9] = state => instructions.cmp(state, readValueImmediate(state, 2));
-opcodeHandlers[0xC5] = state => instructions.cmp(state, readValueZeroPage(state, 3));
-opcodeHandlers[0xD5] = state => instructions.cmp(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0xCD] = state => instructions.cmp(state, readValueAbsolute(state, 4));
-opcodeHandlers[0xDD] = state => instructions.cmp(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0xD9] = state => instructions.cmp(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0xC1] = state => instructions.cmp(state, readValueIndirectX(state, 6));
-opcodeHandlers[0xD1] = state => instructions.cmp(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
-
-
-opcodeHandlers[0xE0] = state => instructions.cpx(state, readValueImmediate(state, 2));
-opcodeHandlers[0xE4] = state => instructions.cpx(state, readValueZeroPage(state, 3));
-opcodeHandlers[0xEC] = state => instructions.cpx(state, readValueAbsolute(state, 4));
-
-opcodeHandlers[0xC0] = state => instructions.cpy(state, readValueImmediate(state, 2));
-opcodeHandlers[0xC4] = state => instructions.cpy(state, readValueZeroPage(state, 3));
-opcodeHandlers[0xCC] = state => instructions.cpy(state, readValueAbsolute(state, 4));
-
-
-opcodeHandlers[0xC7] = state => instructions.dcp(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0xD7] = state => instructions.dcp(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0xCF] = state => instructions.dcp(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0xDF] = state => instructions.dcp(state, readAddressAbsoluteX(state, 7));
-opcodeHandlers[0xDB] = state => instructions.dcp(state, readAddressAbsoluteY(state, 7));
-opcodeHandlers[0xC3] = state => instructions.dcp(state, readAddressIndirectX(state, 8));
-opcodeHandlers[0xD3] = state => instructions.dcp(state, readAddressIndirectY(state, 8));
-
-
-opcodeHandlers[0xC6] = state => instructions.dec(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0xD6] = state => instructions.dec(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0xCE] = state => instructions.dec(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0xDE] = state => instructions.dec(state, readAddressAbsoluteX(state, 7));
-
-opcodeHandlers[0x49] = state => instructions.eor(state, readValueImmediate(state, 2));
-opcodeHandlers[0x45] = state => instructions.eor(state, readValueZeroPage(state, 3)) ;
-opcodeHandlers[0x55] = state => instructions.eor(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0x4D] = state => instructions.eor(state, readValueAbsolute(state, 4));
-opcodeHandlers[0x5D] = state => instructions.eor(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x59] = state => instructions.eor(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x41] = state => instructions.eor(state, readValueIndirectX(state, 6));
-opcodeHandlers[0x51] = state => instructions.eor(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
-
-opcodeHandlers[0xE6] = state => instructions.inc(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0xF6] = state => instructions.inc(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0xEE] = state => instructions.inc(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0xFE] = state => instructions.inc(state, readAddressAbsoluteX(state, 7));
-
-
-
-
-opcodeHandlers[0xE7] = state => instructions.isb(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0xF7] = state => instructions.isb(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0xEF] = state => instructions.isb(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0xFF] = state => instructions.isb(state, readAddressAbsoluteX(state, 7));
-opcodeHandlers[0xFB] = state => instructions.isb(state, readAddressAbsoluteY(state, 7));
-opcodeHandlers[0xE3] = state => instructions.isb(state, readAddressIndirectX(state, 8));
-opcodeHandlers[0xF3] = state => instructions.isb(state, readAddressIndirectY(state, 8));
-
-
-opcodeHandlers[0x4C] = instructions.jmpAbsolute;
-opcodeHandlers[0x6C] = instructions.jmpIndirect;
-
-
-opcodeHandlers[0xA7] = state => instructions.lax(state, readValueZeroPage(state, 3));
-opcodeHandlers[0xB7] = state => instructions.lax(state, readValueZeroPageY(state, 4));
-opcodeHandlers[0xAF] = state => instructions.lax(state, readValueAbsolute(state, 4))
-opcodeHandlers[0xBF] = state => instructions.lax(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4))
-opcodeHandlers[0xA3] = state => instructions.lax(state, readValueIndirectX(state, 6))
-opcodeHandlers[0xB3] = state => instructions.lax(state, readValueIndirectYWithPageBoundaryCycle(state, 5))
-
-
-opcodeHandlers[0xA9] = state => instructions.lda(state, readValueImmediate(state, 2));
-opcodeHandlers[0xA5] = state => instructions.lda(state, readValueZeroPage(state, 3));
-opcodeHandlers[0xB5] = state => instructions.lda(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0xAD] = state => instructions.lda(state, readValueAbsolute(state, 4));
-opcodeHandlers[0xBD] = state => instructions.lda(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0xB9] = state => instructions.lda(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0xA1] = state => instructions.lda(state, readValueIndirectX(state, 6));
-opcodeHandlers[0xB1] = state => instructions.lda(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
-
-
-
-opcodeHandlers[0xA2] = state => instructions.ldx(state, readValueImmediate(state, 2));
-opcodeHandlers[0xA6] = state => instructions.ldx(state, readValueZeroPage(state, 3)) ;
-opcodeHandlers[0xB6] = state => instructions.ldx(state, readValueZeroPageY(state, 4));
-opcodeHandlers[0xAE] = state => instructions.ldx(state, readValueAbsolute(state, 4));
-opcodeHandlers[0xBE] = state => instructions.ldx(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-
-opcodeHandlers[0xA0] = state => instructions.ldy(state, readValueImmediate(state, 2));
-opcodeHandlers[0xA4] = state => instructions.ldy(state, readValueZeroPage(state, 3)) ;
-opcodeHandlers[0xB4] = state => instructions.ldy(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0xAC] = state => instructions.ldy(state, readValueAbsolute(state, 4));
-opcodeHandlers[0xBC] = state => instructions.ldy(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-
-
-opcodeHandlers[0x4A] = instructions.lsrA;
-opcodeHandlers[0x46] = state => instructions.lsr(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x56] = state => instructions.lsr(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x4E] = state => instructions.lsr(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x5E] = state => instructions.lsr(state, readAddressAbsoluteX(state, 7));
-
-opcodeHandlers[0xEA] = instructions.nop;
-opcodeHandlers[0x1A] = instructions.nop;
-opcodeHandlers[0x3A] = instructions.nop;
-opcodeHandlers[0x5A] = instructions.nop;
-opcodeHandlers[0x7A] = instructions.nop;
-opcodeHandlers[0xDA] = instructions.nop;
-opcodeHandlers[0xFA] = instructions.nop;
-opcodeHandlers[0x80] = instructions.unofficialNopImmediate;
-opcodeHandlers[0x82] = instructions.unofficialNopImmediate;
-opcodeHandlers[0x89] = instructions.unofficialNopImmediate;
-opcodeHandlers[0xC2] = instructions.unofficialNopImmediate;
-opcodeHandlers[0xE2] = instructions.unofficialNopImmediate;
-opcodeHandlers[0x04] = instructions.unofficialNopZeroPage;
-opcodeHandlers[0x44] = instructions.unofficialNopZeroPage;
-opcodeHandlers[0x64] = instructions.unofficialNopZeroPage;
-opcodeHandlers[0x0C] = instructions.unofficialNopAbsolute;
-opcodeHandlers[0x14] = instructions.unofficialNopZeroPageX;
-opcodeHandlers[0x34] = instructions.unofficialNopZeroPageX;
-opcodeHandlers[0x54] = instructions.unofficialNopZeroPageX;
-opcodeHandlers[0x74] = instructions.unofficialNopZeroPageX;
-opcodeHandlers[0xD4] = instructions.unofficialNopZeroPageX;
-opcodeHandlers[0xF4] = instructions.unofficialNopZeroPageX;
-
-opcodeHandlers[0x1C] = instructions.unofficialNopAbsoluteX;
-opcodeHandlers[0x3C] = instructions.unofficialNopAbsoluteX;
-opcodeHandlers[0x5C] = instructions.unofficialNopAbsoluteX;
-opcodeHandlers[0x7C] = instructions.unofficialNopAbsoluteX;
-opcodeHandlers[0xDC] = instructions.unofficialNopAbsoluteX;
-opcodeHandlers[0xFC] = instructions.unofficialNopAbsoluteX;
-
-opcodeHandlers[0x09] = state => instructions.ora(state, readValueImmediate(state, 2));
-opcodeHandlers[0x05] = state => instructions.ora(state, readValueZeroPage(state, 3)) ;
-opcodeHandlers[0x15] = state => instructions.ora(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0x0D] = state => instructions.ora(state, readValueAbsolute(state, 4));
-opcodeHandlers[0x1D] = state => instructions.ora(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x19] = state => instructions.ora(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0x01] = state => instructions.ora(state, readValueIndirectX(state, 6));
-opcodeHandlers[0x11] = state => instructions.ora(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
-
-opcodeHandlers[0xC8] = instructions.iny;
-opcodeHandlers[0x88] = instructions.dey;
-opcodeHandlers[0xA8] = instructions.tay;
-
-opcodeHandlers[0xE8] = instructions.inx;
-opcodeHandlers[0xCA] = instructions.dex;
-
-opcodeHandlers[0xAA] = instructions.tax;
-opcodeHandlers[0xBA] = instructions.tsx;
-opcodeHandlers[0x8A] = instructions.txa;
-opcodeHandlers[0x98] = instructions.tya;
-opcodeHandlers[0x9A] = instructions.txs;
-
-opcodeHandlers[0x27] = state => instructions.rla(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x37] = state => instructions.rla(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x2F] = state => instructions.rla(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x3F] = state => instructions.rla(state, readAddressAbsoluteX(state, 7));
-opcodeHandlers[0x3B] = state => instructions.rla(state, readAddressAbsoluteY(state, 7));
-opcodeHandlers[0x23] = state => instructions.rla(state, readAddressIndirectX(state, 8));
-opcodeHandlers[0x33] = state => instructions.rla(state, readAddressIndirectY(state, 8));
-
-
-opcodeHandlers[0x2A] = state => instructions.rolA(state);
-opcodeHandlers[0x26] = state => instructions.rol(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x36] = state => instructions.rol(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x2E] = state => instructions.rol(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x3E] = state => instructions.rol(state, readAddressAbsoluteX(state, 7));
-
-
-
-opcodeHandlers[0x6A] = instructions.rorA;
-opcodeHandlers[0x66] = state => instructions.ror(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x76] = state => instructions.ror(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x6E] = state => instructions.ror(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x7E] = state => instructions.ror(state, readAddressAbsoluteX(state, 7));
-
-
-opcodeHandlers[0x67] = state => instructions.rra(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x77] = state => instructions.rra(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x6F] = state => instructions.rra(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x7F] = state => instructions.rra(state, readAddressAbsoluteX(state, 7));
-opcodeHandlers[0x7B] = state => instructions.rra(state, readAddressAbsoluteY(state, 7));
-opcodeHandlers[0x63] = state => instructions.rra(state, readAddressIndirectX(state, 8));
-opcodeHandlers[0x73] = state => instructions.rra(state, readAddressIndirectY(state, 8));
-
-
-opcodeHandlers[0x87] = state => instructions.sax(state, readAddressZeroPage(state, 3));
-opcodeHandlers[0x97] = state => instructions.sax(state, readAddressZeroPageY(state, 4));
-opcodeHandlers[0x83] = state => instructions.sax(state, readAddressIndirectX(state, 6))
-opcodeHandlers[0x8F] = state => instructions.sax(state, readAddressAbsolute(state, 4))
-
-
-opcodeHandlers[0xE9] = state => instructions.sbc(state, readValueImmediate(state, 2));
-opcodeHandlers[0xEB] = state => instructions.sbc(state, readValueImmediate(state, 2)); // *SBC
-
-opcodeHandlers[0xE5] = state => instructions.sbc(state, readValueZeroPage(state, 3)) ;
-opcodeHandlers[0xF5] = state => instructions.sbc(state, readValueZeroPageX(state, 4));
-opcodeHandlers[0xED] = state => instructions.sbc(state, readValueAbsolute(state, 4));
-opcodeHandlers[0xFD] = state => instructions.sbc(state, readValueAbsoluteXWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0xF9] = state => instructions.sbc(state, readValueAbsoluteYWithPageBoundaryCycle(state, 4));
-opcodeHandlers[0xE1] = state => instructions.sbc(state, readValueIndirectX(state, 6));
-opcodeHandlers[0xF1] = state => instructions.sbc(state, readValueIndirectYWithPageBoundaryCycle(state, 5));
-
-opcodeHandlers[0x38] = instructions.sec;
-opcodeHandlers[0x78] = instructions.sei;
-opcodeHandlers[0xF8] = instructions.sed;
-
-
-opcodeHandlers[0x07] = state => instructions.slo(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x17] = state => instructions.slo(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x0F] = state => instructions.slo(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x1F] = state => instructions.slo(state, readAddressAbsoluteX(state, 7));
-opcodeHandlers[0x1B] = state => instructions.slo(state, readAddressAbsoluteY(state, 7));
-opcodeHandlers[0x03] = state => instructions.slo(state, readAddressIndirectX(state, 8));
-opcodeHandlers[0x13] = state => instructions.slo(state, readAddressIndirectY(state, 8));
-
-
-opcodeHandlers[0x47] = state => instructions.sre(state, readAddressZeroPage(state, 5));
-opcodeHandlers[0x57] = state => instructions.sre(state, readAddressZeroPageX(state, 6));
-opcodeHandlers[0x4F] = state => instructions.sre(state, readAddressAbsolute(state, 6));
-opcodeHandlers[0x5F] = state => instructions.sre(state, readAddressAbsoluteX(state, 7));
-opcodeHandlers[0x5B] = state => instructions.sre(state, readAddressAbsoluteY(state, 7));
-opcodeHandlers[0x43] = state => instructions.sre(state, readAddressIndirectX(state, 8));
-opcodeHandlers[0x53] = state => instructions.sre(state, readAddressIndirectY(state, 8));
-
-// STA
-opcodeHandlers[0x85] = state => instructions.sta(state, readAddressZeroPage(state, 3));
-opcodeHandlers[0x95] = state => instructions.sta(state, readAddressZeroPageX(state, 4));
-opcodeHandlers[0x8D] = state => instructions.sta(state, readAddressAbsolute(state, 4));
-opcodeHandlers[0x9D] = state => instructions.sta(state, readAddressAbsoluteX(state, 5));
-opcodeHandlers[0x99] = state => instructions.sta(state, readAddressAbsoluteY(state, 5));
-opcodeHandlers[0x81] = state => instructions.sta(state, readAddressIndirectX(state, 6));
-opcodeHandlers[0x91] = state => instructions.sta(state, readAddressIndirectY(state, 6));
-
-
-// STX
-opcodeHandlers[0x86] = state => instructions.stx(state, readAddressZeroPage(state, 3));
-opcodeHandlers[0x96] = state => instructions.stx(state, readAddressZeroPageY(state, 4));
-opcodeHandlers[0x8E] = state => instructions.stx(state, readAddressAbsolute(state, 4));
-
-// STY
-opcodeHandlers[0x84] = state => instructions.sty(state, readAddressZeroPage(state, 3));
-opcodeHandlers[0x94] = state => instructions.sty(state, readAddressZeroPageX(state, 4));
-opcodeHandlers[0x8C] = state => instructions.sty(state, readAddressAbsolute(state, 4));
-
-
-opcodeHandlers[0x0] = instructions.brk;
-opcodeHandlers[0x08] = instructions.php;
-opcodeHandlers[0x48] = instructions.pha;
-opcodeHandlers[0x28] = instructions.plp;
-opcodeHandlers[0x40] = instructions.rti;
-opcodeHandlers[0x68] = instructions.pla;
-opcodeHandlers[0x20] = instructions.jsr;
-opcodeHandlers[0x60] = instructions.rts;
-
-opcodeHandlers[0x9E] = instructions.sxa;
-
-// SYA
-opcodeHandlers[0x9C] = instructions.sya;
-
-export default opcodeHandlers;
+import _ from 'lodash';
+import * as ins from './instructions';
+
+const opcodes = [
+    [0x0B, "*AAC", e => ins.aac(e, readAddressImmediate(e, 2))],
+    [0x2B, "*AAC", e => ins.aac(e, readAddressImmediate(e, 2))],
+
+    [0x69, "ADC", e => ins.adc(e, readAddressImmediate(e, 2))],
+    [0x65, "ADC", e => ins.adc(e, readAddressZeroPage(e, 3)) ],
+    [0x75, "ADC", e => ins.adc(e, readAddressZeroPageX(e, 4))],
+    [0x6D, "ADC", e => ins.adc(e, readAddressAbsolute(e, 4))],
+    [0x7D, "ADC", e => ins.adc(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+    [0x79, "ADC", e => ins.adc(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0x61, "ADC", e => ins.adc(e, readAddressIndirectX(e, 6))],
+    [0x71, "ADC", e => ins.adc(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0x29, "AND", e => ins.and(e, readAddressImmediate(e, 2))],
+    [0x25, "AND", e => ins.and(e, readAddressZeroPage(e, 3)) ],
+    [0x35, "AND", e => ins.and(e, readAddressZeroPageX(e, 4))],
+    [0x2D, "AND", e => ins.and(e, readAddressAbsolute(e, 4))],
+    [0x3D, "AND", e => ins.and(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+    [0x39, "AND", e => ins.and(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0x21, "AND", e => ins.and(e, readAddressIndirectX(e, 6))],
+    [0x31, "AND", e => ins.and(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0x6B, "*ARR", e => ins.arr(e, readAddressImmediate(e, 2))],
+
+    [0x0A, "ASL", ins.aslA],
+    [0x06, "ASL", e => ins.asl(e, readAddressZeroPage(e, 5))],
+    [0x16, "ASL", e => ins.asl(e, readAddressZeroPageX(e, 6))],
+    [0x0E, "ASL", e => ins.asl(e, readAddressAbsolute(e, 6))],
+    [0x1E, "ASL", e => ins.asl(e, readAddressAbsoluteX(e, 7))],
+
+    [0x4B, "*ASR", e => ins.asr(e, readAddressImmediate(e, 2))],
+
+    [0xAB, "*ATX", e => ins.atx(e, readAddressImmediate(e, 2))],
+
+    [0xCB, "AXS", e => ins.axs(e, readAddressImmediate(e, 2))],
+
+    [0x24, "BIT", e => ins.bit(e, readAddressZeroPage(e, 3))],
+    [0x2C, "BIT", e => ins.bit(e, readAddressAbsolute(e, 4))],
+
+    [0x90, "BCC", ins.bcc],
+    [0xF0, "BEQ", ins.beq],
+    [0xD0, "BNE", ins.bne],
+    [0xB0, "BCS", ins.bcs],
+    [0x50, "BVC", ins.bvc],
+    [0x70, "BVS", ins.bvs],
+    [0x10, "BPL", ins.bpl],
+    [0x30, "BMI", ins.bmi],
+
+    [0x18, "CLC", ins.clc],
+    [0xD8, "CLD", ins.cld],
+    [0x58, "CLI", ins.cli],
+    [0xB8, "CLV", ins.clv],
+
+    [0xC9, "CMP", e => ins.cmp(e, readAddressImmediate(e, 2))],
+    [0xC5, "CMP", e => ins.cmp(e, readAddressZeroPage(e, 3))],
+    [0xD5, "CMP", e => ins.cmp(e, readAddressZeroPageX(e, 4))],
+    [0xCD, "CMP", e => ins.cmp(e, readAddressAbsolute(e, 4))],
+    [0xDD, "CMP", e => ins.cmp(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+    [0xD9, "CMP", e => ins.cmp(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0xC1, "CMP", e => ins.cmp(e, readAddressIndirectX(e, 6))],
+    [0xD1, "CMP", e => ins.cmp(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0xE0, "CPX", e => ins.cpx(e, readAddressImmediate(e, 2))],
+    [0xE4, "CPX", e => ins.cpx(e, readAddressZeroPage(e, 3))],
+    [0xEC, "CPX", e => ins.cpx(e, readAddressAbsolute(e, 4))],
+
+    [0xC0, "CPY", e => ins.cpy(e, readAddressImmediate(e, 2))],
+    [0xC4, "CPY", e => ins.cpy(e, readAddressZeroPage(e, 3))],
+    [0xCC, "CPY", e => ins.cpy(e, readAddressAbsolute(e, 4))],
+
+    [0xC7, "*DCP", e => ins.dcp(e, readAddressZeroPage(e, 5))],
+    [0xD7, "*DCP", e => ins.dcp(e, readAddressZeroPageX(e, 6))],
+    [0xCF, "*DCP", e => ins.dcp(e, readAddressAbsolute(e, 6))],
+    [0xDF, "*DCP", e => ins.dcp(e, readAddressAbsoluteX(e, 7))],
+    [0xDB, "*DCP", e => ins.dcp(e, readAddressAbsoluteY(e, 7))],
+    [0xC3, "*DCP", e => ins.dcp(e, readAddressIndirectX(e, 8))],
+    [0xD3, "*DCP", e => ins.dcp(e, readAddressIndirectY(e, 8))],
+
+    [0xC6, "DEC", e => ins.dec(e, readAddressZeroPage(e, 5))],
+    [0xD6, "DEC", e => ins.dec(e, readAddressZeroPageX(e, 6))],
+    [0xCE, "DEC", e => ins.dec(e, readAddressAbsolute(e, 6))],
+    [0xDE, "DEC", e => ins.dec(e, readAddressAbsoluteX(e, 7))],
+
+    [0x49, "EOR", e => ins.eor(e, readAddressImmediate(e, 2))],
+    [0x45, "EOR", e => ins.eor(e, readAddressZeroPage(e, 3)) ],
+    [0x55, "EOR", e => ins.eor(e, readAddressZeroPageX(e, 4))],
+    [0x4D, "EOR", e => ins.eor(e, readAddressAbsolute(e, 4))],
+    [0x5D, "EOR", e => ins.eor(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+    [0x59, "EOR", e => ins.eor(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0x41, "EOR", e => ins.eor(e, readAddressIndirectX(e, 6))],
+    [0x51, "EOR", e => ins.eor(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0xE6, "INC", e => ins.inc(e, readAddressZeroPage(e, 5))],
+    [0xF6, "INC", e => ins.inc(e, readAddressZeroPageX(e, 6))],
+    [0xEE, "INC", e => ins.inc(e, readAddressAbsolute(e, 6))],
+    [0xFE, "INC", e => ins.inc(e, readAddressAbsoluteX(e, 7))],
+
+    [0xE7, "*ISB", e => ins.isb(e, readAddressZeroPage(e, 5))],
+    [0xF7, "*ISB", e => ins.isb(e, readAddressZeroPageX(e, 6))],
+    [0xEF, "*ISB", e => ins.isb(e, readAddressAbsolute(e, 6))],
+    [0xFF, "*ISB", e => ins.isb(e, readAddressAbsoluteX(e, 7))],
+    [0xFB, "*ISB", e => ins.isb(e, readAddressAbsoluteY(e, 7))],
+    [0xE3, "*ISB", e => ins.isb(e, readAddressIndirectX(e, 8))],
+    [0xF3, "*ISB", e => ins.isb(e, readAddressIndirectY(e, 8))],
+
+    [0x4C, "JMP", ins.jmpAbsolute],
+    [0x6C, "JMP", ins.jmpIndirect],
+
+    [0xA7, "*LAX", e => ins.lax(e, readAddressZeroPage(e, 3))],
+    [0xB7, "*LAX", e => ins.lax(e, readAddressZeroPageY(e, 4))],
+    [0xAF, "*LAX", e => ins.lax(e, readAddressAbsolute(e, 4))],
+    [0xBF, "*LAX", e => ins.lax(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0xA3, "*LAX", e => ins.lax(e, readAddressIndirectX(e, 6))],
+    [0xB3, "*LAX", e => ins.lax(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0xA9, "LDA", e => ins.lda(e, readAddressImmediate(e, 2))],
+    [0xA5, "LDA", e => ins.lda(e, readAddressZeroPage(e, 3))],
+    [0xB5, "LDA", e => ins.lda(e, readAddressZeroPageX(e, 4))],
+    [0xAD, "LDA", e => ins.lda(e, readAddressAbsolute(e, 4))],
+    [0xBD, "LDA", e => ins.lda(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+    [0xB9, "LDA", e => ins.lda(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0xA1, "LDA", e => ins.lda(e, readAddressIndirectX(e, 6))],
+    [0xB1, "LDA", e => ins.lda(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0xA2, "LDX", e => ins.ldx(e, readAddressImmediate(e, 2))],
+    [0xA6, "LDX", e => ins.ldx(e, readAddressZeroPage(e, 3)) ],
+    [0xB6, "LDX", e => ins.ldx(e, readAddressZeroPageY(e, 4))],
+    [0xAE, "LDX", e => ins.ldx(e, readAddressAbsolute(e, 4))],
+    [0xBE, "LDX", e => ins.ldx(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+
+    [0xA0, "LDY", e => ins.ldy(e, readAddressImmediate(e, 2))],
+    [0xA4, "LDY", e => ins.ldy(e, readAddressZeroPage(e, 3)) ],
+    [0xB4, "LDY", e => ins.ldy(e, readAddressZeroPageX(e, 4))],
+    [0xAC, "LDY", e => ins.ldy(e, readAddressAbsolute(e, 4))],
+    [0xBC, "LDY", e => ins.ldy(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+
+    [0x4A, "LSR", ins.lsrA],
+    [0x46, "LSR", e => ins.lsr(e, readAddressZeroPage(e, 5))],
+    [0x56, "LSR", e => ins.lsr(e, readAddressZeroPageX(e, 6))],
+    [0x4E, "LSR", e => ins.lsr(e, readAddressAbsolute(e, 6))],
+    [0x5E, "LSR", e => ins.lsr(e, readAddressAbsoluteX(e, 7))],
+
+    [0xEA, "NOP", ins.nop],
+    [0x1A, "*NOP", ins.nop],
+    [0x3A, "*NOP", ins.nop],
+    [0x5A, "*NOP", ins.nop],
+    [0x7A, "*NOP", ins.nop],
+    [0xDA, "*NOP", ins.nop],
+    [0xFA, "*NOP", ins.nop],
+    [0x80, "*NOP", ins.unofficialNopImmediate],
+    [0x82, "*NOP", ins.unofficialNopImmediate],
+    [0x89, "*NOP", ins.unofficialNopImmediate],
+    [0xC2, "*NOP", ins.unofficialNopImmediate],
+    [0xE2, "*NOP", ins.unofficialNopImmediate],
+    [0x04, "*NOP", ins.unofficialNopZeroPage],
+    [0x44, "*NOP", ins.unofficialNopZeroPage],
+    [0x64, "*NOP", ins.unofficialNopZeroPage],
+    [0x0C, "*NOP", ins.unofficialNopAbsolute],
+    [0x14, "*NOP", ins.unofficialNopZeroPageX],
+    [0x34, "*NOP", ins.unofficialNopZeroPageX],
+    [0x54, "*NOP", ins.unofficialNopZeroPageX],
+    [0x74, "*NOP", ins.unofficialNopZeroPageX],
+    [0xD4, "*NOP", ins.unofficialNopZeroPageX],
+    [0xF4, "*NOP", ins.unofficialNopZeroPageX],
+
+    [0x1C, "NOP", ins.unofficialNopAbsoluteX],
+    [0x3C, "NOP", ins.unofficialNopAbsoluteX],
+    [0x5C, "NOP", ins.unofficialNopAbsoluteX],
+    [0x7C, "NOP", ins.unofficialNopAbsoluteX],
+    [0xDC, "NOP", ins.unofficialNopAbsoluteX],
+    [0xFC, "NOP", ins.unofficialNopAbsoluteX],
+
+    [0x09, "ORA", e => ins.ora(e, readAddressImmediate(e, 2))],
+    [0x05, "ORA", e => ins.ora(e, readAddressZeroPage(e, 3)) ],
+    [0x15, "ORA", e => ins.ora(e, readAddressZeroPageX(e, 4))],
+    [0x0D, "ORA", e => ins.ora(e, readAddressAbsolute(e, 4))],
+    [0x1D, "ORA", e => ins.ora(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+    [0x19, "ORA", e => ins.ora(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0x01, "ORA", e => ins.ora(e, readAddressIndirectX(e, 6))],
+    [0x11, "ORA", e => ins.ora(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0xC8, "INY", ins.iny],
+    [0x88, "DEY", ins.dey],
+    [0xA8, "TAY", ins.tay],
+
+    [0xE8, "INX", ins.inx],
+    [0xCA, "DEX", ins.dex],
+
+    [0xAA, "TAX", ins.tax],
+    [0xBA, "TSX", ins.tsx],
+    [0x8A, "TXA", ins.txa],
+    [0x98, "TYA", ins.tya],
+    [0x9A, "TXS", ins.txs],
+
+    [0x27, "*RLA", e => ins.rla(e, readAddressZeroPage(e, 5))],
+    [0x37, "*RLA", e => ins.rla(e, readAddressZeroPageX(e, 6))],
+    [0x2F, "*RLA", e => ins.rla(e, readAddressAbsolute(e, 6))],
+    [0x3F, "*RLA", e => ins.rla(e, readAddressAbsoluteX(e, 7))],
+    [0x3B, "*RLA", e => ins.rla(e, readAddressAbsoluteY(e, 7))],
+    [0x23, "*RLA", e => ins.rla(e, readAddressIndirectX(e, 8))],
+    [0x33, "*RLA", e => ins.rla(e, readAddressIndirectY(e, 8))],
+
+    [0x2A, "ROL", e => ins.rolA(e)],
+    [0x26, "ROL", e => ins.rol(e, readAddressZeroPage(e, 5))],
+    [0x36, "ROL", e => ins.rol(e, readAddressZeroPageX(e, 6))],
+    [0x2E, "ROL", e => ins.rol(e, readAddressAbsolute(e, 6))],
+    [0x3E, "ROL", e => ins.rol(e, readAddressAbsoluteX(e, 7))],
+
+    [0x6A, "ROR", ins.rorA],
+    [0x66, "ROR", e => ins.ror(e, readAddressZeroPage(e, 5))],
+    [0x76, "ROR", e => ins.ror(e, readAddressZeroPageX(e, 6))],
+    [0x6E, "ROR", e => ins.ror(e, readAddressAbsolute(e, 6))],
+    [0x7E, "ROR", e => ins.ror(e, readAddressAbsoluteX(e, 7))],
+
+    [0x67, "*RRA", e => ins.rra(e, readAddressZeroPage(e, 5))],
+    [0x77, "*RRA", e => ins.rra(e, readAddressZeroPageX(e, 6))],
+    [0x6F, "*RRA", e => ins.rra(e, readAddressAbsolute(e, 6))],
+    [0x7F, "*RRA", e => ins.rra(e, readAddressAbsoluteX(e, 7))],
+    [0x7B, "*RRA", e => ins.rra(e, readAddressAbsoluteY(e, 7))],
+    [0x63, "*RRA", e => ins.rra(e, readAddressIndirectX(e, 8))],
+    [0x73, "*RRA", e => ins.rra(e, readAddressIndirectY(e, 8))],
+
+    [0x87, "*SAX", e => ins.sax(e, readAddressZeroPage(e, 3))],
+    [0x97, "*SAX", e => ins.sax(e, readAddressZeroPageY(e, 4))],
+    [0x83, "*SAX", e => ins.sax(e, readAddressIndirectX(e, 6))],
+    [0x8F, "*SAX", e => ins.sax(e, readAddressAbsolute(e, 4))],
+
+    [0xE9, "*SBC", e => ins.sbc(e, readAddressImmediate(e, 2))],
+    [0xEB, "*SBC", e => ins.sbc(e, readAddressImmediate(e, 2))],
+    [0xE5, "*SBC", e => ins.sbc(e, readAddressZeroPage(e, 3)) ],
+    [0xF5, "*SBC", e => ins.sbc(e, readAddressZeroPageX(e, 4))],
+    [0xED, "*SBC", e => ins.sbc(e, readAddressAbsolute(e, 4))],
+    [0xFD, "*SBC", e => ins.sbc(e, readAddressAbsoluteXWithPageBoundaryCycle(e, 4))],
+    [0xF9, "*SBC", e => ins.sbc(e, readAddressAbsoluteYWithPageBoundaryCycle(e, 4))],
+    [0xE1, "*SBC", e => ins.sbc(e, readAddressIndirectX(e, 6))],
+    [0xF1, "*SBC", e => ins.sbc(e, readAddressIndirectYWithPageBoundaryCycle(e, 5))],
+
+    [0x38, "SEC", ins.sec],
+    [0x78, "SEI", ins.sei],
+    [0xF8, "SED", ins.sed],
+
+    [0x07, "*SLO", e => ins.slo(e, readAddressZeroPage(e, 5))],
+    [0x17, "*SLO", e => ins.slo(e, readAddressZeroPageX(e, 6))],
+    [0x0F, "*SLO", e => ins.slo(e, readAddressAbsolute(e, 6))],
+    [0x1F, "*SLO", e => ins.slo(e, readAddressAbsoluteX(e, 7))],
+    [0x1B, "*SLO", e => ins.slo(e, readAddressAbsoluteY(e, 7))],
+    [0x03, "*SLO", e => ins.slo(e, readAddressIndirectX(e, 8))],
+    [0x13, "*SLO", e => ins.slo(e, readAddressIndirectY(e, 8))],
+
+    [0x47, "*SRE", e => ins.sre(e, readAddressZeroPage(e, 5))],
+    [0x57, "*SRE", e => ins.sre(e, readAddressZeroPageX(e, 6))],
+    [0x4F, "*SRE", e => ins.sre(e, readAddressAbsolute(e, 6))],
+    [0x5F, "*SRE", e => ins.sre(e, readAddressAbsoluteX(e, 7))],
+    [0x5B, "*SRE", e => ins.sre(e, readAddressAbsoluteY(e, 7))],
+    [0x43, "*SRE", e => ins.sre(e, readAddressIndirectX(e, 8))],
+    [0x53, "*SRE", e => ins.sre(e, readAddressIndirectY(e, 8))],
+
+    [0x85, "STA", e => ins.sta(e, readAddressZeroPage(e, 3))],
+    [0x95, "STA", e => ins.sta(e, readAddressZeroPageX(e, 4))],
+    [0x8D, "STA", e => ins.sta(e, readAddressAbsolute(e, 4))],
+    [0x9D, "STA", e => ins.sta(e, readAddressAbsoluteX(e, 5))],
+    [0x99, "STA", e => ins.sta(e, readAddressAbsoluteY(e, 5))],
+    [0x81, "STA", e => ins.sta(e, readAddressIndirectX(e, 6))],
+    [0x91, "STA", e => ins.sta(e, readAddressIndirectY(e, 6))],
+
+    [0x86, "STX", e => ins.stx(e, readAddressZeroPage(e, 3))],
+    [0x96, "STX", e => ins.stx(e, readAddressZeroPageY(e, 4))],
+    [0x8E, "STX", e => ins.stx(e, readAddressAbsolute(e, 4))],
+
+    [0x84, "STY", e => ins.sty(e, readAddressZeroPage(e, 3))],
+    [0x94, "STY", e => ins.sty(e, readAddressZeroPageX(e, 4))],
+    [0x8C, "STY", e => ins.sty(e, readAddressAbsolute(e, 4))],
+
+    [0x0, "BRK", ins.brk],
+    [0x08, "PHP", ins.php],
+    [0x48, "PHA", ins.pha],
+    [0x28, "PLP", ins.plp],
+    [0x40, "RTI", ins.rti],
+    [0x68, "PLA", ins.pla],
+    [0x20, "JSR", ins.jsr],
+    [0x60, "RTS", ins.rts],
+
+    [0x9E, "*SXA", ins.sxa],
+    [0x9C, "*SYA", ins.sya]
+];
+
+export const opcodeTable = new Array(256);
+
+_.forEach(opcodes, ([opcode, name, implementation]) => {
+    opcodeTable[opcode] = implementation;
+})

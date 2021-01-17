@@ -1,7 +1,7 @@
 import { hex } from './stateLogging';
 import opcodeMetadata from './opcodeMetadata';
 
-import opcodeHandlers from './cpu';
+import { opcodeTable } from './cpu';
 
 import { getResetVectorAddress } from './instructions/utils';
 import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
@@ -93,9 +93,9 @@ export const stepFrame = (state) => {
 export const step = (state) => {
   const opcode = readMem(state, state.PC);
   const oldCycles = state.CYC;
-  if (opcode in opcodeHandlers) {
+  if (opcode in opcodeTable) {
     // console.log('Executing $' + hex(opcode));
-    opcodeHandlers[opcode](state);
+    opcodeTable[opcode](state);
   } else {
 
     console.error('No handler found for opcode $' + hex(opcode === undefined ? -1 : opcode), opcodeMetadata[opcode]?.name ?? '', hex(state.PC));
