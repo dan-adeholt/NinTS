@@ -172,16 +172,3 @@ const _readAddressIndirectYWithPenaltyCycle = (state, cycles, penaltyCycle) => {
 
 export const readAddressIndirectYWithPageBoundaryCycle = (state, cycles) => _readAddressIndirectYWithPenaltyCycle(state, cycles, 1)
 export const readAddressIndirectY = (state, cycles) => _readAddressIndirectYWithPenaltyCycle(state, cycles, 0)
-
-// Read functions
-export const readValueImmediate = (state, cycles) => readMem(state, readAddressImmediate(state, cycles))
-export const readValueAbsolute = (state, cycles) => readMem(state, readAddressAbsolute(state, cycles))
-export const readValueZeroPage = (state, cycles) => readMem(state, readAddressZeroPage(state, cycles))
-export const readValueZeroPageX = (state, cycles) => readMem(state, readAddressZeroPageX(state, cycles))
-export const readValueZeroPageY = (state, cycles) => readMem(state, readAddressZeroPageY(state, cycles))
-export const readValueAbsoluteXWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressAbsoluteXWithPageBoundaryCycle(state, cycles))
-export const readValueAbsoluteYWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressAbsoluteYWithPageBoundaryCycle(state, cycles))
-export const readValueIndirectX = (state, cycles) => readMem(state, readAddressIndirectX(state, cycles))
-export const readValueIndirectYWithPageBoundaryCycle = (state, cycles) => readMem(state, readAddressIndirectYWithPageBoundaryCycle(state, cycles))
-
-// Write functions

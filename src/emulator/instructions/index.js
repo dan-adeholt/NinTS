@@ -4,17 +4,26 @@ import {
   clampToByte,
   getAddressAbsolute,
   isNegative,
-  onSamePageBoundary, P_MASK_CARRY, P_MASK_DECIMAL, P_MASK_INTERRUPT, P_MASK_OVERFLOW,
-  P_MASK_OVERFLOW_AND_NEGATIVE, P_REG_BREAK,
-  P_REG_CARRY, P_REG_NEGATIVE, P_REG_OVERFLOW, P_REG_ZERO,
+  onSamePageBoundary,
+  P_MASK_CARRY,
+  P_MASK_DECIMAL,
+  P_MASK_INTERRUPT,
+  P_MASK_OVERFLOW,
+  P_MASK_OVERFLOW_AND_NEGATIVE,
+  P_REG_BREAK,
+  P_REG_CARRY,
+  P_REG_NEGATIVE,
+  P_REG_OVERFLOW,
+  P_REG_ZERO,
   P_REGS_OVERFLOW_AND_NEGATIVE,
   PAGE_MASK,
-  readValueAbsolute,
-  readValueAbsoluteXWithPageBoundaryCycle,
-  readValueImmediate,
-  readValueZeroPage,
-  readValueZeroPageX,
-  setAlwaysOne, setBreak,
+  readAddressAbsolute,
+  readAddressAbsoluteXWithPageBoundaryCycle,
+  readAddressImmediate,
+  readAddressZeroPage,
+  readAddressZeroPageX,
+  setAlwaysOne,
+  setBreak,
   setCarry,
   setDecimal,
   setInterrupt,
@@ -797,11 +806,11 @@ export const txs = state => {
   state.PC += 1;
 }
 
-export const unofficialNopZeroPage = state => readValueZeroPage(state, 3)
-export const unofficialNopImmediate = state => readValueImmediate(state, 2)
-export const unofficialNopZeroPageX = state => readValueZeroPageX(state, 4)
-export const unofficialNopAbsolute = state => readValueAbsolute(state, 4)
-export const unofficialNopAbsoluteX = state => readValueAbsoluteXWithPageBoundaryCycle(state, 4)
+export const unofficialNopZeroPage = state => readAddressZeroPage(state, 3)
+export const unofficialNopImmediate = state => readAddressImmediate(state, 2)
+export const unofficialNopZeroPageX = state => readAddressZeroPageX(state, 4)
+export const unofficialNopAbsolute = state => readAddressAbsolute(state, 4)
+export const unofficialNopAbsoluteX = state => readAddressAbsoluteXWithPageBoundaryCycle(state, 4)
 
 /**
  * JMP - Indirect
