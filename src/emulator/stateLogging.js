@@ -1,4 +1,16 @@
-import { opcodeMetadata } from './cpu';
+import {
+  AddressModeAbsolute,
+  AddressModeAbsoluteX,
+  AddressModeAbsoluteY,
+  AddressModeAccumulator,
+  AddressModeImmediate,
+  AddressModeImplied,
+  AddressModeIndirect, AddressModeIndirectX, AddressModeIndirectY, AddressModeRelative,
+  AddressModeZeroPage,
+  AddressModeZeroPageX,
+  AddressModeZeroPageY,
+  opcodeMetadata
+} from './cpu';
 
 import {
   getAddressAbsolute,
@@ -28,9 +40,9 @@ const readLogMem = (state, address) => {
 }
 
 const logFormatters = {
-  Accumulator: state => "A",
-  Immediate: (state, pc) => "#$" + hex(readMem(state, pc + 1)),
-  Absolute: (state, pc) => {
+  [AddressModeAccumulator]: state => "A",
+  [AddressModeImmediate]: (state, pc) => "#$" + hex(readMem(state, pc + 1)),
+  [AddressModeAbsolute]: (state, pc) => {
     const opcode = readMem(state, pc);
     const { name } = opcodeMetadata[opcode];
     const address = getAddressAbsolute(state, pc);
@@ -41,34 +53,34 @@ const logFormatters = {
       return "$" + hex16(address) + " = " + hex(byte);
     }
   },
-  AbsoluteX: (state, pc) => {
+  [AddressModeAbsoluteX]: (state, pc) => {
     const base = getAddressAbsolute(state, pc);
     const address = (base + state.X) & 0xFFFF;
     const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",X @ " + hex16(address) + ' = ' + hex(byte);
   },
-  AbsoluteY: (state, pc) => {
+  [AddressModeAbsoluteY]: (state, pc) => {
     const base = getAddressAbsolute(state, pc);
     const address = (base + state.Y) & 0xFFFF;
     const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",Y @ " + hex16(address) + ' = ' + hex(byte);
   },
-  ZeroPage: (state, pc) => {
+  [AddressModeZeroPage]: (state, pc) => {
     const offset = readMem(state, pc + 1);
     return "$" + hex(offset) + " = " + hex(readMem(state, offset));
   },
-  ZeroPageX: (state, pc) => {
+  [AddressModeZeroPageX]: (state, pc) => {
     const base = readMem(state, pc + 1);
     const address = (base + state.X) % 256;
     return "$" + hex(base) + ",X @ " + hex(address) + " = " + hex(readLogMem(state, address));
   },
-  ZeroPageY: (state, pc) => {
+  [AddressModeZeroPageY]: (state, pc) => {
     const base = readMem(state, pc + 1);
     const address = (base + state.Y) % 256;
     return "$" + hex(base) + ",Y @ " + hex(address) + " = " + hex(readLogMem(state, address));
   },
-  Implied: state => "",
-  Indirect: (state, pc) => {
+  [AddressModeImplied]: state => "",
+  [AddressModeIndirect]: (state, pc) => {
     const address = getAddressAbsolute(state, pc);
 
     const lo = address;
@@ -81,7 +93,7 @@ const logFormatters = {
     const target = readMem(state, lo) + (readMem(state, hi) << 8);
     return "($" + hex16(address) + ") = " + hex16(target);
   },
-  IndirectX: (state, pc) => {
+  [AddressModeIndirectX]: (state, pc) => {
     const offset = readMem(state, pc + 1);
     const addressLocation = (state.X + offset) % 256;
 
@@ -90,7 +102,7 @@ const logFormatters = {
 
     return "($" + hex(offset) + ",X) @ " + hex(addressLocation) + " = " + hex16(address) + " = " + hex(value);
   },
-  IndirectY: (state, pc) => {
+  [AddressModeIndirectY]: (state, pc) => {
     const zeroPageAddress = readMem(state, pc + 1);
     const base = readMem(state, zeroPageAddress) + (readMem(state, (zeroPageAddress + 1) % 256) << 8);
     const address = (base + state.Y) & 0xFFFF;
@@ -98,7 +110,7 @@ const logFormatters = {
     let value = readLogMem(state, address);
     return "($" + hex(zeroPageAddress) + "),Y = " + hex16(base) + " @ " + hex16(address) + " = " + hex(value);
   },
-  Relative: (state, pc) => {
+  [AddressModeRelative]: (state, pc) => {
     let offset = readMem(state, pc + 1);
     if (offset > 0x7F) {
       offset -= 256;
