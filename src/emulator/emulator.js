@@ -1,5 +1,5 @@
 import { hex, hex16 } from './stateLogging';
-import { opcodeTable, opcodeMetadata } from './cpu';
+import { opcodeTable, opcodeMetadata, opcodeReadTable } from './cpu';
 
 import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
 
@@ -94,10 +94,8 @@ export const step = (state) => {
   state.CYC++;
 
   if (opcode in opcodeTable) {
-    // console.log('Executing $' + hex(opcode));
     opcodeTable[opcode](state);
   } else {
-
     console.error('No handler found for opcode $' + hex(opcode === undefined ? -1 : opcode), opcodeMetadata[opcode]?.name ?? '', hex(state.PC));
 
     return false;
