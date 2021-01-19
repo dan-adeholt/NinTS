@@ -141,6 +141,22 @@ export const procFlagsToString = (P) => {
     ' CARR:' + toBinary(P_REG_CARRY);
 }
 
+const InstructionLengthTranslation = {
+  [AddressModeAbsolute]: 3,
+  [AddressModeAbsoluteX]: 3,
+  [AddressModeAbsoluteY]: 3,
+  [AddressModeAccumulator]: 1,
+  [AddressModeImmediate]: 2,
+  [AddressModeImplied]: 1,
+  [AddressModeIndirect]: 3,
+  [AddressModeIndirectX]: 2,
+  [AddressModeIndirectY]: 2,
+  [AddressModeRelative]: 2,
+  [AddressModeZeroPage]: 2,
+  [AddressModeZeroPageX]: 2,
+  [AddressModeZeroPageY]: 2
+};
+
 export const stateToString = (state, swapPPU) => {
   let str = hex16(state.PC)
   str += '  ';
@@ -154,7 +170,9 @@ export const stateToString = (state, swapPPU) => {
   str += ' ';
 
   if (opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {
-    const { instructionSize, name, mode } = opcodeMetadata[opcode];
+    const { name, mode } = opcodeMetadata[opcode];
+
+    const instructionSize = InstructionLengthTranslation[mode];
 
     for (let i = 0; i < instructionSize - 1; i++) {
       str += hex(readMem(state, state.PC + 1 + i)) + ' ';
