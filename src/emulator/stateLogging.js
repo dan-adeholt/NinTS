@@ -13,7 +13,6 @@ import {
 } from './cpu';
 
 import {
-  getAddressAbsolute,
   onSamePageBoundary,
   P_REG_ALWAYS_1,
   P_REG_BREAK, P_REG_CARRY,
@@ -39,13 +38,17 @@ const readLogMem = (state, address) => {
   }
 }
 
+export const absoluteAddress = (state, pc) => {
+  return readMem(state, pc + 1) + (readMem(state, pc + 2) << 8);
+}
+
 const logFormatters = {
   [AddressModeAccumulator]: state => "A",
   [AddressModeImmediate]: (state, pc) => "#$" + hex(readMem(state, pc + 1)),
   [AddressModeAbsolute]: (state, pc) => {
     const opcode = readMem(state, pc);
     const { name } = opcodeMetadata[opcode];
-    const address = getAddressAbsolute(state, pc);
+    const address = absoluteAddress(state, pc);
     if (name in branchInstructions) {
       return "$" + hex16(address);
     } else {
@@ -54,13 +57,13 @@ const logFormatters = {
     }
   },
   [AddressModeAbsoluteX]: (state, pc) => {
-    const base = getAddressAbsolute(state, pc);
+    const base = absoluteAddress(state, pc);
     const address = (base + state.X) & 0xFFFF;
     const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",X @ " + hex16(address) + ' = ' + hex(byte);
   },
   [AddressModeAbsoluteY]: (state, pc) => {
-    const base = getAddressAbsolute(state, pc);
+    const base = absoluteAddress(state, pc);
     const address = (base + state.Y) & 0xFFFF;
     const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",Y @ " + hex16(address) + ' = ' + hex(byte);
@@ -81,7 +84,7 @@ const logFormatters = {
   },
   [AddressModeImplied]: state => "",
   [AddressModeIndirect]: (state, pc) => {
-    const address = getAddressAbsolute(state, pc);
+    const address = absoluteAddress(state, pc);
 
     const lo = address;
     let hi = address + 1;

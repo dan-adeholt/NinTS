@@ -1,6 +1,6 @@
 import { parseROM } from '../emulator/parseROM';
 import { initMachine, readMem, reset, step, stepFrame } from '../emulator/emulator';
-import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging';
+import { hex, hex16, procFlagsToString, stateToString } from '../emulator/stateLogging';
 
 const parseLog = (data) => data.toString().split(/[\r\n]+/);
 
@@ -20,6 +20,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
 
   const rom = parseROM(data);
   const machine = initMachine(rom);
+
   if (adjustState != null) {
     adjustState(machine);
   }
@@ -35,6 +36,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
 
     const entryLine = prefixLine(i, entry);
     let stateString = prefixLine(i, stateToString(machine, swapPPU));
+
     let flagsString = procFlagsToString(machine.P);
 
     if (stateString !== entryLine) {

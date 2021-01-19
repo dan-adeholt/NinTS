@@ -1,8 +1,11 @@
-import { hex } from './stateLogging';
+import { hex, hex16 } from './stateLogging';
 import { opcodeTable, opcodeMetadata } from './cpu';
 
-import { getResetVectorAddress } from './instructions/utils';
 import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
+
+const getResetVectorAddress = state => {
+  return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
+}
 
 export const initMachine = (rom) => {
   let memory = new Uint8Array(1 << 16);
@@ -49,10 +52,6 @@ export const initMachine = (rom) => {
 
 export const readStack = (state, sp) => state.memory[0x100 + sp]
 
-export const setStack = (state, sp, value) => {
-  state.memory[0x100 + sp] = value;
-};
-
 export const readMem = (state, addr) => {
   if (addr >= 0x2000 && addr <= 0x2007) {
     return readPPUMem(state, addr);
@@ -89,8 +88,11 @@ export const stepFrame = (state) => {
 }
 
 export const step = (state) => {
-  const opcode = readMem(state, state.PC);
   const oldCycles = state.CYC;
+
+  const opcode = readMem(state, state.PC);
+  state.CYC++;
+
   if (opcode in opcodeTable) {
     // console.log('Executing $' + hex(opcode));
     opcodeTable[opcode](state);

@@ -68,73 +68,47 @@ export const setDecimal = (state, on) => setFlag(state, P_REG_DECIMAL, P_MASK_DE
 export const setBreak = (state, on) => setFlag(state, P_REG_BREAK, P_MASK_BREAK, on);
 export const setAlwaysOne = (state) => setFlag(state, P_REG_ALWAYS_1, P_MASK_ALWAYS_1, true);
 
-// Get address functions - these merely fetch the values without updating anything
-
-export const getResetVectorAddress = state => {
-  return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
+export const writeStackByte = (state, sp, value) => {
+  writeByte(state, 0x100 + sp, value);
 }
 
-export const getAddressAbsolute = (state, pc) => {
-  return readMem(state, pc + 1) + (readMem(state, pc + 2) << 8);
+export const readStackByte = (state, sp) => {
+  return readByte(state, 0x100 + sp);
 }
 
-export const getAddressZeroPage = (state) => {
-  return readMem(state, state.PC + 1);
+export const writeByte = (state, address, value) => {
+  state.CYC++;
+  return setMem(state, address, value);
+}
+
+export const readByte = (state, address) => {
+  state.CYC++;
+  return readMem(state, address);
+}
+
+export const readWord = (state, address) => {
+  return readByte(state, address) + (readByte(state, address + 1) << 8);
 }
 
 // Read address functions - these read an address and updates the PC and CYC values accordingly
-export const readAddressImmediate = (state, cycles) => {
+export const readAddressImmediate = (state) => {
   const address = state.PC + 1;
   state.PC += 2;
-  state.CYC += cycles;
   return address;
 }
 
-export const readAddressAbsolute = (state, cycles) => {
-  const address = getAddressAbsolute(state, state.PC);
+export const readAddressAbsolute = (state) => {
+  const address = readWord(state, state.PC + 1);
   state.PC += 3;
-  state.CYC += cycles;
   return address;
 }
 
-const _readAddressAbsoluteWithOffset = (state, offset, cycles) => {
-  const base = getAddressAbsolute(state, state.PC);
+const _readAddressAbsoluteWithOffset = (state, offset, shortenCycle) => {
+  const base = readWord(state, state.PC + 1);
   const address = (base + offset) & 0xFFFF;
 
-  state.CYC += cycles;
-  state.PC += 3;
-
-  return address;
-}
-
-export const readAddressAbsoluteX = (state, cycles) => _readAddressAbsoluteWithOffset(state, state.X, cycles)
-export const readAddressAbsoluteY = (state, cycles) => _readAddressAbsoluteWithOffset(state, state.Y, cycles)
-
-export const readAddressZeroPage = (state, cycles) => {
-  const address = getAddressZeroPage(state);
-  state.PC += 2;
-  state.CYC += cycles;
-  return address;
-}
-
-const _readAddressZeroPageOffset = (state, offset, cycles) => {
-  const address = (getAddressZeroPage(state) + offset) % 256;
-  state.PC += 2;
-  state.CYC += cycles;
-  return address;
-}
-
-export const readAddressZeroPageX = (state, cycles) => _readAddressZeroPageOffset(state, state.X, cycles)
-export const readAddressZeroPageY = (state, cycles) => _readAddressZeroPageOffset(state, state.Y, cycles)
-
-const _readAddressAbsoluteWithOffsetAndPageBoundaryCycles = (state, offset, cycles) => {
-  const base = getAddressAbsolute(state, state.PC);
-  const address = (base + offset) & 0xFFFF;
-
-  state.CYC += cycles;
-
-  if (!onSamePageBoundary(base, address)) {
-    state.CYC += 1;
+  if (!onSamePageBoundary(base, address) || !shortenCycle) {
+    state.CYC ++;
   }
 
   state.PC += 3;
@@ -142,33 +116,50 @@ const _readAddressAbsoluteWithOffsetAndPageBoundaryCycles = (state, offset, cycl
   return address;
 }
 
-export const readAddressAbsoluteXWithPageBoundaryCycle = (state, cycles) => _readAddressAbsoluteWithOffsetAndPageBoundaryCycles(state, state.X, cycles)
-export const readAddressAbsoluteYWithPageBoundaryCycle = (state, cycles) => _readAddressAbsoluteWithOffsetAndPageBoundaryCycles(state, state.Y, cycles)
+export const readAddressAbsoluteX = (state) => _readAddressAbsoluteWithOffset(state, state.X, false)
+export const readAddressAbsoluteY = (state) => _readAddressAbsoluteWithOffset(state, state.Y, false)
 
-export const readAddressIndirectX = (state, cycles) => {
-  const offset = getAddressZeroPage(state);
+export const readAddressZeroPage = (state) => {
+  const address = readByte(state, state.PC + 1);
+  state.PC += 2;
+  return address;
+}
+
+const _readAddressZeroPageOffset = (state, offset) => {
+  const address = (readByte(state, state.PC + 1) + offset) % 256;
+  state.CYC++;
+  state.PC += 2;
+  return address;
+}
+
+export const readAddressZeroPageX = (state) => _readAddressZeroPageOffset(state, state.X)
+export const readAddressZeroPageY = (state) => _readAddressZeroPageOffset(state, state.Y)
+export const readAddressAbsoluteXWithPageBoundaryCycle = state => _readAddressAbsoluteWithOffset(state, state.X, true)
+export const readAddressAbsoluteYWithPageBoundaryCycle = state => _readAddressAbsoluteWithOffset(state, state.Y, true)
+
+export const readAddressIndirectX = (state) => {
+  const offset = readByte(state, state.PC + 1);
+  state.CYC++;
   const addressLocation = (state.X + offset) % 256;
-  const address = readMem(state, addressLocation) + (readMem(state, (addressLocation + 1) % 256) << 8);
+  const address = readByte(state, addressLocation) + (readByte(state, (addressLocation + 1) % 256) << 8);
 
-  state.CYC += cycles;
   state.PC += 2;
 
   return address;
 }
 
-const _readAddressIndirectYWithPenaltyCycle = (state, cycles, penaltyCycle) => {
-  const zeroPageAddress = getAddressZeroPage(state);
-  const base = readMem(state, zeroPageAddress) + (readMem(state, (zeroPageAddress + 1) % 256) << 8);
+const _readAddressIndirectYWithPenaltyCycle = (state, shortenCycle) => {
+  const zeroPageAddress = readByte(state, state.PC + 1)
+  const base = readByte(state, zeroPageAddress) + (readByte(state, (zeroPageAddress + 1) % 256) << 8);
   const address = (base + state.Y) & 0xFFFF;
-  state.CYC += cycles;
   state.PC += 2;
 
-  if (!onSamePageBoundary(base, address)) {
-    state.CYC += penaltyCycle;
+  if (!onSamePageBoundary(base, address) || !shortenCycle) {
+    state.CYC ++;
   }
 
   return address;
 }
 
-export const readAddressIndirectYWithPageBoundaryCycle = (state, cycles) => _readAddressIndirectYWithPenaltyCycle(state, cycles, 1)
-export const readAddressIndirectY = (state, cycles) => _readAddressIndirectYWithPenaltyCycle(state, cycles, 0)
+export const readAddressIndirectYWithPageBoundaryCycle = (state) => _readAddressIndirectYWithPenaltyCycle(state, true)
+export const readAddressIndirectY = (state) => _readAddressIndirectYWithPenaltyCycle(state, false)
