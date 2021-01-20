@@ -2,6 +2,7 @@ import { hex, hex16 } from './stateLogging';
 import { opcodeTable, opcodeMetadata, opcodeReadTable } from './cpu';
 
 import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
+import { readOpcode } from './instructions/';
 
 const getResetVectorAddress = state => {
   return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
@@ -89,9 +90,7 @@ export const stepFrame = (state) => {
 
 export const step = (state) => {
   const oldCycles = state.CYC;
-
-  const opcode = readMem(state, state.PC);
-  state.CYC++;
+  const opcode = readOpcode(state);
 
   if (opcode in opcodeTable) {
     opcodeTable[opcode](state);
