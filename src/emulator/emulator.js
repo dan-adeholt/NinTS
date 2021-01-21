@@ -2,7 +2,7 @@ import { hex, hex16 } from './stateLogging';
 import { opcodeTable, opcodeMetadata, opcodeReadTable } from './cpu';
 
 import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
-import { readOpcode } from './instructions/';
+import { readOpcode } from './memory/';
 
 const getResetVectorAddress = state => {
   return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
@@ -67,6 +67,8 @@ export const setMem = (state, addr, value) => {
   } else {
     state.memory[addr] = value;
   }
+
+  return value;
 };
 
 export const reset = (state) => {

@@ -13,7 +13,6 @@ import {
 } from './cpu';
 
 import {
-  onSamePageBoundary,
   P_REG_ALWAYS_1,
   P_REG_BREAK, P_REG_CARRY,
   P_REG_DECIMAL,
@@ -21,6 +20,7 @@ import {
   P_REG_NEGATIVE, P_REG_OVERFLOW,
   P_REG_ZERO, PAGE_MASK
 } from './instructions/';
+import { onSamePageBoundary } from './memory';
 import { readMem } from './emulator';
 import _ from 'lodash';
 
