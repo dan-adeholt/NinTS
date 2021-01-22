@@ -1,4 +1,5 @@
 import { readMem, setMem } from './emulator';
+import { PAGE_MASK } from './instructions';
 
 export const onSamePageBoundary = (a1, a2) => (a1 ^ a2) <= 0xFF;
 
@@ -30,6 +31,17 @@ export const readAbsolute = (state) => {
   state.PC++;
 
   return lo + (hi << 8);
+}
+
+export const readIndirect = state => {
+  const address = readAbsolute(state);
+  let hi = address + 1;
+
+  if (!onSamePageBoundary(address, hi)) {
+    hi = (address & PAGE_MASK);
+  }
+
+  return readByte(state, address) + (readByte(state, hi) << 8);
 }
 
 const readAbsoluteWithOffset = (state, offset, shortenCycle) => {

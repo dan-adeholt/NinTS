@@ -53,7 +53,6 @@ export const setDecimal = (state, on) => setFlag(state, P_REG_DECIMAL, P_MASK_DE
 export const setBreak = (state, on) => setFlag(state, P_REG_BREAK, P_MASK_BREAK, on);
 export const setAlwaysOne = (state) => setFlag(state, P_REG_ALWAYS_1, P_MASK_ALWAYS_1, true);
 
-
 const setY = (state, value) => state.Y = value
 const setX = (state, value) => state.X = value
 const setA = (state, value) => state.A = value
@@ -61,17 +60,16 @@ const setAX = (state, value) => state.A = state.X = value
 
 
 /**
- * Illegal opcode. AND:s byte with accumulator. If the result is negative then carry is set.
+ * Arithmetic and bitwise operations
  */
-export const aac = (state, address) => {
-  state.A &= readByte(state, address);
-  setZeroNegative(state, state.A);
-  setCarry(state, isNegative(state.A));
-};
+export const bit = (state, address) => {
+  const value = readByte(state, address);
+  setZero(state, value & state.A);
+  const upperBits = value & P_REGS_OVERFLOW_AND_NEGATIVE;
+  const lowerBits = state.P & P_MASK_OVERFLOW_AND_NEGATIVE;
+  state.P = upperBits | lowerBits;
+}
 
-/**
- * ADC - Add with Carry - [A,Z,C,N] = A+M+C
- */
 const performADC = (state, value) => {
   const result = state.A + value + (state.P & P_REG_CARRY);
   const resultByte = (result & 0xFF);
@@ -82,23 +80,26 @@ const performADC = (state, value) => {
   setZeroNegative(state, state.A);
 }
 
+const performEOR = (state, value) => setZeroNegative(state, state.A ^= value);
+const performSBC = (state, value) => performADC(state, value ^ 0xFF)
+const performORA = (state, value) => setZeroNegative(state, state.A |= value)
+const performAND = (state, value) => setZeroNegative(state, state.A &= value);
+
+export const eor = (state, address) => performEOR(state, readByte(state, address))
+export const ora = (state, address) => performORA(state, readByte(state, address));
 export const adc = (state, address) => performADC(state, readByte(state, address))
-
-/**
- * AND - Logical AND - [A,Z,N] = A & M
- */
-export const performAND = (state, value) => setZeroNegative(state, state.A &= value);
+export const sbc = (state, address) => performSBC(state, readByte(state, address));
 export const and = (state, address) => performAND(state, readByte(state, address));
+export const slo = (state, address) => performORA(state, asl(state, address));
 
+// Illegal instruction. AND:s byte with accumulator. If the result is negative then carry is set.
+export const aac = (state, address) => {
+  state.A &= readByte(state, address);
+  setZeroNegative(state, state.A);
+  setCarry(state, isNegative(state.A));
+};
 
-/**
- * ARR - Illegal opcode - AND:s byte with accumulator, then rotates one bit right in accumulator and updates C/V based on bits 5 and 6.
- *
- * Both bits == 1: set C, clear V
- * Both bits == 0: clear C and V
- * Bit 5 == 1 && Bit 6 === 0: set V, clear C.
- * Bit 5 == 0 && Bit 6 === 1: set C and V.
- */
+// ARR - Illegal instruction - AND:s byte with accumulator, then rotates one bit right in accumulator and updates C/V based on bits 5 and 6.
 export const arr = (state, address) => {
   const value = readByte(state, address);
   const oldCarry = state.P & P_REG_CARRY;
@@ -111,10 +112,37 @@ export const arr = (state, address) => {
   setOverflowValue(state, bit5 ^ bit6);
 }
 
+// ISB - Illegal instruction
+export const isb = (state, address) => {
+  let value = (readByte(state, address) + 1) & 0xFF;
+  state.CYC++;
+  writeByte(state, address, value);
+  performSBC(state, value);
+}
 
 /**
- * ASL - Arithmetic Shift Left - [A,Z,C,N] = M*2, or [M,Z,C,N] = M*2
+ *  Read-Modify-Write operations
  */
+
+const performLSR = (state, value) => {
+  setCarry(state, value & 0x1);
+  const newValue = value >> 1;
+  setZeroNegative(state, newValue);
+  return newValue;
+}
+
+const performROL = (state, value) => {
+  const oldCarry = state.P & P_REG_CARRY;
+  setCarry(state, (value & BIT_7) >> 7);
+  return ((value << 1) & 0xFF) | oldCarry;
+}
+
+const performROR = (state, value) => {
+  const oldCarry = state.P & P_REG_CARRY;
+  setCarry(state, value & 0x1);
+  return ((value >> 1) & BIT_7_MASK) | (oldCarry << 7);
+}
+
 export const aslA = (state) => {
   state.CYC++;
   setCarry(state, state.A & BIT_7); // Copy last bit to carry flag
@@ -133,133 +161,6 @@ export const asl = (state, address) => {
   return newValue;
 }
 
-
-/**
- * ASR (illegal opcode) - AND byte with accumulator then shift bits right one bit in accumulator.
- */
-export const asr = (state, address) => {
-  state.A = performLSR(state, performAND(state, readByte(state, address)));
-}
-
-
-/**
- * ATX (illegal opcode)
- *
- * Some sites claims this opcode AND:s the value in A before transferring it to A and X.
- * However, blarggs instruction tests simply set the values. We match that behavior.
- */
-export const atx = (state, address) => {
-  state.A = readByte(state, address);
-  state.X = state.A;
-  setZeroNegative(state, state.A);
-};
-
-/**
- * AXS (illegal opcode) - AND:s X register with the accumulator and stores result in X register, then
- * subtracts byte from the X register - without borrow.
- */
-export const axs = (state, address) => {
-  const value = readByte(state, address);
-
-  let andResult = state.A & state.X;
-  const result = andResult + (value ^ 0xFF) + 1;
-  const resultByte = (result & 0xFF);
-  state.X = result;
-  setCarry(state, result > 0xFF);
-  setZeroNegative(state, resultByte);
-};
-
-/**
- * BIT - Bit Test - A&M, N = M bit7, V = M bit6
- */
-export const bit = (state, address) => {
-  const value = readByte(state, address);
-
-  if (value & state.A) {
-    setZero(state, 1);
-  } else {
-    setZero(state, 0);
-  }
-
-  const upperBits = value & P_REGS_OVERFLOW_AND_NEGATIVE;
-  const lowerBits = state.P & P_MASK_OVERFLOW_AND_NEGATIVE;
-  state.P = upperBits | lowerBits;
-}
-
-/**
- * Helper function for clear related instructions. Clears specific bits in the P register based on the supplied mask.
- */
-const clear = (state, mask) => {
-  state.P = state.P & mask;
-  state.CYC++;
-}
-
-export const clc = state => clear(state, P_MASK_CARRY);
-export const cld = state => clear(state, P_MASK_DECIMAL);
-export const cli = state => clear(state, P_MASK_INTERRUPT);
-export const clv = state => clear(state, P_MASK_OVERFLOW)
-
-const performCompare = (state, value, register) => {
-  let diff = register + (value ^ 0xFF) + 1;
-  setCarry(state, diff > 0xFF);
-  setZeroNegative(state, diff & 0xFF);
-}
-
-const compare = (state, address, register) => performCompare(state, readByte(state, address), register);
-
-export const cmp = (state, address) => compare(state, address, state.A)
-export const cpx = (state, address) => compare(state, address, state.X)
-export const cpy = (state, address) => compare(state, address, state.Y)
-
-export const dec = (state, address) => {
-  let value = (readByte(state, address) - 1) & 0xFF;
-
-  state.CYC++;
-  writeByte(state, address, value);
-  setZeroNegative(state, value);
-  return value;
-}
-
-export const dcp = (state, address) => performCompare(state, dec(state, address), state.A);
-
-const performEOR = (state, value) => {
-  const result = state.A ^ value;
-  state.A = result;
-  setZeroNegative(state, result);
-};
-
-export const eor = (state, address) => performEOR(state, readByte(state, address))
-
-export const inc = (state, address) => {
-  const value = (readByte(state, address) + 1) & 0xFF;
-  state.CYC++;
-  writeByte(state, address, value);
-  setZeroNegative(state, value);
-}
-
-export const isb = (state, address) => {
-  let value = (readByte(state, address) + 1) & 0xFF;
-  state.CYC++;
-  writeByte(state, address, value);
-  performSBC(state, value);
-}
-
-const ld = (state, address, setter) => {
-  const val = setter(state, readByte(state, address))
-  setZeroNegative(state, val);
-}
-
-export const lax = (state, address) => ld(state, address, setAX)
-export const lda = (state, address) => ld(state, address, setA)
-export const ldx = (state, address) => ld(state, address, setX)
-export const ldy = (state, address) => ld(state, address, setY)
-
-const performLSR = (state, value) => {
-  setCarry(state, value & 0x1);
-  const newValue = value >> 1;
-  return setZeroNegative(state, newValue);
-}
-
 export const lsrA = (state) => {
   state.CYC++;
   state.A = performLSR(state, state.A);
@@ -271,18 +172,108 @@ export const lsr = (state, address) => {
   return writeByte(state, address, newValue);
 }
 
-export const nop = (state) => state.CYC++;
-export const unofficialNop = (state, address) => readByte(state, address)
+export const rolA = (state) => {
+  state.CYC++;
+  state.A = performROL(state, state.A);
+  setZeroNegative(state, state.A);
+}
 
-const performORA = (state, value) => {
-  const result = state.A | value;
-  state.A = result;
-  setZeroNegative(state, result);
+export const rol = (state, address) => {
+  const newValue = performROL(state, readByte(state, address));
+  state.CYC++;
+  writeByte(state, address, newValue);
+  setZeroNegative(state, newValue);
+  return newValue;
+}
+
+export const rorA = (state) => {
+  state.CYC++;
+  state.A = performROR(state, state.A);
+  setZeroNegative(state, state.A);
+}
+
+export const ror = (state, address) => {
+  const newValue = performROR(state, readByte(state, address));
+  state.CYC++;
+  writeByte(state, address, newValue);
+  setZeroNegative(state, newValue);
+  return newValue;
+}
+
+export const inc = (state, address) => {
+  const value = (readByte(state, address) + 1) & 0xFF;
+  state.CYC++;
+  writeByte(state, address, value);
+  setZeroNegative(state, value);
+}
+
+export const dec = (state, address) => {
+  let value = (readByte(state, address) - 1) & 0xFF;
+  state.CYC++;
+  writeByte(state, address, value);
+  setZeroNegative(state, value);
+  return value;
+}
+
+// RLA - Illegal instruction. ROL value at address and then AND with result.
+export const rla = (state, address) => performAND(state, rol(state, address));
+
+// RRA (illegal instruction) - Perform ROR and then ADC the result
+export const rra = (state, address) => performADC(state, ror(state, address));
+
+// ASR (illegal instruction) - AND byte with accumulator then shift bits right one bit in accumulator.
+export const asr = (state, address) => state.A = performLSR(state, performAND(state, readByte(state, address)));
+
+// ATX - illegal instruction. Some sites claims this instruction AND:s the value in A before copying it to A and X.
+// However, blarggs instruction tests simply set the values. We match that behavior.
+export const atx = (state, address) => {
+  state.A = state.X = readByte(state, address);
+  setZeroNegative(state, state.A);
 };
 
-export const ora = (state, address) => performORA(state, readByte(state, address));
+// AXS - illegal instruction. AND:s X register with the accumulator and stores result in X register, then
+// subtracts read byte from memory from the X register - without borrow.
+export const axs = (state, address) => {
+  const value = readByte(state, address);
+  let andResult = state.A & state.X;
+  const result = andResult + (value ^ 0xFF) + 1;
+  state.X = result & 0xFF;
+  setCarry(state, result > 0xFF);
+  setZeroNegative(state, state.X);
+};
 
-// Helper method for various register transfer/increment instructions
+/**
+ * Compare instructions
+ */
+const performCompare = (state, value, register) => {
+  let diff = register + (value ^ 0xFF) + 1;
+  setCarry(state, diff > 0xFF);
+  setZeroNegative(state, diff & 0xFF);
+}
+
+export const cmp = (state, address) => performCompare(state, readByte(state, address), state.A)
+export const cpx = (state, address) => performCompare(state, readByte(state, address), state.X)
+export const cpy = (state, address) => performCompare(state, readByte(state, address), state.Y)
+
+// DCP - illegal instruction. Decrement value at memory and then compare.
+export const dcp = (state, address) => performCompare(state, dec(state, address), state.A);
+
+/**
+ *  Load instructions - load value from memory into registers.
+ */
+const ld = (state, address, setter) => {
+  const val = setter(state, readByte(state, address))
+  setZeroNegative(state, val);
+}
+
+export const lax = (state, address) => ld(state, address, setAX)
+export const lda = (state, address) => ld(state, address, setA)
+export const ldx = (state, address) => ld(state, address, setX)
+export const ldy = (state, address) => ld(state, address, setY)
+
+/**
+ * Register update instructions.
+ */
 const writeRegister = (state, value, setter) => {
   state.CYC++;
   setZeroNegative(state, value);
@@ -299,59 +290,29 @@ export const tsx = state => writeRegister(state, state.SP, setX)
 export const txa = state => writeRegister(state, state.X, setA)
 export const tya = state => writeRegister(state, state.Y, setA)
 
-export const rla = (state, address) => performAND(state, rol(state, address));
-
-export const rolA = (state) => {
+export const txs = state => {
   state.CYC++;
-  const oldCarry = state.P & P_REG_CARRY;
-  setCarry(state, (state.A & BIT_7) >> 7);
-  state.A = ((state.A << 1) & 0xFF) | oldCarry;
-  setZeroNegative(state, state.A);
+  state.SP = state.X;
 }
 
-export const rol = (state, address) => {
-  const value = readByte(state, address);
+/**
+ * NOP instructions
+ */
 
-  const oldCarry = state.P & P_REG_CARRY;
-  setCarry(state, (value & BIT_7) >> 7);
-  const newValue = ((value << 1) & 0xFF) | oldCarry;
-  state.CYC++;
-  writeByte(state, address, newValue);
-  setZeroNegative(state, newValue);
-  return newValue;
-}
+export const nop = (state) => state.CYC++;
+export const unofficialNop = (state, address) => readByte(state, address)
 
-export const rorA = (state) => {
-  state.CYC++;
-  const oldCarry = state.P & P_REG_CARRY;
-  setCarry(state, state.A & 0x1);
-  state.A = ((state.A >> 1) & BIT_7_MASK) | (oldCarry << 7);
-  setZeroNegative(state, state.A);
-}
 
-export const ror = (state, address) => {
-  const value = readByte(state, address);
+/**
+ * Store related functions
+ */
 
-  const oldCarry = state.P & P_REG_CARRY;
-  setCarry(state, value & 0x1);
-  const newValue = ((value >> 1) & BIT_7_MASK) | (oldCarry << 7);
-  state.CYC++;
-  writeByte(state, address, newValue);
-  return setZeroNegative(state, newValue);
-}
-
-export const rra = (state, address) => performADC(state, ror(state, address));
-export const sax = (state, address) => writeByte(state, address, state.X & state.A);
-
-const performSBC = (state, value) => performADC(state, value ^ 0xFF)
-
-export const sbc = (state, address) => performSBC(state, readByte(state, address));
-export const slo = (state, address) => performORA(state, asl(state, address));
-export const sre = (state, address) => performEOR(state, lsr(state, address));
 export const sta = (state, address) => writeByte(state, address, state.A)
 export const stx = (state, address) => writeByte(state, address, state.X)
 export const sty = (state, address) => writeByte(state, address, state.Y)
 
+// Used for illegal instruction SXA and SYA. Making the write only if base and address is on same page
+// is the way to make blargg tests pass.
 const s_a = (state, offset, register) => {
   const base = readWord(state, state.PC);
   const address = (base + offset) & 0xFFFF;
@@ -359,8 +320,7 @@ const s_a = (state, offset, register) => {
   if (onSamePageBoundary(base, address)) {
     let hi = (address & 0xFF00) >> 8;
     hi = (hi + 1) & 0xFF;
-    const result = register & hi;
-    writeByte(state, address, result);
+    writeByte(state, address, register & hi);
   } else {
     state.CYC++;
   }
@@ -370,6 +330,101 @@ const s_a = (state, offset, register) => {
 
 export const sxa = state => s_a(state, state.Y, state.X)
 export const sya = state => s_a(state, state.X, state.Y)
+
+// Illegal instruction. AND X and A and store to memory
+export const sax = (state, address) => writeByte(state, address, state.X & state.A);
+// Illegal instruction. LSR value at address and then EOR result.
+export const sre = (state, address) => performEOR(state, lsr(state, address));
+
+/**
+ * Flag (Processor Status) Instructions
+ */
+
+const writeFlag = (state, flagFunction, on) => {
+  flagFunction(state, on);
+  state.CYC++;
+}
+
+const clearFlag = (state, mask) => {
+  state.P = state.P & mask;
+  state.CYC++;
+}
+
+export const clc = state => clearFlag(state, P_MASK_CARRY);
+export const cld = state => clearFlag(state, P_MASK_DECIMAL);
+export const cli = state => clearFlag(state, P_MASK_INTERRUPT);
+export const clv = state => clearFlag(state, P_MASK_OVERFLOW)
+export const sed = state => writeFlag(state, setDecimal, true)
+export const sei = state => writeFlag(state, setInterrupt, true)
+export const sec = state => writeFlag(state, setCarry, true)
+
+/**
+ * Stack functions
+ */
+export const pla = state => {
+  state.CYC++;
+  state.CYC++;
+  state.A = popStack(state);
+  setZeroNegative(state, state.A);
+}
+
+export const plp = state => {
+  state.CYC++;
+  state.CYC++;
+  state.P = popStack(state);
+  setBreak(state, false); // See http://wiki.nesdev.com/w/index.php/Status_flags
+  setAlwaysOne(state);
+};
+
+export const pha = state => {
+  state.CYC++;
+  pushStack(state, state.A);
+};
+
+export const php = state => {
+  state.CYC++;
+  pushStack(state, state.P | P_REG_BREAK);
+}
+
+/**
+ *  Return instructions
+ */
+
+export const rti = state => {
+  state.CYC++;
+  state.CYC++;
+  state.P = popStack(state);
+  setBreak(state, false); // See http://wiki.nesdev.com/w/index.php/Status_flags
+  setAlwaysOne(state);
+  const low = popStack(state);
+  const high = popStack(state);
+  state.PC = (low | (high << 8));
+}
+
+export const rts = state => {
+  state.CYC++;
+  state.CYC++;
+  const low = popStack(state);
+  const high = popStack(state);
+  state.CYC++;
+  state.PC = (low | (high << 8)) + 1;
+}
+
+export const brk = state => {
+  state.CYC++;
+
+  const addr = state.PC + 1; // Next instruction - 1
+  pushStack(state, addr >> 8);
+  pushStack(state, addr & 0xFF);
+  pushStack(state, state.P | P_REG_BREAK);
+  setInterrupt(state, true);
+  state.PC = readWord(state, 0xFFFE);
+}
+
+/**
+ * Jump instructions
+ */
+export const jmp = (state, address) => state.PC = address
 
 export const jsr = state => { // JSR
   const low = readByte(state, state.PC);
@@ -383,99 +438,8 @@ export const jsr = state => { // JSR
   state.PC = low + (high << 8);
 }
 
-export const rts = state => { // RTS
-  state.CYC++;
-  state.CYC++;
-  const low = popStack(state);
-  const high = popStack(state);
-  state.CYC++;
-  state.PC = (low | (high << 8)) + 1;
-}
-
-export const pla = state => { // PLA
-  state.CYC++;
-  state.CYC++;
-  state.A = popStack(state);
-  setZeroNegative(state, state.A);
-}
-
-export const plp = state => { // PLP
-  state.CYC++;
-  state.CYC++;
-  state.P = popStack(state);
-  setBreak(state, false); // See http://wiki.nesdev.com/w/index.php/Status_flags
-  setAlwaysOne(state);
-};
-
-export const pha = state => { // PHA
-  state.CYC++;
-  pushStack(state, state.A);
-};
-
-export const php = state => { // PHP
-  const pCopy = state.P | P_REG_BREAK;
-  state.CYC++;
-  pushStack(state, pCopy);
-}
-
-export const rti = state => { // RTI
-  state.CYC++;
-  state.CYC++;
-  state.P = popStack(state);
-  setBreak(state, false); // See http://wiki.nesdev.com/w/index.php/Status_flags
-  setAlwaysOne(state);
-  const low = popStack(state);
-  const high = popStack(state);
-  state.PC = (low | (high << 8));
-}
-
-export const brk = state => { // BRK
-  const pCopy = state.P | P_REG_BREAK;
-  state.CYC++;
-
-  const addr = state.PC + 1; // Next instruction - 1
-  pushStack(state, addr >> 8);
-  pushStack(state, addr & 0xFF);
-  pushStack(state, pCopy);
-  setInterrupt(state, true);
-  state.PC = readWord(state, 0xFFFE);
-}
-
-const writeFlag = (state, flagFunction, on) => {
-  flagFunction(state, on);
-  state.CYC++;
-}
-
-export const sed = state => writeFlag(state, setDecimal, true)
-export const sei = state => writeFlag(state, setInterrupt, true)
-export const sec = state => writeFlag(state, setCarry, true)
-
-// TXS - Transfer X to Stack Pointer
-export const txs = state => {
-  state.CYC++;
-  state.SP = state.X;
-}
-
-
-
 /**
- * JMP - Indirect - Changes the PC to the specified indirect address.
- */
-export const jmpIndirect = (state, address) => {
-  let hi = address + 1;
-
-  if (!onSamePageBoundary(address, hi)) {
-    hi = (address & PAGE_MASK);
-  }
-
-  state.PC = readByte(state, address) + (readByte(state, hi) << 8);
-}
-
-export const jmpAbsolute = (state, address) => state.PC = address
-
-/**
- * Helper function for various branch related instructions. They are all implemented the same way apart
- * from the condition on which the branch is predicated.
+ * Branch instructions. They are all implemented the same way apart from the condition on which the branch is predicated.
  */
 const branch = (state, address, shouldBranch) => {
   let offset = readByte(state, address);
@@ -493,7 +457,6 @@ const branch = (state, address, shouldBranch) => {
   }
 }
 
-/* Branching instructions */
 export const bcc = (state, address) => branch(state, address, !(state.P & P_REG_CARRY ));
 export const beq = (state, address) => branch(state, address, state.P & P_REG_ZERO);
 export const bne = (state, address) => branch(state, address, !(state.P & P_REG_ZERO));

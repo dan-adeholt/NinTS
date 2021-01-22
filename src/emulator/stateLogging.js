@@ -1,14 +1,14 @@
 import {
-  AddressModeAbsolute,
-  AddressModeAbsoluteX,
-  AddressModeAbsoluteY,
-  AddressModeAccumulator,
-  AddressModeImmediate,
-  AddressModeImplied,
-  AddressModeIndirect, AddressModeIndirectX, AddressModeIndirectY, AddressModeRelative,
-  AddressModeZeroPage,
-  AddressModeZeroPageX,
-  AddressModeZeroPageY,
+  ModeAbsolute,
+  ModeAbsoluteX,
+  ModeAbsoluteY,
+  ModeAccumulator,
+  ModeImmediate,
+  ModeImplied,
+  ModeIndirect, ModeIndirectX, ModeIndirectY, ModeRelative,
+  ModeZeroPage,
+  ModeZeroPageX,
+  ModeZeroPageY,
   opcodeMetadata
 } from './cpu';
 
@@ -43,9 +43,9 @@ export const absoluteAddress = (state, pc) => {
 }
 
 const logFormatters = {
-  [AddressModeAccumulator]: state => "A",
-  [AddressModeImmediate]: (state, pc) => "#$" + hex(readMem(state, pc + 1)),
-  [AddressModeAbsolute]: (state, pc) => {
+  [ModeAccumulator]: state => "A",
+  [ModeImmediate]: (state, pc) => "#$" + hex(readMem(state, pc + 1)),
+  [ModeAbsolute]: (state, pc) => {
     const opcode = readMem(state, pc);
     const { name } = opcodeMetadata[opcode];
     const address = absoluteAddress(state, pc);
@@ -56,34 +56,34 @@ const logFormatters = {
       return "$" + hex16(address) + " = " + hex(byte);
     }
   },
-  [AddressModeAbsoluteX]: (state, pc) => {
+  [ModeAbsoluteX]: (state, pc) => {
     const base = absoluteAddress(state, pc);
     const address = (base + state.X) & 0xFFFF;
     const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",X @ " + hex16(address) + ' = ' + hex(byte);
   },
-  [AddressModeAbsoluteY]: (state, pc) => {
+  [ModeAbsoluteY]: (state, pc) => {
     const base = absoluteAddress(state, pc);
     const address = (base + state.Y) & 0xFFFF;
     const byte = readLogMem(state, address);
     return "$" + hex16(base) + ",Y @ " + hex16(address) + ' = ' + hex(byte);
   },
-  [AddressModeZeroPage]: (state, pc) => {
+  [ModeZeroPage]: (state, pc) => {
     const offset = readMem(state, pc + 1);
     return "$" + hex(offset) + " = " + hex(readMem(state, offset));
   },
-  [AddressModeZeroPageX]: (state, pc) => {
+  [ModeZeroPageX]: (state, pc) => {
     const base = readMem(state, pc + 1);
     const address = (base + state.X) % 256;
     return "$" + hex(base) + ",X @ " + hex(address) + " = " + hex(readLogMem(state, address));
   },
-  [AddressModeZeroPageY]: (state, pc) => {
+  [ModeZeroPageY]: (state, pc) => {
     const base = readMem(state, pc + 1);
     const address = (base + state.Y) % 256;
     return "$" + hex(base) + ",Y @ " + hex(address) + " = " + hex(readLogMem(state, address));
   },
-  [AddressModeImplied]: state => "",
-  [AddressModeIndirect]: (state, pc) => {
+  [ModeImplied]: state => "",
+  [ModeIndirect]: (state, pc) => {
     const address = absoluteAddress(state, pc);
 
     const lo = address;
@@ -96,7 +96,7 @@ const logFormatters = {
     const target = readMem(state, lo) + (readMem(state, hi) << 8);
     return "($" + hex16(address) + ") = " + hex16(target);
   },
-  [AddressModeIndirectX]: (state, pc) => {
+  [ModeIndirectX]: (state, pc) => {
     const offset = readMem(state, pc + 1);
     const addressLocation = (state.X + offset) % 256;
 
@@ -105,7 +105,7 @@ const logFormatters = {
 
     return "($" + hex(offset) + ",X) @ " + hex(addressLocation) + " = " + hex16(address) + " = " + hex(value);
   },
-  [AddressModeIndirectY]: (state, pc) => {
+  [ModeIndirectY]: (state, pc) => {
     const zeroPageAddress = readMem(state, pc + 1);
     const base = readMem(state, zeroPageAddress) + (readMem(state, (zeroPageAddress + 1) % 256) << 8);
     const address = (base + state.Y) & 0xFFFF;
@@ -113,7 +113,7 @@ const logFormatters = {
     let value = readLogMem(state, address);
     return "($" + hex(zeroPageAddress) + "),Y = " + hex16(base) + " @ " + hex16(address) + " = " + hex(value);
   },
-  [AddressModeRelative]: (state, pc) => {
+  [ModeRelative]: (state, pc) => {
     let offset = readMem(state, pc + 1);
     if (offset > 0x7F) {
       offset -= 256;
@@ -142,19 +142,19 @@ export const procFlagsToString = (P) => {
 }
 
 const InstructionLengthTranslation = {
-  [AddressModeAbsolute]: 3,
-  [AddressModeAbsoluteX]: 3,
-  [AddressModeAbsoluteY]: 3,
-  [AddressModeAccumulator]: 1,
-  [AddressModeImmediate]: 2,
-  [AddressModeImplied]: 1,
-  [AddressModeIndirect]: 3,
-  [AddressModeIndirectX]: 2,
-  [AddressModeIndirectY]: 2,
-  [AddressModeRelative]: 2,
-  [AddressModeZeroPage]: 2,
-  [AddressModeZeroPageX]: 2,
-  [AddressModeZeroPageY]: 2
+  [ModeAbsolute]: 3,
+  [ModeAbsoluteX]: 3,
+  [ModeAbsoluteY]: 3,
+  [ModeAccumulator]: 1,
+  [ModeImmediate]: 2,
+  [ModeImplied]: 1,
+  [ModeIndirect]: 3,
+  [ModeIndirectX]: 2,
+  [ModeIndirectY]: 2,
+  [ModeRelative]: 2,
+  [ModeZeroPage]: 2,
+  [ModeZeroPageX]: 2,
+  [ModeZeroPageY]: 2
 };
 
 export const stateToString = (state, swapPPU) => {
