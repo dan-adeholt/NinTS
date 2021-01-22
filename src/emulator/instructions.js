@@ -1,6 +1,4 @@
-import { onSamePageBoundary, popStack, pushStack, readByte, readWord, writeByte } from './memory';
-
-export const PAGE_MASK = ~(0xFF);
+import { onSamePageBoundary, popStack, pushStack, pushStackWord, readByte, readWord, writeByte } from './memory';
 
 export const BIT_7 = 0b10000000;
 export const BIT_7_MASK = ~BIT_7;
@@ -134,86 +132,58 @@ const performLSR = (state, value) => {
 const performROL = (state, value) => {
   const oldCarry = state.P & P_REG_CARRY;
   setCarry(state, (value & BIT_7) >> 7);
-  return ((value << 1) & 0xFF) | oldCarry;
+  const newValue = ((value << 1) & 0xFF) | oldCarry
+  setZeroNegative(state, newValue);
+  return newValue;
+}
+
+const performINC = (state, value) => {
+  const newValue = (value + 1) & 0xFF;
+  setZeroNegative(state, newValue);
+  return newValue;
+}
+
+const performDEC = (state, value) => {
+  const newValue = (value - 1) & 0xFF;
+  setZeroNegative(state, newValue);
+  return newValue;
 }
 
 const performROR = (state, value) => {
   const oldCarry = state.P & P_REG_CARRY;
   setCarry(state, value & 0x1);
-  return ((value >> 1) & BIT_7_MASK) | (oldCarry << 7);
+  const newValue = ((value >> 1) & BIT_7_MASK) | (oldCarry << 7);
+  setZeroNegative(state, newValue);
+  return newValue;
 }
 
-export const aslA = (state) => {
-  state.CYC++;
-  setCarry(state, state.A & BIT_7); // Copy last bit to carry flag
-  state.A = (state.A << 1) & 0xFF;
-  setZeroNegative(state, state.A);
-}
-
-export const asl = (state, address) => {
-  const value = readByte(state, address);
-
-  setCarry(state, value & BIT_7);
+const performASL = (state, value) => {
+  setCarry(state, value & BIT_7); // Copy last bit to carry flag
   const newValue = (value << 1) & 0xFF;
-  state.CYC++;
-  writeByte(state, address, newValue);
   setZeroNegative(state, newValue);
   return newValue;
 }
 
-export const lsrA = (state) => {
+const rmwA = (state, value) => {
   state.CYC++;
-  state.A = performLSR(state, state.A);
+  state.A = value;
 }
 
-export const lsr = (state, address) => {
-  const newValue = performLSR(state, readByte(state, address));
+const rmw = (state, address, value) => {
   state.CYC++;
-  return writeByte(state, address, newValue);
+  return writeByte(state, address, value);
 }
 
-export const rolA = (state) => {
-  state.CYC++;
-  state.A = performROL(state, state.A);
-  setZeroNegative(state, state.A);
-}
-
-export const rol = (state, address) => {
-  const newValue = performROL(state, readByte(state, address));
-  state.CYC++;
-  writeByte(state, address, newValue);
-  setZeroNegative(state, newValue);
-  return newValue;
-}
-
-export const rorA = (state) => {
-  state.CYC++;
-  state.A = performROR(state, state.A);
-  setZeroNegative(state, state.A);
-}
-
-export const ror = (state, address) => {
-  const newValue = performROR(state, readByte(state, address));
-  state.CYC++;
-  writeByte(state, address, newValue);
-  setZeroNegative(state, newValue);
-  return newValue;
-}
-
-export const inc = (state, address) => {
-  const value = (readByte(state, address) + 1) & 0xFF;
-  state.CYC++;
-  writeByte(state, address, value);
-  setZeroNegative(state, value);
-}
-
-export const dec = (state, address) => {
-  let value = (readByte(state, address) - 1) & 0xFF;
-  state.CYC++;
-  writeByte(state, address, value);
-  setZeroNegative(state, value);
-  return value;
-}
+export const aslA = (state) => rmwA(state, performASL(state, state.A))
+export const lsrA = (state) => rmwA(state, performLSR(state, state.A))
+export const rolA = (state) => rmwA(state, performROL(state, state.A))
+export const rorA = (state) => rmwA(state, performROR(state, state.A))
+export const asl = (state, address) => rmw(state, address, performASL(state, readByte(state, address)));
+export const lsr = (state, address) => rmw(state, address, performLSR(state, readByte(state, address)));
+export const rol = (state, address) => rmw(state, address, performROL(state, readByte(state, address)));
+export const ror = (state, address) => rmw(state, address, performROR(state, readByte(state, address)));
+export const inc = (state, address) => rmw(state, address, performINC(state, readByte(state, address)));
+export const dec = (state, address) => rmw(state, address, performDEC(state, readByte(state, address)));
 
 // RLA - Illegal instruction. ROL value at address and then AND with result.
 export const rla = (state, address) => performAND(state, rol(state, address));
@@ -412,10 +382,7 @@ export const rts = state => {
 
 export const brk = state => {
   state.CYC++;
-
-  const addr = state.PC + 1; // Next instruction - 1
-  pushStack(state, addr >> 8);
-  pushStack(state, addr & 0xFF);
+  pushStackWord(state, state.PC + 1);
   pushStack(state, state.P | P_REG_BREAK);
   setInterrupt(state, true);
   state.PC = readWord(state, 0xFFFE);
@@ -426,15 +393,14 @@ export const brk = state => {
  */
 export const jmp = (state, address) => state.PC = address
 
-export const jsr = state => { // JSR
+export const jsr = state => {
   const low = readByte(state, state.PC);
   state.CYC++;
 
   const jumpBackAddress = state.PC + 1; // Next instruction - 1
 
-  pushStack(state, jumpBackAddress >> 8);
-  pushStack(state, jumpBackAddress & 0xFF);
-  const high = readByte(state, state.PC + 1);
+  pushStackWord(state, jumpBackAddress);
+  const high = readByte(state, jumpBackAddress);
   state.PC = low + (high << 8);
 }
 

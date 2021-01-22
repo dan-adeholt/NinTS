@@ -40,6 +40,7 @@ export const initMachine = (rom) => {
     X: 0,
     Y: 0,
     P: 0x24,
+    PF: [false, false, true, false, false, true, false, false],
     PC: startingLocation,
     SP: 0xFD,
     CYC: 0,

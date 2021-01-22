@@ -1,5 +1,6 @@
 import { readMem, setMem } from './emulator';
-import { PAGE_MASK } from './instructions';
+
+export const PAGE_MASK = ~(0xFF);
 
 export const onSamePageBoundary = (a1, a2) => (a1 ^ a2) <= 0xFF;
 
@@ -116,4 +117,9 @@ export const popStack = (state) => {
 export const pushStack = (state, value) => {
   writeByte(state, 0x100 + state.SP, value);
   state.SP = (state.SP - 1) & 0xFF;
+}
+
+export const pushStackWord = (state, word) => {
+  pushStack(state, word >> 8);
+  pushStack(state, word & 0xFF);
 }
