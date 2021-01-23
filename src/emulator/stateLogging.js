@@ -19,7 +19,7 @@ import {
   P_REG_INTERRUPT,
   P_REG_NEGATIVE, P_REG_OVERFLOW,
   P_REG_ZERO,
-} from './instructions/';
+} from './instructions/util';
 import { onSamePageBoundary, PAGE_MASK } from './memory';
 import { readMem } from './emulator';
 import _ from 'lodash';
