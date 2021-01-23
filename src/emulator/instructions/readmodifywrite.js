@@ -4,6 +4,7 @@
 import { BIT_7, BIT_7_MASK, P_REG_CARRY, setCarry, setZeroNegative } from './util';
 import { readByte, writeByte } from '../memory';
 import { performADC, performAND } from './arithmetic';
+import { tick } from '../emulator';
 
 export const performLSR = (state, value) => {
   setCarry(state, value & 0x1);
@@ -48,12 +49,12 @@ const performASL = (state, value) => {
 }
 
 const rmwA = (state, value) => {
-  state.CYC++;
+  tick(state);
   state.A = value;
 }
 
 const rmw = (state, address, value) => {
-  state.CYC++;
+  tick(state);
   return writeByte(state, address, value);
 }
 

@@ -4,6 +4,7 @@
 import { onSamePageBoundary, readWord, writeByte } from '../memory';
 import { performEOR } from './arithmetic';
 import { lsr } from './readmodifywrite';
+import { tick } from '../emulator';
 
 export const sta = (state, address) => writeByte(state, address, state.A)
 export const stx = (state, address) => writeByte(state, address, state.X)
@@ -20,7 +21,7 @@ const s_a = (state, offset, register) => {
     hi = (hi + 1) & 0xFF;
     writeByte(state, address, register & hi);
   } else {
-    state.CYC++;
+    tick(state);
   }
 
   state.PC += 2;

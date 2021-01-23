@@ -10,15 +10,16 @@ import {
   setDecimal,
   setInterrupt
 } from './util';
+import { tick } from '../emulator';
 
 const writeFlag = (state, flagFunction, on) => {
   flagFunction(state, on);
-  state.CYC++;
+  tick(state);
 }
 
 const clearFlag = (state, mask) => {
   state.P = state.P & mask;
-  state.CYC++;
+  tick(state);
 }
 
 export const clc = state => clearFlag(state, P_MASK_CARRY);

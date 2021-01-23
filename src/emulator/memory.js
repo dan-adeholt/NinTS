@@ -1,16 +1,16 @@
-import { readMem, setMem } from './emulator';
+import { readMem, setMem, tick } from './emulator';
 
 export const PAGE_MASK = ~(0xFF);
 
 export const onSamePageBoundary = (a1, a2) => (a1 ^ a2) <= 0xFF;
 
 export const writeByte = (state, address, value) => {
-  state.CYC++;
+  tick(state);
   return setMem(state, address, value);
 }
 
 export const readByte = (state, address) => {
-  state.CYC++;
+  tick(state);
   return readMem(state, address);
 }
 
@@ -50,7 +50,7 @@ const readAbsoluteWithOffset = (state, offset, shortenCycle) => {
   const address = (base + offset) & 0xFFFF;
 
   if (!onSamePageBoundary(base, address) || !shortenCycle) {
-    state.CYC ++;
+    tick(state);
   }
 
   state.PC += 2;
@@ -65,7 +65,7 @@ export const readZeroPage = (state) => readByte(state, state.PC++)
 
 const readZeroPageOffset = (state, offset) => {
   const address = (readByte(state, state.PC) + offset) % 256;
-  state.CYC++;
+  tick(state);
   state.PC += 1;
   return address;
 }
@@ -77,7 +77,7 @@ export const readAbsoluteYShortenCycle = state => readAbsoluteWithOffset(state, 
 
 export const readIndirectX = (state) => {
   const offset = readByte(state, state.PC);
-  state.CYC++;
+  tick(state);
   const addressLocation = (state.X + offset) % 256;
   const address = readByte(state, addressLocation) + (readByte(state, (addressLocation + 1) & 0xFF) << 8);
 
@@ -93,7 +93,7 @@ const readIndirectYHelper = (state, shortenCycle) => {
   state.PC += 1;
 
   if (!onSamePageBoundary(base, address) || !shortenCycle) {
-    state.CYC ++;
+    tick(state);
   }
 
   return address;

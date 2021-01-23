@@ -52,8 +52,6 @@ export const initMachine = (rom) => {
   };
 }
 
-export const readStack = (state, sp) => state.memory[0x100 + sp]
-
 export const readMem = (state, addr) => {
   if (addr >= 0x2000 && addr <= 0x2007) {
     return readPPUMem(state, addr);
@@ -91,20 +89,20 @@ export const stepFrame = (state) => {
   return hitBreakpoint;
 }
 
+export const tick = (state) => {
+  state.CYC++;
+  updatePPU(state, 1);
+}
+
 export const step = (state) => {
-  const oldCycles = state.CYC;
   const opcode = readOpcode(state);
 
   if (opcode in opcodeTable) {
     opcodeTable[opcode](state);
   } else {
     console.error('No handler found for opcode $' + hex(opcode === undefined ? -1 : opcode), opcodeMetadata[opcode]?.name ?? '', hex(state.PC));
-
     return false;
   }
-
-  const executedCycles = state.CYC - oldCycles;
-  updatePPU(state, executedCycles);
 
   return true;
 };

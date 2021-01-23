@@ -2,9 +2,10 @@
  * Register update instructions.
  */
 import { setA, setX, setY, setZeroNegative } from './util';
+import { tick } from '../emulator';
 
 const writeRegister = (state, value, setter) => {
-  state.CYC++;
+  tick(state);
   setZeroNegative(state, value);
   setter(state, value);
 }
@@ -20,6 +21,6 @@ export const txa = state => writeRegister(state, state.X, setA)
 export const tya = state => writeRegister(state, state.Y, setA)
 
 export const txs = state => {
-  state.CYC++;
+  tick(state);
   state.SP = state.X;
 }

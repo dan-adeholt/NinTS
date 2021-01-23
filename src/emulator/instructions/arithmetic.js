@@ -13,6 +13,7 @@ import {
 
 import { readByte, writeByte } from '../memory';
 import { asl } from './readmodifywrite';
+import { tick } from '../emulator';
 
 export const bit = (state, address) => {
   const value = readByte(state, address);
@@ -66,7 +67,7 @@ export const arr = (state, address) => {
 // ISB - Illegal instruction
 export const isb = (state, address) => {
   let value = (readByte(state, address) + 1) & 0xFF;
-  state.CYC++;
+  tick(state);
   writeByte(state, address, value);
   performSBC(state, value);
 }
