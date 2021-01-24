@@ -1,7 +1,3 @@
-import { onSamePageBoundary, popStack, pushStack, pushStackWord, readByte, readWord, writeByte } from '../memory';
-import { asl, dec, lsr } from './readmodifywrite';
-import { performEOR } from './arithmetic';
-
 export const BIT_7 = 0b10000000;
 export const BIT_7_MASK = ~BIT_7;
 
@@ -49,7 +45,6 @@ export const setZeroNegative = (state, value) => {
 export const setOverflow = (state, accumulator, value, result) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, (accumulator ^ result) & (value ^ result) & 0x80);
 export const setOverflowValue = (state, on) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, on);
 export const setInterrupt = (state, on) => setFlag(state, P_REG_INTERRUPT, P_MASK_INTERRUPT, on);
-export const setDecimal = (state, on) => setFlag(state, P_REG_DECIMAL, P_MASK_DECIMAL, on);
 export const setBreak = (state, on) => setFlag(state, P_REG_BREAK, P_MASK_BREAK, on);
 export const setAlwaysOne = (state) => setFlag(state, P_REG_ALWAYS_1, P_MASK_ALWAYS_1, true);
 

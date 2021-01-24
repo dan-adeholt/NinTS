@@ -6,26 +6,19 @@ import {
   P_MASK_CARRY,
   P_MASK_DECIMAL,
   P_MASK_INTERRUPT,
-  P_MASK_OVERFLOW, setCarry,
-  setDecimal,
-  setInterrupt
+  P_MASK_OVERFLOW, P_REG_CARRY, P_REG_DECIMAL, P_REG_INTERRUPT
 } from './util';
 import { tick } from '../emulator';
 
-const writeFlag = (state, flagFunction, on) => {
-  flagFunction(state, on);
+const setFlags = (state, p) => {
+  state.P = p;
   tick(state);
 }
 
-const clearFlag = (state, mask) => {
-  state.P = state.P & mask;
-  tick(state);
-}
-
-export const clc = state => clearFlag(state, P_MASK_CARRY);
-export const cld = state => clearFlag(state, P_MASK_DECIMAL);
-export const cli = state => clearFlag(state, P_MASK_INTERRUPT);
-export const clv = state => clearFlag(state, P_MASK_OVERFLOW)
-export const sed = state => writeFlag(state, setDecimal, true)
-export const sei = state => writeFlag(state, setInterrupt, true)
-export const sec = state => writeFlag(state, setCarry, true)
+export const clc = state => setFlags(state, state.P & P_MASK_CARRY);
+export const cld = state => setFlags(state, state.P & P_MASK_DECIMAL);
+export const cli = state => setFlags(state, state.P & P_MASK_INTERRUPT);
+export const clv = state => setFlags(state, state.P & P_MASK_OVERFLOW)
+export const sed = state => setFlags(state, state.P | P_REG_DECIMAL);
+export const sei = state => setFlags(state, state.P | P_REG_INTERRUPT);
+export const sec = state => setFlags(state, state.P | P_REG_CARRY);

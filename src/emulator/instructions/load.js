@@ -5,8 +5,8 @@ import { readByte } from '../memory';
 import { setA, setAX, setX, setY, setZeroNegative } from './util';
 
 const ld = (state, address, setter) => {
-  const val = setter(state, readByte(state, address))
-  setZeroNegative(state, val);
+  const value = setter(state, readByte(state, address))
+  setZeroNegative(state, value);
 }
 
 export const lax = (state, address) => ld(state, address, setAX)

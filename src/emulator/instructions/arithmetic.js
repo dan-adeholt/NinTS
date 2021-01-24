@@ -15,28 +15,24 @@ import { readByte, writeByte } from '../memory';
 import { asl } from './readmodifywrite';
 import { tick } from '../emulator';
 
-export const bit = (state, address) => {
-  const value = readByte(state, address);
-  setZero(state, value & state.A);
-  const upperBits = value & P_REGS_OVERFLOW_AND_NEGATIVE;
-  const lowerBits = state.P & P_MASK_OVERFLOW_AND_NEGATIVE;
-  state.P = upperBits | lowerBits;
+const updateAccumulator = (state, value) => {
+  state.A = value;
+  setZeroNegative(state, state.A);
+  return value;
 }
 
 export const performADC = (state, value) => {
   const result = state.A + value + (state.P & P_REG_CARRY);
   const resultByte = (result & 0xFF);
-
   setOverflow(state, state.A, value, resultByte);
-  state.A = resultByte;
   setCarry(state, result > 0xFF);
-  setZeroNegative(state, state.A);
+  return updateAccumulator(state, resultByte);
 }
 
-export const performEOR = (state, value) => setZeroNegative(state, state.A ^= value);
+export const performEOR = (state, value) => updateAccumulator(state, state.A ^ value);
+const performORA = (state, value) => updateAccumulator(state, state.A | value);
+export const performAND = (state, value) => updateAccumulator(state, state.A & value);
 const performSBC = (state, value) => performADC(state, value ^ 0xFF)
-const performORA = (state, value) => setZeroNegative(state, state.A |= value)
-export const performAND = (state, value) => setZeroNegative(state, state.A &= value);
 
 export const eor = (state, address) => performEOR(state, readByte(state, address))
 export const ora = (state, address) => performORA(state, readByte(state, address));
@@ -44,6 +40,14 @@ export const adc = (state, address) => performADC(state, readByte(state, address
 export const sbc = (state, address) => performSBC(state, readByte(state, address));
 export const and = (state, address) => performAND(state, readByte(state, address));
 export const slo = (state, address) => performORA(state, asl(state, address));
+
+export const bit = (state, address) => {
+  const value = readByte(state, address);
+  setZero(state, value & state.A);
+  const upperBits = value & P_REGS_OVERFLOW_AND_NEGATIVE;
+  const lowerBits = state.P & P_MASK_OVERFLOW_AND_NEGATIVE;
+  state.P = upperBits | lowerBits;
+}
 
 // Illegal instruction. AND:s byte with accumulator. If the result is negative then carry is set.
 export const aac = (state, address) => {
@@ -71,7 +75,6 @@ export const isb = (state, address) => {
   writeByte(state, address, value);
   performSBC(state, value);
 }
-
 
 // ATX - illegal instruction. Some sites claims this instruction AND:s the value in A before copying it to A and X.
 // However, blarggs instruction tests simply set the values. We match that behavior.

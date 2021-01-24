@@ -21,7 +21,7 @@ const branch = (state, address, shouldBranch) => {
   }
 }
 
-export const bcc = (state, address) => branch(state, address, !(state.P & P_REG_CARRY ));
+export const bcc = (state, address) => branch(state, address, !(state.P & P_REG_CARRY));
 export const beq = (state, address) => branch(state, address, state.P & P_REG_ZERO);
 export const bne = (state, address) => branch(state, address, !(state.P & P_REG_ZERO));
 export const bcs = (state, address) => branch(state, address, state.P & P_REG_CARRY);
