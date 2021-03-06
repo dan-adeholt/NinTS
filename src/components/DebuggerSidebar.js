@@ -10,6 +10,8 @@ import { opcodeMetadata } from '../emulator/cpu';
 import { step } from '../emulator/emulator';
 import { RunModeType } from '../App';
 
+export const BREAKPOINTS_KEY = 'Breakpoints';
+
 const allOpcodeNames = _.uniq(_.map(opcodeMetadata, 'name'));
 
 const getComponentStyle = (component) => {
@@ -39,15 +41,16 @@ const AddressRow = React.memo(({ data, index, style }) => {
   </div>
 });
 
-const DebuggerSidebar = ({ emulator, setRunMode, runMode }) => {
+const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
   const [lines, setLines] = useState([]);
-  const [breakpoints, setBreakpoints] = useState({});
+  const [breakpoints, setBreakpoints] = useState(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? {}));
   const [currentStep, setCurrentStep] = useState(0);
   const listRef = useRef();
 
   const stepEmulator = useCallback(() => {
     step(emulator);
     setCurrentStep(s => s + 1);
+    onRefresh();
   }, [emulator]);
 
   const updateDebugger = useCallback(() => {
@@ -67,6 +70,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode }) => {
         newBreakpoints[address] = true;
       }
 
+      localStorage.setItem(BREAKPOINTS_KEY, JSON.stringify(newBreakpoints));
       return newBreakpoints;
     })
   }, []);
@@ -120,6 +124,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode }) => {
   const handleKeyEvent = useCallback(e => {
     switch (e.key) {
       case 'n':
+      case 'F10':
         stepEmulator();
         break;
       case 'r':
@@ -129,6 +134,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode }) => {
           runEmulator();
         }
         break;
+      case 'F11':
       case 'f':
         runEmulatorFrame();
         break;
@@ -144,8 +150,6 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode }) => {
       document.removeEventListener('keydown', handleKeyEvent);
     }
   }, [handleKeyEvent])
-
-  console.log('Running', running, runMode);
 
   const data = useMemo(() => ({
     lines, emulator, breakpoints, toggleBreakpoint, running

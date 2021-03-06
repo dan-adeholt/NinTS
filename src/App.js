@@ -4,7 +4,8 @@ import { parseROM } from './emulator/parseROM';
 import { hex } from './emulator/stateLogging';
 import { initMachine, stepFrame } from './emulator/emulator';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from './emulator/ppu';
-import DebuggerSidebar from './components/DebuggerSidebar';
+import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
+import _ from 'lodash';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
 const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
@@ -52,6 +53,7 @@ function App() {
     const fileReader = new FileReader();
     fileReader.onloadend = handleFileRead;
     fileReader.readAsArrayBuffer(e.target.files[0]);
+    localStorage.setItem(BREAKPOINTS_KEY, {});
   }, [handleFileRead]);
 
   const animationFrameRef = useRef(null);
@@ -83,10 +85,10 @@ function App() {
 
   const running = runMode !== RunModeType.STOPPED;
 
-  const registerCell = (label, register) => (
+  const registerCell = (label, register, formatter = hex) => (
     <td>
       <label>{ label }</label>
-      { running ? '-' : hex(register) }
+      { running ? '-' : formatter(register) }
     </td>
   );
 
@@ -97,9 +99,12 @@ function App() {
     setDisplay({ imageData, framebuffer, context });
   }, [canvasRef]);
 
+  const [refresh, setRefresh] = useState(false);
+  const triggerRefresh = useCallback(() => setRefresh(s => !s), []);
+
   return (
     <div className="App">
-      <DebuggerSidebar emulator={emulator} runMode={runMode} setRunMode={setRunMode} />
+      <DebuggerSidebar emulator={emulator} runMode={runMode} setRunMode={setRunMode} onRefresh={triggerRefresh}/>
       <div className="content">
         <h1>{ title }</h1>
         { emulator && (
@@ -116,6 +121,7 @@ function App() {
                 { registerCell('Y', emulator.Y) }
                 { registerCell('SP', emulator.SP) }
                 { registerCell('PC', emulator.PC) }
+                { registerCell('CYC', emulator.CYC, _.identity) }
               </tr>
               </tbody>
             </table>
