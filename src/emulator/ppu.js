@@ -1,4 +1,7 @@
 import { COLORS } from './constants';
+import { OAM_DMA } from './cpu';
+import { tick } from './emulator';
+import { hex16 } from './stateLogging';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
@@ -40,6 +43,7 @@ export const initPPU = () => {
     scanline: 0,
     evenFrame: true,
     vblankCount: 0,
+    nmiOccurred: false,
     V: 0,
     T: 0,
     X: 0,
@@ -71,11 +75,16 @@ const incrementVRAMAddress = state => {
 }
 
 export const readPPUMem = (state, address) => {
-  const ret = state.memory[address];
-
+  let ret = state.memory[address];
 
   if (address === PPUSTATUS) {
-    state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
+    ret &= PPUSTATUS_VBLANK_MASK;
+
+    if (state.ppu.nmiOccurred) {
+      ret = ret | PPUSTATUS_VBLANK;
+      state.ppu.nmiOccurred = false;
+    }
+
     state.ppu.W = 0;
   } else {
     // Reading from write-only registers return the last value on the bus. Reading from PPUCTRL
@@ -103,6 +112,31 @@ export const readPPUMem = (state, address) => {
 
 
   return ret;
+}
+
+export const writeDMA = (state, address, value) => {
+  // Setting the memory value is actually incorrect. When reading from OAM_DMA there is no decoding circuit for that particular
+  // address, and the value returned is the last value on the open bus. But we don't emulate that behavior
+  // since it's too complicated (at least for now), so set the value for debugging etc
+  state.memory[OAM_DMA] = value;
+
+  if (state.CYC % 2 === 1) {
+    tick(state);
+  }
+
+  const baseAddress = value << 8;
+
+  let oamAddress = state.memory[OAMADDR];
+  for (let i = 0; i < 256; i++) {
+    const addr = baseAddress + i;
+    tick(state);
+    const value = state.memory[addr];
+    tick(state);
+    state.ppu.oamMemory[oamAddress] = value;
+    oamAddress = (oamAddress + 1) & 0xFF;
+  }
+
+  console.log(state.memory.slice(baseAddress, baseAddress + 0xFF));
 }
 
 export const setPPUMem = (state, address, value) => {
@@ -228,15 +262,22 @@ const updatePPU = (state, cpuCycles) => {
       ppu.scanlineCycle = 0;
       ppu.scanline = 0;
       ppu.evenFrame = !ppu.evenFrame;
+      ppu.nmiOccurred = false;
     } else if (ppu.scanlineCycle === 340) {
       ppu.scanline++;
       ppu.scanlineCycle = 0;
 
       if (ppu.scanline === VBLANK_SCANLINE) {
         // Generate vblank interrupt
+        ppu.nmiOccurred = true;
+
+        if (ppu.control.generateNMI && ppu.scanlineCycle === 0) {
+          state.nmiInterruptCycle = state.CYC;
+        }
+
         ppu.vblankCount++;
       } else if (ppu.scanline > PRE_RENDER_SCANLINE) {
-
+        ppu.nmiOccurred = false;
         ppu.scanline = 0;
         ppu.evenFrame = !ppu.evenFrame;
       }

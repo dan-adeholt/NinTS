@@ -1,8 +1,9 @@
 import { hex, hex16 } from './stateLogging';
-import { opcodeTable, opcodeMetadata, opcodeReadTable } from './cpu';
+import { opcodeTable, opcodeMetadata, opcodeReadTable, OAM_DMA } from './cpu';
 
-import updatePPU, { initPPU, readPPUMem, setPPUMem } from './ppu';
-import { readOpcode } from './memory/';
+import updatePPU, { initPPU, readPPUMem, setPPUMem, writeDMA } from './ppu';
+import { readOpcode } from './memory';
+import { nmi } from './instructions/stack';
 
 const getResetVectorAddress = state => {
   return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
@@ -60,8 +61,11 @@ export const readMem = (state, addr) => {
   }
 }
 
+
 export const setMem = (state, addr, value) => {
-  if (addr >= 0x2000 && addr <= 0x2007) {
+  if (addr === OAM_DMA) {
+    writeDMA(state, addr, value);
+  } else if (addr >= 0x2000 && addr <= 0x2007) {
     setPPUMem(state, addr, value);
   } else {
     state.memory[addr] = value;
@@ -102,6 +106,12 @@ export const step = (state) => {
   } else {
     console.error('No handler found for opcode $' + hex(opcode === undefined ? -1 : opcode), opcodeMetadata[opcode]?.name ?? '', hex(state.PC));
     return false;
+  }
+
+  if (state.nmiInterruptCycle != null) {
+    // @TODO: Use cycle later to perfect NMI triggering conditions
+    nmi(state);
+    state.nmiInterruptCycle = null;
   }
 
   return true;
