@@ -25,4 +25,6 @@ vblankwait:
   BNE CycleColor
 
   JMP ResetCycleColor
-  
+
+NMI:
+  RTI

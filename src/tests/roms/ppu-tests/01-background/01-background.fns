@@ -1,8 +1,9 @@
 ; 01-background.asm
-CycleColor                       = $C020
-ResetCycleColor                  = $C01E
-vblankwait1                      = $C014
-vblankwait2                      = $C019
+CycleColor                       = $C03F
+ResetCycleColor                  = $C03D
+vblankwait1                      = $C033
+vblankwait2                      = $C038
+clrmem                           = $C014
 RESET                            = $C000
-NMI                              = $E000
-vblankwait                       = $C022
+NMI                              = $C05B
+vblankwait                       = $C041

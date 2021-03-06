@@ -1,0 +1,11 @@
+; 02-sprites.asm
+LoadPalettes                     = $C03D
+Forever                          = $C083
+palette                          = $E000
+LoadPalettesLoop                 = $C04C
+WriteSprite                      = $C05B
+vblankwait1                      = $C033
+vblankwait2                      = $C038
+clrmem                           = $C014
+RESET                            = $C000
+NMI                              = $C086

@@ -3,18 +3,16 @@
   .inesmap 0   ; mapper 0 = NROM, no bank swapping
   .inesmir 1   ; background mirroring
 
-;;;;;;;;;;;;;; Set up bank 1: IRQ handlers 
+;;;;;;;;;;;;;; Set up bank 1: IRQ handlers
 
-NMI:
-  RTI
- 
   .bank 1
   .org $FFFA     ;first of the three vectors starts here
-  .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+  .dw NMI        ;when an NMI happens (once per frame if enabled) the
                    ;processor will jump to the label NMI:
   .dw RESET      ;when the processor first turns on or is reset, it will jump
                    ;to the label RESET:
   .dw 0          ;external interrupt IRQ is not used in this tutorial
+
 
 ;;;;;;;;;;;;; Set up bank 2: Graphical data
 
@@ -40,6 +38,21 @@ RESET:
   STX $2001    ; disable rendering
   STX $4010    ; disable DMC IRQs
 
+clrmem:
+  LDA #$00
+  STA $0000, x
+  STA $0100, x
+  STA $0300, x
+  STA $0400, x
+  STA $0500, x
+  STA $0600, x
+  STA $0700, x
+  LDA #$FE
+  STA $0200, x    ;move all sprites off screen
+  INX
+  BNE clrmem
+
+  
 vblankwait1:       ; First wait for vblank to make sure PPU is ready
   BIT PPU_STATUS
   BPL vblankwait1
