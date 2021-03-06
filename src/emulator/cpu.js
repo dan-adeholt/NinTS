@@ -13,6 +13,7 @@ import * as nop from './instructions/nop';
 import * as illegal from './instructions/illegal';
 import * as memory from './memory';
 
+export const OAM_DMA = 0x4014;
 
 export const ModeAbsolute = 1;
 export const ModeAbsoluteX = 2;
@@ -27,6 +28,30 @@ export const ModeRelative = 10;
 export const ModeZeroPage = 11;
 export const ModeZeroPageX = 12;
 export const ModeZeroPageY = 13;
+
+export const getInstructionSize = (mode) => {
+    switch (mode) {
+        case ModeIndirect:
+        case ModeAbsolute:
+        case ModeAbsoluteX:
+        case ModeAbsoluteY:
+            return 3;
+        case ModeIndirectX:
+        case ModeIndirectY:
+        case ModeImmediate:
+        case ModeZeroPageY:
+        case ModeZeroPageX:
+        case ModeZeroPage:
+        case ModeRelative:
+            return 2;
+        case ModeImplied:
+        case ModeAccumulator:
+            return 1;
+        default:
+            console.error('Invalid mode passed to getInstructionSize');
+            return 1;
+    }
+};
 
 const opcodes = [
     [0x69, "ADC",  ModeImmediate,   arithmetic.adc, memory.readImmediate],

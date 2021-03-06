@@ -1,4 +1,5 @@
 import {
+  getInstructionSize,
   ModeAbsolute,
   ModeAbsoluteX,
   ModeAbsoluteY,
@@ -254,7 +255,8 @@ export const disassemble = (state) => {
     lines.push( { address, line });
 
     if (opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {
-      const { instructionSize } = opcodeMetadata[opcode];
+      const metadata = opcodeMetadata[opcode];
+      const instructionSize = getInstructionSize(metadata.mode);
       address += instructionSize;
     } else {
       address++;
