@@ -130,7 +130,7 @@ export const testPPURom = (location, testCase) => {
   const rom = parseROM(data);
   let state = initMachine(rom);
 
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     stepFrame(state);
   }
 
