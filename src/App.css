@@ -199,3 +199,21 @@ td label {
 .listContainer {
   flex-grow: 1;
 }
+
+.canvasContainer {
+  width: 768px;
+  height: 384px;
+  box-sizing: border-box;
+  border: 1px solid gray;
+}
+
+.canvasContainer canvas {
+  box-sizing: border-box;
+
+  transform: scale(3);
+  transform-origin: 0% 0%;
+  /* Firefox */
+  image-rendering: crisp-edges;
+  /* Chromium + Safari */
+  image-rendering: pixelated;
+}

@@ -45,10 +45,9 @@ export const initMachine = (rom) => {
     PC: startingLocation,
     SP: 0xFD,
     CYC: 0,
-    CHR: rom.chrData,
     settings: rom.settings,
     breakpoints: {},
-    ppu: initPPU(),
+    ppu: initPPU(rom.chrData),
     memory,
   };
 }
@@ -78,16 +77,20 @@ export const reset = (state) => {
   state.PC = getResetVectorAddress(state);
 }
 
-export const stepFrame = (state) => {
+export const stepFrame = (state, breakAfterScanlineChange) => {
   let hitBreakpoint = false;
   let vblankCount = state.ppu.vblankCount;
 
+  let prevScanline = state.ppu.scanline;
   while (!hitBreakpoint && vblankCount === state.ppu.vblankCount) {
     if (!step(state)) {
       break;
     }
 
     hitBreakpoint = state.PC in state.breakpoints;
+    if (breakAfterScanlineChange) {
+      hitBreakpoint = prevScanline !== state.ppu.scanline;
+    }
   }
 
   return hitBreakpoint;

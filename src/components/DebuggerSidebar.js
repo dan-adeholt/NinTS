@@ -43,7 +43,7 @@ const AddressRow = React.memo(({ data, index, style }) => {
 
 const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
   const [lines, setLines] = useState([]);
-  const [breakpoints, setBreakpoints] = useState(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? {}));
+  const [breakpoints, setBreakpoints] = useState(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
   const [currentStep, setCurrentStep] = useState(0);
   const listRef = useRef();
 
@@ -82,6 +82,11 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
 
   const runEmulatorFrame = useCallback(() => {
     setRunMode(RunModeType.RUNNING_SINGLE_FRAME);
+    setCurrentStep(s => s + 1);
+  }, [setRunMode, setCurrentStep]);
+
+  const runScanline = useCallback(() => {
+    setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
     setCurrentStep(s => s + 1);
   }, [setRunMode, setCurrentStep]);
 
@@ -137,6 +142,9 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
       case 'F11':
       case 'f':
         runEmulatorFrame();
+        break;
+      case 's':
+        runScanline();
         break;
       default:
         break;

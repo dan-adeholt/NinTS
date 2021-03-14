@@ -6,6 +6,7 @@ import { initMachine, stepFrame } from './emulator/emulator';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
+import PPUDebugger from './components/PPUDebugger';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
 const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
@@ -13,7 +14,8 @@ const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
 export const RunModeType = Object.freeze({
   STOPPED: 'Stopped',
   RUNNING: 'Running',
-  RUNNING_SINGLE_FRAME: 'RunningSingleFrame'
+  RUNNING_SINGLE_FRAME: 'RunningSingleFrame',
+  RUNNING_SINGLE_SCANLINE: 'RunningSingleScanline'
 });
 
 function App() {
@@ -53,13 +55,13 @@ function App() {
     const fileReader = new FileReader();
     fileReader.onloadend = handleFileRead;
     fileReader.readAsArrayBuffer(e.target.files[0]);
-    localStorage.setItem(BREAKPOINTS_KEY, {});
+    localStorage.setItem(BREAKPOINTS_KEY, null);
   }, [handleFileRead]);
 
   const animationFrameRef = useRef(null);
 
   const updateFrame = useCallback(() => {
-    if (stepFrame(emulator) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
+    if (stepFrame(emulator, runMode === RunModeType.RUNNING_SINGLE_SCANLINE ) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
       // Hit breakpoint
       setRunMode(RunModeType.STOPPED);
     } else {
@@ -129,6 +131,7 @@ function App() {
         ) }
 
         <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
+        <PPUDebugger emulator={emulator}/>
         <input type="file" onChange={romFileChanged} />
       </div>
     </div>
