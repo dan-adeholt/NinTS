@@ -23,14 +23,17 @@ LoadPalettesLoop:
   BNE LoadPalettesLoop  ;if x = $20, 32 bytes copied, all done
 
   LDX #$00
-  LDY #$08
+  LDY #$8
   
 WriteSprite:  
   TYA
   STA $0200,X      ; put sprite 0 in center ($80) of screen vert
+  TYA
+  STA $0200,X      ; put sprite 0 in center ($80) of screen vert
+
   STA $0203,X        ; put sprite 0 in center ($80) of screen horiz
   LDA #$2
-  STA $0201,X        ; tile number = 0
+  STA $0201,X        ; tile number
   LDA #$00
   STA $0202,X        ; color = 0, no flipping
   TXA

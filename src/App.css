@@ -200,14 +200,27 @@ td label {
   flex-grow: 1;
 }
 
-.canvasContainer {
-  width: 768px;
-  height: 384px;
+.ppuContainer {
+  width: 770px;
+  height: 386px;
+  box-sizing: border-box;
+  border: 1px solid gray;
+  margin-left: 40px;
+}
+
+.drawingArea {
+  display: flex;
+}
+
+.displayContainer {
+  width: 770px;
+  height: 722px;
   box-sizing: border-box;
   border: 1px solid gray;
 }
 
-.canvasContainer canvas {
+
+.ppuContainer canvas, .displayContainer canvas {
   box-sizing: border-box;
 
   transform: scale(3);

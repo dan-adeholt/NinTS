@@ -2,6 +2,7 @@ import { COLORS } from './constants';
 import { OAM_DMA } from './cpu';
 import { tick } from './emulator';
 import { BIT_7, BIT_7_MASK } from './instructions/util';
+import { hex } from './stateLogging';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
@@ -12,8 +13,10 @@ const PPUSCROLL	= 0x2005;
 const PPUADDR	= 0x2006;
 const PPUDATA	= 0x2007;
 
+
 const SPRITE_ATTRIB_FLIP_VERTICAL = 0b10000000;
-const SPRITE_ATTRIB_PRIORITY = 0b00100000;
+const SPRITE_ATTRIB_PRIORITY      = 0b00100000;
+const SPRITE_ATTRIBS_PALETTE      = 0b00000011;
 
 // const PPUMASK_GREYSCALE = 1;
 // const PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS = 1 << 1;
@@ -35,9 +38,48 @@ const NUM_SCANLINES = 262;
 const PPU_CYCLES_PER_SCANLINE = 341;
 
 const VRAM_BACKGROUND_COLOR = 0x3f00;
+const VRAM_BG_PALETTE_1_ADDRESS = 0x3F01;
+const VRAM_SPRITE_PALETTE_1_ADDRESS = 0x3F11;
 
 export const SCREEN_WIDTH = 256;
 export const SCREEN_HEIGHT = 240;
+
+let isSteppingScanline = false;
+
+export const setIsSteppingScanline = (_isSteppingScanline) => isSteppingScanline = _isSteppingScanline;
+
+export const paletteIndexedColor = (ppu, indexedColor, attributes) => {
+  const spritePalette = attributes & SPRITE_ATTRIBS_PALETTE;
+  let paletteIndex = VRAM_SPRITE_PALETTE_1_ADDRESS + spritePalette * 4;
+
+  if (isSteppingScanline) {
+    // console.log('Color', hex(paletteIndex), spritePalette);
+  }
+
+  const p1Color = COLORS[ppu.ppuMemory[paletteIndex++]];
+  const p2Color = COLORS[ppu.ppuMemory[paletteIndex++]];
+  const p3Color = COLORS[ppu.ppuMemory[paletteIndex++]];
+
+  if (isSteppingScanline) {
+    // console.log('Colors', p1Color, p2Color, p3Color)
+  }
+
+  switch (indexedColor) {
+    case 0x0:
+      return 0x00000000;
+    case 0x1:
+      return p1Color;
+    case 0x2:
+      return p2Color;
+    case 0x3:
+      return p3Color;
+    default:
+      console.log('Unhandled value', indexedColor);
+      return 0;
+  }
+
+  return 0;
+}
 
 export const greyScaleColorForIndexedColor = indexedColor => {
   switch (indexedColor) {
@@ -94,7 +136,8 @@ const initSpriteUnits = () => {
       shiftRegister1: 0,
       shiftRegister2: 0,
       attributes: 0,
-      counter: 0
+      counter: 0,
+      isValid: false
     };
   }
 
@@ -277,6 +320,7 @@ export const setPPUMem = (state, address, value) => {
     case PPUDATA:
       const ppuAddress = state.ppu.V & 0x3FFF;
       state.ppu.ppuMemory[ppuAddress] = value;
+
       incrementVRAMAddress(state);
       break;
     default:
@@ -297,18 +341,27 @@ export const ppuCyclesPerFrame = state => {
 }
 
 const clearSecondaryOAM = ppu => {
+  if (isSteppingScanline) {
+    console.log('Clearing secondary OAM');
+  }
+
   for (let i = 0; i < ppu.secondaryOamMemory.length; i++) {
     ppu.secondaryOamMemory[i] = 0xFF;
   }
 }
 
 const initializeSecondaryOAM = ppu => {
+  if (isSteppingScanline) {
+    console.log('Init secondary OAM');
+  }
+
   const spriteSize = getSpriteSize(ppu);
 
   let secondaryIndex = 0;
+  let scanline = ppu.scanline;
   for (let i = 0; i < ppu.oamMemory.length && secondaryIndex < ppu.secondaryOamMemory.length; i+=4) {
     const y = ppu.oamMemory[i];
-    if (ppu.scanline >= y && ppu.scanline < (y + spriteSize)) {
+    if (scanline >= y && scanline < (y + spriteSize)) {
       ppu.secondaryOamMemory[secondaryIndex++] = y;
       ppu.secondaryOamMemory[secondaryIndex++] = ppu.oamMemory[i+1];
       ppu.secondaryOamMemory[secondaryIndex++] = ppu.oamMemory[i+2];
@@ -327,13 +380,18 @@ const copyToSpriteUnits = ppu => {
     let attributes = ppu.secondaryOamMemory[oamAddress++];
     let x = ppu.secondaryOamMemory[oamAddress++];
     let unit = ppu.spriteUnits[i];
-    unit.counter = x;
+    unit.counter = x + 1; // Account for idle cycle
     unit.attributes = attributes;
 
+    unit.isValid = y !== 0xFF;
     let pixelRow = ppu.scanline - y;
 
     if (attributes & SPRITE_ATTRIB_FLIP_VERTICAL) {
       pixelRow = spriteSize - 1 - pixelRow;
+    }
+
+    if (isSteppingScanline && unit.isValid) {
+      console.log('Rendering sprite at', x, 'x', y);
     }
 
     if (spriteSize === 16) {
@@ -352,8 +410,6 @@ const copyToSpriteUnits = ppu => {
       unit.shiftRegister1 = 0;
       unit.shiftRegister2 = 0;
     } else {
-      // console.log('PXRow:', tileIndex, pixelRow, y, ppu.scanline);
-
       unit.shiftRegister1 = ppu.CHR[chrIndex];
       unit.shiftRegister2 = ppu.CHR[chrIndex + 8];
     }
@@ -369,36 +425,45 @@ const handleVisibleScanline = (ppu) => {
     copyToSpriteUnits(ppu);
   }
 
-  let spriteColor = 0;
-  let spritePriority = -1;
-
-  for (let i = 0; i < ppu.spriteUnits.length; i++) {
-    let unit = ppu.spriteUnits[i];
-    unit.counter--;
-
-    if (unit.counter <= 0 && unit.counter > -8) {
-      const c1 = (unit.shiftRegister1 & BIT_7) >> 7;
-      const c2 = (unit.shiftRegister2 & BIT_7) >> 7;
-      const color = (c2 << 1) | c1;
-
-      if (spriteColor === 0) {
-        spriteColor = color;
-        spritePriority = (unit.attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
-      }
-
-      unit.shiftRegister1 <<= 1;
-      unit.shiftRegister2 <<= 1;
-    }
-  }
 
   if (ppu.scanlineCycle > 0 && ppu.scanlineCycle <= 256) {
+    let spriteColor = 0;
+    let spritePriority = -1;
+
+    for (let i = 0; i < ppu.spriteUnits.length; i++) {
+      let unit = ppu.spriteUnits[i];
+      unit.counter--;
+
+      if (unit.isValid && unit.counter <= 0 && unit.counter > -8) {
+        const c1 = (unit.shiftRegister1 & BIT_7) >> 7;
+        const c2 = (unit.shiftRegister2 & BIT_7) >> 7;
+        const color = (c2 << 1) | c1;
+
+        if (spriteColor === 0) {
+          spriteColor = paletteIndexedColor(ppu, color, unit.attributes);
+          spritePriority = (unit.attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
+        }
+
+        unit.shiftRegister1 <<= 1;
+        unit.shiftRegister2 <<= 1;
+      }
+    }
+
+    if (spriteColor !== 0 && isSteppingScanline) {
+      console.log(ppu.scanline, ppu.scanlineCycle - 1, spriteColor);
+    }
+
     // Draw pixel
     const index = ppu.scanline * SCREEN_WIDTH + (ppu.scanlineCycle - 1);
     const backgroundColor = ppu.ppuMemory[VRAM_BACKGROUND_COLOR];
     if (spriteColor === 0) {
       ppu.framebuffer[index] = COLORS[backgroundColor];
     } else {
-      ppu.framebuffer[index] = greyScaleColorForIndexedColor(spriteColor);
+      if (isSteppingScanline) {
+        console.log('Blitting 0x' + hex(spriteColor) + ' at ' + ppu.scanline + 'x' + (ppu.scanlineCycle - 1));
+      }
+
+      ppu.framebuffer[index] = spriteColor;
     }
   }
 }

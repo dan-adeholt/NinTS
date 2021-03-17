@@ -3,7 +3,7 @@ import './App.css';
 import { parseROM } from './emulator/parseROM';
 import { hex } from './emulator/stateLogging';
 import { initMachine, stepFrame } from './emulator/emulator';
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from './emulator/ppu';
+import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
 import PPUDebugger from './components/PPUDebugger';
@@ -64,6 +64,7 @@ function App() {
     if (stepFrame(emulator, runMode === RunModeType.RUNNING_SINGLE_SCANLINE ) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
       // Hit breakpoint
       setRunMode(RunModeType.STOPPED);
+      setIsSteppingScanline(false);
     } else {
       animationFrameRef.current = window.requestAnimationFrame(updateFrame);
     }
@@ -109,6 +110,7 @@ function App() {
       <DebuggerSidebar emulator={emulator} runMode={runMode} setRunMode={setRunMode} onRefresh={triggerRefresh}/>
       <div className="content">
         <h1>{ title }</h1>
+        <input type="file" onChange={romFileChanged} />
         { emulator && (
           <div className="stateTable">
             <table>
@@ -130,9 +132,13 @@ function App() {
           </div>
         ) }
 
-        <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
-        <PPUDebugger emulator={emulator}/>
-        <input type="file" onChange={romFileChanged} />
+        <div className="drawingArea">
+          <div className="displayContainer">
+            <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
+          </div>
+          <PPUDebugger emulator={emulator}/>
+        </div>
+
       </div>
     </div>
   );

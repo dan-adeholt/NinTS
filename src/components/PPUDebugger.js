@@ -55,7 +55,7 @@ const PPUDebugger = ({ emulator }) => {
   }, [ppuCanvasRef, emulator]);
 
   return (
-    <div className="canvasContainer">
+    <div className="ppuContainer">
       <canvas width={256} height={128} ref={ppuCanvasRef}/>
     </div>
   );

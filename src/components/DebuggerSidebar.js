@@ -9,6 +9,7 @@ import _ from 'lodash';
 import { opcodeMetadata } from '../emulator/cpu';
 import { step } from '../emulator/emulator';
 import { RunModeType } from '../App';
+import { setIsSteppingScanline } from '../emulator/ppu';
 
 export const BREAKPOINTS_KEY = 'Breakpoints';
 
@@ -87,11 +88,13 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
 
   const runScanline = useCallback(() => {
     setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
+    setIsSteppingScanline(true);
     setCurrentStep(s => s + 1);
   }, [setRunMode, setCurrentStep]);
 
   const stopEmulator = useCallback(() => {
     setRunMode(RunModeType.STOPPED);
+    setIsSteppingScanline(false);
     setCurrentStep(s => s + 1);
     _.defer(() => {
       updateDebugger();

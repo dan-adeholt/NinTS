@@ -1,4 +1,4 @@
-import { testPPURom } from './testutil';
+import { testPPURom, testPPURomWithImage } from './testutil';
 import { COLORS } from '../emulator/constants';
 import _ from 'lodash';
 import { stepFrame } from '../emulator/emulator';
@@ -13,3 +13,5 @@ test('01 - Background', () => testPPURom(
     }
   })
 );
+
+test('02 - Sprites', () => testPPURomWithImage('ppu-tests/02-sprites/02-sprites'));

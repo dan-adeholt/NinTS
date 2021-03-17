@@ -1,17 +1,14 @@
 import { parseROM } from '../emulator/parseROM';
 import { initMachine, readMem, reset, step, stepFrame } from '../emulator/emulator';
-import { hex, hex16, procFlagsToString, stateToString } from '../emulator/stateLogging';
+import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging';
+import { PNG } from 'pngjs/browser';
+import _ from 'lodash';
+import fs from 'fs';
 
 const parseLog = (data) => data.toString().split(/[\r\n]+/);
-
-const fs = require('fs');
-
-const prefixLine = (idx, str) => {
-  return '[' + idx + '] ' + str;
-}
+const prefixLine = (idx, str) => '[' + idx + '] ' + str
 
 const procRegex = / P:([0-9A-F][0-9A-F])/;
-
 const romRootPath = 'src/tests/roms/';
 
 export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
@@ -135,4 +132,43 @@ export const testPPURom = (location, testCase) => {
   }
 
   testCase(state);
+};
+
+// Remove top and bottom 8 pixels, i.e. go from 240 screen height to 224. FCEUX unfortunately dumps 224px screens.
+const convertBufferToVisibleArea = buffer => buffer.slice(8 * 256, buffer.length - 8 * 256)
+
+const dumpFramebuffer = (visibleBuffer32) => {
+  const width = 256;
+  const height = visibleBuffer32.length / width;
+  let outPNG = new PNG({ width, height });
+  outPNG.data = new Uint8Array(visibleBuffer32.buffer);
+  fs.writeFileSync('/tmp/out.png', PNG.sync.write(outPNG, {}));
+}
+
+export const testPPURomWithImage = (location) => {
+  const romFile = romRootPath + location + '.nes';
+  const data = fs.readFileSync(romFile);
+  const imgFile = romRootPath + location + '.png';
+  const imgData = fs.readFileSync(imgFile);
+  const png8 = PNG.sync.read(imgData);
+  const png = new Uint32Array(png8.data.buffer);
+
+  const rom = parseROM(data);
+  let state = initMachine(rom);
+
+  for (let i = 0; i < 4; i++) {
+    stepFrame(state);
+  }
+
+  const visibleBuffer = convertBufferToVisibleArea(state.ppu.framebuffer);
+  dumpFramebuffer(visibleBuffer);
+
+  for (let i = 0; i < visibleBuffer.length; i++) {
+    if (visibleBuffer[i] !== png[i]) {
+      console.log(i % 256, Math.ceil(i / 256.0), '0x' + hex(visibleBuffer[i]), '0x' + hex(png[i]));
+      break;
+    }
+  }
+
+  expect(_.isEqual(visibleBuffer, png)).toEqual(true);
 };
