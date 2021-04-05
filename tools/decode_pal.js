@@ -8,10 +8,10 @@ console.log(path);
 const data = fs.readFileSync(path);
 
 for (let i = 0, addr = 0; addr < data.length; i++) {
-  const r = data[addr++];
-  const g = data[addr++];
   const b = data[addr++];
-  console.log('0xFF' + hex(r) + hex(g) + hex(b) + ', //' + hex(i++));
+  const g = data[addr++];
+  const r = data[addr++];
+  console.log('0xFF' + hex(r) + hex(g) + hex(b) + ', //' + hex(i));
 }
 
 
