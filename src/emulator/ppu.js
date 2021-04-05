@@ -1,7 +1,7 @@
 import { COLORS } from './constants';
 import { OAM_DMA } from './cpu';
 import { tick } from './emulator';
-import { BIT_7, BIT_7_MASK } from './instructions/util';
+import { BIT_7, BIT_0, BIT_7_MASK } from './instructions/util';
 import { hex } from './stateLogging';
 
 const PPUCTRL	= 0x2000;
@@ -14,9 +14,10 @@ const PPUADDR	= 0x2006;
 const PPUDATA	= 0x2007;
 
 
-const SPRITE_ATTRIB_FLIP_VERTICAL = 0b10000000;
-const SPRITE_ATTRIB_PRIORITY      = 0b00100000;
-const SPRITE_ATTRIBS_PALETTE      = 0b00000011;
+const SPRITE_ATTRIB_FLIP_HORIZONTAL = 0b01000000;
+const SPRITE_ATTRIB_FLIP_VERTICAL   = 0b10000000;
+const SPRITE_ATTRIB_PRIORITY        = 0b00100000;
+const SPRITE_ATTRIBS_PALETTE        = 0b00000011;
 
 // const PPUMASK_GREYSCALE = 1;
 // const PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS = 1 << 1;
@@ -137,7 +138,8 @@ const initSpriteUnits = () => {
       shiftRegister2: 0,
       attributes: 0,
       counter: 0,
-      isValid: false
+      isValid: false,
+      flipHorizontal: false
     };
   }
 
@@ -169,7 +171,7 @@ export const initPPU = (rom) => {
     },
     busLatch: 0,
     ppuMemory: new Uint8Array(16384),
-    oamMemory: new Uint8Array(256),
+    oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
     spriteUnits: initSpriteUnits(),
     framebuffer: new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT)
@@ -362,6 +364,10 @@ const initializeSecondaryOAM = ppu => {
   for (let i = 0; i < ppu.oamMemory.length && secondaryIndex < ppu.secondaryOamMemory.length; i+=4) {
     const y = ppu.oamMemory[i];
     if (scanline >= y && scanline < (y + spriteSize)) {
+      if (isSteppingScanline) {
+        console.log(i, 'Adding sprite to secondary OAM at ', ppu.oamMemory[i+3] + ',' + y + ' - ', ppu.oamMemory[i+1], ppu.oamMemory[i+2]);
+      }
+
       ppu.secondaryOamMemory[secondaryIndex++] = y;
       ppu.secondaryOamMemory[secondaryIndex++] = ppu.oamMemory[i+1];
       ppu.secondaryOamMemory[secondaryIndex++] = ppu.oamMemory[i+2];
@@ -406,6 +412,8 @@ const copyToSpriteUnits = ppu => {
 
     let chrIndex = tileIndex * 8 * 2 + pixelRow;
 
+    unit.flipHorizontal = attributes & SPRITE_ATTRIB_FLIP_HORIZONTAL;
+
     if (y === 0xFF) {
       unit.shiftRegister1 = 0;
       unit.shiftRegister2 = 0;
@@ -435,17 +443,27 @@ const handleVisibleScanline = (ppu) => {
       unit.counter--;
 
       if (unit.isValid && unit.counter <= 0 && unit.counter > -8) {
-        const c1 = (unit.shiftRegister1 & BIT_7) >> 7;
-        const c2 = (unit.shiftRegister2 & BIT_7) >> 7;
+        let c1;
+        let c2;
+        if (unit.flipHorizontal) {
+          c1 = (unit.shiftRegister1 & BIT_0);
+          c2 = (unit.shiftRegister2 & BIT_0);
+          unit.shiftRegister1 >>= 1;
+          unit.shiftRegister2 >>= 1;
+        } else {
+          c1 = (unit.shiftRegister1 & BIT_7) >> 7;
+          c2 = (unit.shiftRegister2 & BIT_7) >> 7;
+          unit.shiftRegister1 <<= 1;
+          unit.shiftRegister2 <<= 1;
+        }
+
+
         const color = (c2 << 1) | c1;
 
         if (spriteColor === 0) {
           spriteColor = paletteIndexedColor(ppu, color, unit.attributes);
           spritePriority = (unit.attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
         }
-
-        unit.shiftRegister1 <<= 1;
-        unit.shiftRegister2 <<= 1;
       }
     }
 
