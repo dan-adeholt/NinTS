@@ -156,7 +156,7 @@ export const testPPURomWithImage = (location) => {
   const rom = parseROM(data);
   let state = initMachine(rom);
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     stepFrame(state);
   }
 

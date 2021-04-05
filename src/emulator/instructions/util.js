@@ -1,4 +1,5 @@
 export const BIT_7 = 0b10000000;
+export const BIT_0 = 0b00000001;
 export const BIT_7_MASK = ~BIT_7;
 
 export const P_REG_CARRY     = 0b00000001;
