@@ -105,6 +105,10 @@ function App() {
   const [refresh, setRefresh] = useState(false);
   const triggerRefresh = useCallback(() => setRefresh(s => !s), []);
 
+  useEffect(() => {
+    triggerRefresh();
+  }, [runMode, triggerRefresh]);
+
   return (
     <div className="App">
       <DebuggerSidebar emulator={emulator} runMode={runMode} setRunMode={setRunMode} onRefresh={triggerRefresh}/>
@@ -136,7 +140,7 @@ function App() {
           <div className="displayContainer">
             <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
           </div>
-          <PPUDebugger emulator={emulator}/>
+          <PPUDebugger emulator={emulator} refresh={refresh}/>
         </div>
 
       </div>

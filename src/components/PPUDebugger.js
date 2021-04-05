@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { greyScaleColorForIndexedColor } from '../emulator/ppu';
+import PPUOAMDebugger from './PPUOAMDebugger';
 
 const PATTERN_TABLE_WIDTH = 256;
 const PATTERN_TABLE_HEIGHT = 128;
@@ -41,7 +42,7 @@ const generateFrameBuffer = tiles => {
   return texture;
 };
 
-const PPUDebugger = ({ emulator }) => {
+const PPUDebugger = ({ emulator, refresh }) => {
   const ppuCanvasRef = useRef();
 
   useEffect(() => {
@@ -55,8 +56,11 @@ const PPUDebugger = ({ emulator }) => {
   }, [ppuCanvasRef, emulator]);
 
   return (
-    <div className="ppuContainer">
-      <canvas width={256} height={128} ref={ppuCanvasRef}/>
+    <div className="ppuDebugger">
+      <div className="ppuContainer">
+        <canvas width={256} height={128} ref={ppuCanvasRef}/>
+      </div>
+      <PPUOAMDebugger emulator={emulator} refresh={refresh}/>
     </div>
   );
 };
