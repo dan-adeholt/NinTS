@@ -13,6 +13,10 @@ const PPUSCROLL	= 0x2005;
 const PPUADDR	= 0x2006;
 const PPUDATA	= 0x2007;
 
+const POINTER_Y_MASK = 0b000001111100000;
+const POINTER_Y_MASK_INV = ~POINTER_Y_MASK;
+const POINTER_X_MASK = 0b000000000011111;
+const POINTER_X_MASK_INV = ~POINTER_X_MASK;
 
 const SPRITE_ATTRIB_FLIP_HORIZONTAL = 0b01000000;
 const SPRITE_ATTRIB_FLIP_VERTICAL   = 0b10000000;
@@ -173,6 +177,10 @@ export const initPPU = (rom) => {
     ppuMemory: new Uint8Array(16384),
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
+    backgroundShiftRegister1: 0,
+    backgroundShiftRegister2: 0,
+    backgroundPaletteRegister1: 0,
+    backgroundPaletteRegister2: 0,
     spriteUnits: initSpriteUnits(),
     framebuffer: new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT)
   }
@@ -310,7 +318,7 @@ export const setPPUMem = (state, address, value) => {
 
         state.ppu.W = 1;
       } else {
-        state.ppu.T = state.ppu.T & 0b11111110000000;
+        state.ppu.T = state.ppu.T & 0b111111100000000;
         state.ppu.T = state.ppu.T | value;
         state.ppu.V = state.ppu.T;
         state.ppu.W = 0;
@@ -424,19 +432,113 @@ const copyToSpriteUnits = ppu => {
   }
 }
 
+const incrementHorizontalV = ppu => {
+  ppu.V++;
+}
+
+const incrementVerticalV = ppu => {
+  let coarseYPos = (ppu.V & POINTER_Y_MASK) >> 5;
+  coarseYPos++;
+  coarseYPos <<= 5;
+  ppu.V &= POINTER_Y_MASK_INV;
+  ppu.V |= coarseYPos;
+}
+
+// Shift to make room for next tile
+const shiftBackgroundRegistersForNextScanline = ppu => {
+  const { scanlineCycle } = ppu;
+  if (scanlineCycle >= 328 && scanlineCycle < 336) {
+    ppu.backgroundShiftRegister1 >>= 1;
+    ppu.backgroundShiftRegister2 >>= 1;
+    ppu.backgroundPaletteRegister1 >>= 1;
+    ppu.backgroundPaletteRegister2 >>= 1;
+  }
+}
+
 const handleVisibleScanline = (ppu) => {
-  if (ppu.scanlineCycle === 1) {
+  const { scanlineCycle } = ppu;
+  if (scanlineCycle === 1) {
     clearSecondaryOAM(ppu);
-  } else if (ppu.scanlineCycle === 257) {
+  } else if (scanlineCycle === 256) {
+    // incrementVerticalV(ppu);
+  } else if (scanlineCycle === 257) {
     initializeSecondaryOAM(ppu);
-  } else if (ppu.scanlineCycle === 321) {
+    resetHorizontalScroll(ppu);
+  } else if (scanlineCycle === 321) {
     copyToSpriteUnits(ppu);
   }
+
+  const generatingTilesForCurrentScanline = scanlineCycle > 1 && scanlineCycle <= 249;
+  const generatingTilesForNextScanline = scanlineCycle >= 328;
+
+  /*
+  if (generatingTilesForCurrentScanline || generatingTilesForNextScanline) {
+    if (scanlineCycle % 8 === 0) {
+      // Read tile from current VRAM address and corresponding palette attributes,
+      // feed into upper part of shift registers
+
+      const tileAddress = 0x2000 | (ppu.V & 0x0FFF)
+      const nametable = (ppu.V & 0x0C00);
+
+      // Since each entry in the palette table handles 4x4 tiles, we drop 2
+      // bits of precision from the X & Y components so that they increment
+      // every 4 tiles (go from 5 bits of precision on each to only 2).
+      const y = ((ppu.V >> 4) & 0b111000);
+      const x = ((ppu.V >> 2) & 0b000111)
+      const attributeAddress = 0x23C0 | nametable | y | x;
+      const tileIndex = ppu.ppuMemory[tileAddress];
+      const attribute = ppu.ppuMemory[attributeAddress];
+
+      // The palette value is packed like this:
+      // (bottomRight << 6) | (bottomLeft << 4) | (topRight << 2) | (topLeft << 0)
+
+      // Each consecutive two bits of the palette byte represents a 2x2
+      // tile area. So, we would like to know how many times we should
+      // shift the value to get the correct palette. If we drop 1 bit of
+      // precision on the X,Y values and combine them into a 3 bit value
+      // we get:
+      // topLeft     = shift 0 pixels = 0b000
+      // topRight    = shift 2 pixels = 0b010
+      // bottomLeft  = shift 4 pixels = 0b100
+      // bottomRight = shift 6 pixels = 0b110
+      const tileShift = ((ppu.V >> 4) & 0b100) | (ppu.V & 0b010);
+      const palette = (attribute >> tileShift) & 0b11;
+
+      if (palette & 0b01) { // Else it's already all zeroes due to shifts
+        ppu.backgroundPaletteRegister1 |= 0b1111111100000000;
+      }
+
+      if (palette & 0b10) {
+        ppu.backgroundPaletteRegister2 |= 0b1111111100000000;
+      }
+
+      let chrIndex = tileIndex * 8 * 2;
+      ppu.backgroundShiftRegister1 |= (ppu.CHR[chrIndex] << 8);
+      ppu.backgroundShiftRegister2 |= (ppu.CHR[chrIndex + 8] << 8);
+
+      incrementHorizontalV(ppu);
+    }
+  }*/
 
 
   if (ppu.scanlineCycle > 0 && ppu.scanlineCycle <= 256) {
     let spriteColor = 0;
     let spritePriority = -1;
+
+    const backgroundColor = 0;
+    /*
+    let backgroundColor1 = ppu.backgroundShiftRegister1 & 0b1;
+    let backgroundColor2 = ppu.backgroundShiftRegister2 & 0b1;
+    let backgroundPalette1 = ppu.backgroundPaletteRegister1 & 0b1;
+    let backgroundPalette2 = ppu.backgroundPaletteRegister2 & 0b1;
+
+    ppu.backgroundShiftRegister1 >>= 1;
+    ppu.backgroundShiftRegister2 >>= 1;
+    ppu.backgroundPaletteRegister1 >>= 1;
+    ppu.backgroundPaletteRegister2 >>= 1;
+
+    const backgroundColor = greyScaleColorForIndexedColor((backgroundColor2 << 1) | backgroundColor1);
+    const packgroundPalette = (backgroundPalette2 << 1) | backgroundPalette1;*/
 
     for (let i = 0; i < ppu.spriteUnits.length; i++) {
       let unit = ppu.spriteUnits[i];
@@ -473,69 +575,114 @@ const handleVisibleScanline = (ppu) => {
 
     // Draw pixel
     const index = ppu.scanline * SCREEN_WIDTH + (ppu.scanlineCycle - 1);
-    const backgroundColor = ppu.ppuMemory[VRAM_BACKGROUND_COLOR];
+    const vramBackgroundColor = ppu.ppuMemory[VRAM_BACKGROUND_COLOR];
     if (spriteColor === 0) {
-      ppu.framebuffer[index] = COLORS[backgroundColor];
+      if (backgroundColor === 0) {
+        ppu.framebuffer[index] = COLORS[vramBackgroundColor];
+      } else {
+        ppu.framebuffer[index] = backgroundColor;
+      }
+    } else if (backgroundColor === 0) {
+      ppu.framebuffer[index] = spriteColor;
     } else {
-      if (isSteppingScanline) {
-        console.log('Blitting 0x' + hex(spriteColor) + ' at ' + ppu.scanline + 'x' + (ppu.scanlineCycle - 1));
+      // Both colors set
+      if (spritePriority === 0) {
+        ppu.framebuffer[index] = spriteColor;
+      } else {
+        ppu.framebuffer[index] = backgroundColor;
+      }
+    }
+  }
+
+
+  // shiftBackgroundRegistersForNextScanline(ppu);
+}
+
+const handleVblankScanline = (state) => {
+  let { ppu } = state;
+
+  if (ppu.scanlineCycle === 1) {
+    state.memory[PPUSTATUS] = state.memory[PPUSTATUS] | PPUSTATUS_VBLANK;
+  }
+}
+
+const resetVerticalScroll = (ppu) => {
+  return;
+  // Reset vertical part (Y scroll) of current VRAM address
+  ppu.V &= POINTER_Y_MASK_INV;
+  ppu.V |= (ppu.T & POINTER_Y_MASK);
+}
+
+const resetHorizontalScroll = (ppu) => {
+  return;
+  // Reset horizontal part (X scroll) of current VRAM address
+  ppu.V &= POINTER_X_MASK_INV;
+  ppu.V |= (ppu.T & POINTER_X_MASK);
+}
+
+const handlePrerenderScanline = (state) => {
+  let { ppu } = state;
+
+  if (ppu.scanlineCycle === 1) {
+    state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
+  } else if (ppu.scanlineCycle === 257) {
+    // resetHorizontalScroll(ppu);
+  } else if (ppu.scanlineCycle === 304) {
+    // resetVerticalScroll(ppu);
+  }
+
+  // shiftBackgroundRegistersForNextScanline(ppu);
+}
+
+const incrementDot = (state) => {
+  const { ppu } = state;
+  const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
+
+  ppu.scanlineCycle++;
+
+  const skipLastCycle = renderingEnabled && !ppu.evenFrame;
+
+  if (ppu.scanlineCycle === 339 && ppu.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
+    ppu.scanlineCycle = 0;
+    ppu.scanline = 0;
+    ppu.evenFrame = !ppu.evenFrame;
+    ppu.nmiOccurred = false;
+  } else if (ppu.scanlineCycle === 340) {
+    ppu.scanline++;
+    ppu.scanlineCycle = 0;
+
+    if (ppu.scanline === VBLANK_SCANLINE) {
+      // Generate vblank interrupt
+      ppu.nmiOccurred = true;
+
+      if (ppu.control.generateNMI && ppu.scanlineCycle === 0) {
+        state.nmiInterruptCycle = state.CYC;
       }
 
-      ppu.framebuffer[index] = spriteColor;
+      ppu.vblankCount++;
+    } else if (ppu.scanline > PRE_RENDER_SCANLINE) {
+      ppu.nmiOccurred = false;
+      ppu.scanline = 0;
+      ppu.evenFrame = !ppu.evenFrame;
     }
   }
 }
+
 
 const updatePPU = (state, cpuCycles) => {
   let { ppu } = state;
   ppu.cycle += cpuCycles * 3;
 
-  const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
-
   for (let i = 0; i < cpuCycles * 3; i++){
     if (ppu.scanline < SCREEN_HEIGHT) {
       handleVisibleScanline(ppu);
+    } else if (ppu.scanline === VBLANK_SCANLINE) {
+      handleVblankScanline(state);
+    } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
+      handlePrerenderScanline(state);
     }
 
-
-    if (ppu.scanlineCycle === 1) {
-      if (ppu.scanline === VBLANK_SCANLINE) {
-        // Set vblank status, generate interrupt
-        state.memory[PPUSTATUS] = state.memory[PPUSTATUS] | PPUSTATUS_VBLANK;
-      } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
-        state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
-      }
-    }
-
-
-    ppu.scanlineCycle++;
-
-    const skipLastCycle = renderingEnabled && !ppu.evenFrame;
-
-    if (ppu.scanlineCycle === 339 && ppu.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
-      ppu.scanlineCycle = 0;
-      ppu.scanline = 0;
-      ppu.evenFrame = !ppu.evenFrame;
-      ppu.nmiOccurred = false;
-    } else if (ppu.scanlineCycle === 340) {
-      ppu.scanline++;
-      ppu.scanlineCycle = 0;
-
-      if (ppu.scanline === VBLANK_SCANLINE) {
-        // Generate vblank interrupt
-        ppu.nmiOccurred = true;
-
-        if (ppu.control.generateNMI && ppu.scanlineCycle === 0) {
-          state.nmiInterruptCycle = state.CYC;
-        }
-
-        ppu.vblankCount++;
-      } else if (ppu.scanline > PRE_RENDER_SCANLINE) {
-        ppu.nmiOccurred = false;
-        ppu.scanline = 0;
-        ppu.evenFrame = !ppu.evenFrame;
-      }
-    }
+    incrementDot(state);
   }
 
   // ppu.framebuffer[0] = 0xdadadada;
