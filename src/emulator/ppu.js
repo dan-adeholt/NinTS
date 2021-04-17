@@ -1,7 +1,7 @@
 import { COLORS } from './constants';
 import { OAM_DMA } from './cpu';
 import { tick } from './emulator';
-import { BIT_7, BIT_0, BIT_7_MASK } from './instructions/util';
+import { BIT_7, BIT_0, BIT_7_MASK, BIT_15 } from './instructions/util';
 import { hex } from './stateLogging';
 
 const PPUCTRL	= 0x2000;
@@ -53,17 +53,16 @@ let isSteppingScanline = false;
 
 export const setIsSteppingScanline = (_isSteppingScanline) => isSteppingScanline = _isSteppingScanline;
 
-export const paletteIndexedColor = (ppu, indexedColor, attributes) => {
-  const spritePalette = attributes & SPRITE_ATTRIBS_PALETTE;
-  let paletteIndex = VRAM_SPRITE_PALETTE_1_ADDRESS + spritePalette * 4;
+export const paletteIndexedColor = (ppu, indexedColor, paletteIndex, baseOffset) => {
+  let paletteAddress = baseOffset + paletteIndex * 4;
 
   if (isSteppingScanline) {
     // console.log('Color', hex(paletteIndex), spritePalette);
   }
 
-  const p1Color = COLORS[ppu.ppuMemory[paletteIndex++]];
-  const p2Color = COLORS[ppu.ppuMemory[paletteIndex++]];
-  const p3Color = COLORS[ppu.ppuMemory[paletteIndex++]];
+  const p1Color = COLORS[ppu.ppuMemory[paletteAddress++]];
+  const p2Color = COLORS[ppu.ppuMemory[paletteAddress++]];
+  const p3Color = COLORS[ppu.ppuMemory[paletteAddress++]];
 
   if (isSteppingScanline) {
     // console.log('Colors', p1Color, p2Color, p3Color)
@@ -84,6 +83,11 @@ export const paletteIndexedColor = (ppu, indexedColor, attributes) => {
   }
 
   return 0;
+}
+
+export const paletteIndexedSpriteColor = (ppu, indexedColor, attributes) => {
+  const paletteIndex = attributes & SPRITE_ATTRIBS_PALETTE;
+  return paletteIndexedColor(ppu, indexedColor, paletteIndex, VRAM_SPRITE_PALETTE_1_ADDRESS);
 }
 
 export const greyScaleColorForIndexedColor = indexedColor => {
@@ -450,7 +454,7 @@ const incrementHorizontalV = ppu => {
 
 const incrementVerticalV = ppu => {
   let coarseYPos = (ppu.V & POINTER_Y_MASK) >> 5;
-  coarseYPos = Math.floor(ppu.scanline / 8);
+  coarseYPos = Math.floor((ppu.scanline + 1) / 8);
   coarseYPos <<= 5;
   ppu.V &= POINTER_Y_MASK_INV;
   ppu.V |= coarseYPos;
@@ -467,7 +471,22 @@ const shiftBackgroundRegistersForNextScanline = ppu => {
   }
 }
 
-let flork = false;
+const getPaletteFromByte = (v, byte) => {
+  const coarseX = (v & 0b0000011111);
+  const coarseY = (v & 0b1111100000) >> 5;
+
+  if (coarseY === 1) {
+    byte >>= 4;
+    if (coarseX === 1) {
+      byte >>= 2;
+    }
+  } else if (coarseX === 1) {
+    byte >>= 2;
+  }
+
+  return byte & 0b11;
+}
+
 const handleVisibleScanline = (ppu) => {
   const { scanlineCycle } = ppu;
   if (scanlineCycle === 1) {
@@ -477,7 +496,6 @@ const handleVisibleScanline = (ppu) => {
   } else if (scanlineCycle === 257) {
     initializeSecondaryOAM(ppu);
     resetHorizontalScroll(ppu);
-    flork = true;
   } else if (scanlineCycle === 321) {
     copyToSpriteUnits(ppu);
   }
@@ -500,42 +518,30 @@ const handleVisibleScanline = (ppu) => {
       // every 4 tiles (go from 5 bits of precision on each to only 2).
       const y = ((ppu.V >> 4) & 0b111000);
       const x = ((ppu.V >> 2) & 0b000111)
+
       const attributeAddress = 0x23C0 | nametable | y | x;
+
       if (isSteppingScanline) {
         console.log('[' + ppu.scanline + ',' + ppu.scanlineCycle + ' - nt:' + hex(readableNametable) + ']  Tile address', '0x' + hex(tileAddress));
       }
       let tileIndex = ppu.ppuMemory[tileAddress];
       tileIndex = (ppu.control.bgPatternAddress << 8) | tileIndex;
       const attribute = ppu.ppuMemory[attributeAddress];
-
-      // The palette value is packed like this:
-      // (bottomRight << 6) | (bottomLeft << 4) | (topRight << 2) | (topLeft << 0)
-
-      // Each consecutive two bits of the palette byte represents a 2x2
-      // tile area. So, we would like to know how many times we should
-      // shift the value to get the correct palette. If we drop 1 bit of
-      // precision on the X,Y values and combine them into a 3 bit value
-      // we get:
-      // topLeft     = shift 0 pixels = 0b000
-      // topRight    = shift 2 pixels = 0b010
-      // bottomLeft  = shift 4 pixels = 0b100
-      // bottomRight = shift 6 pixels = 0b110
-      const tileShift = ((ppu.V >> 4) & 0b100) | (ppu.V & 0b010);
-      const palette = (attribute >> tileShift) & 0b11;
+      const palette = getPaletteFromByte(ppu.V, attribute);
 
       if (palette & 0b01) { // Else it's already all zeroes due to shifts
-        ppu.backgroundPaletteRegister1 |= 0b1111111100000000;
+        ppu.backgroundPaletteRegister1 |= 0b11111111;
       }
 
       if (palette & 0b10) {
-        ppu.backgroundPaletteRegister2 |= 0b1111111100000000;
+        ppu.backgroundPaletteRegister2 |= 0b11111111;
       }
 
       let lineIndex = ppu.scanline % 8;
       let chrIndex = tileIndex * 8 * 2 + lineIndex;
       // chrIndex = 16 + lineIndex;
-      ppu.backgroundShiftRegister1 |= (ppu.CHR[chrIndex] << 8);
-      ppu.backgroundShiftRegister2 |= (ppu.CHR[chrIndex + 8] << 8);
+      ppu.backgroundShiftRegister1 |= (ppu.CHR[chrIndex]);
+      ppu.backgroundShiftRegister2 |= (ppu.CHR[chrIndex + 8]);
 
       incrementHorizontalV(ppu);
     }
@@ -546,18 +552,20 @@ const handleVisibleScanline = (ppu) => {
     let spriteColor = 0;
     let spritePriority = -1;
 
-    let backgroundColor1 = ppu.backgroundShiftRegister1 & 0b1;
-    let backgroundColor2 = ppu.backgroundShiftRegister2 & 0b1;
-    let backgroundPalette1 = ppu.backgroundPaletteRegister1 & 0b1;
-    let backgroundPalette2 = ppu.backgroundPaletteRegister2 & 0b1;
+    let backgroundColor1 = (ppu.backgroundShiftRegister1 & BIT_15) >> 15;
+    let backgroundColor2 = (ppu.backgroundShiftRegister2 & BIT_15) >> 15;
+    let backgroundPalette1 = (ppu.backgroundPaletteRegister1 & BIT_15) >> 15;
+    let backgroundPalette2 = (ppu.backgroundPaletteRegister2 & BIT_15) >> 15;
 
-    ppu.backgroundShiftRegister1 >>= 1;
-    ppu.backgroundShiftRegister2 >>= 1;
-    ppu.backgroundPaletteRegister1 >>= 1;
-    ppu.backgroundPaletteRegister2 >>= 1;
+    ppu.backgroundShiftRegister1 <<= 1;
+    ppu.backgroundShiftRegister2 <<= 1;
+    ppu.backgroundPaletteRegister1 <<= 1;
+    ppu.backgroundPaletteRegister2 <<= 1;
 
-    const backgroundColor = greyScaleColorForIndexedColor((backgroundColor2 << 1) | backgroundColor1);
-    const packgroundPalette = (backgroundPalette2 << 1) | backgroundPalette1;
+    const backgroundPaletteIndex = (backgroundPalette2 << 1) | backgroundPalette1;
+    const backgroundColorIndex = (backgroundColor2 << 1) | backgroundColor1;
+    // const backgroundColor = greyScaleColorForIndexedColor(backgroundColorIndex);
+    const backgroundColor = paletteIndexedColor(ppu, backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS);
 
     for (let i = 0; i < ppu.spriteUnits.length; i++) {
       let unit = ppu.spriteUnits[i];
@@ -582,7 +590,7 @@ const handleVisibleScanline = (ppu) => {
         const color = (c2 << 1) | c1;
 
         if (spriteColor === 0) {
-          spriteColor = paletteIndexedColor(ppu, color, unit.attributes);
+          spriteColor = paletteIndexedSpriteColor(ppu, color, unit.attributes);
           spritePriority = (unit.attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
         }
       }
