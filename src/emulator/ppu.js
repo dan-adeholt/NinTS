@@ -262,6 +262,14 @@ const getSpriteSize = ppu => {
   return ppu.control.spriteSize === 1 ? 16 : 8;
 }
 
+const dumpScrollPointer = pointer => {
+  const FY = (pointer & 0b111000000000000) >> 12;
+  const NT = (pointer & 0b000110000000000) >> 10;
+  const CY = (pointer & 0b000001111100000) >> 5;
+  const CX = (pointer & 0b000000000011111);
+  return '[FY: ' + FY + ', NT: ' + NT + ', CY: ' + CY + ', CX: ' + CX + ']';
+}
+
 export const setPPUMem = (state, address, value) => {
   state.memory[address] = value;
 
@@ -433,12 +441,16 @@ const copyToSpriteUnits = ppu => {
 }
 
 const incrementHorizontalV = ppu => {
-  ppu.V++;
+  let xValue = ((ppu.V & 0b11111) + 1) & 0b11111;
+
+  // Handle overflow by wrapping around for now
+  ppu.V &= POINTER_X_MASK_INV;
+  ppu.V |= xValue;
 }
 
 const incrementVerticalV = ppu => {
   let coarseYPos = (ppu.V & POINTER_Y_MASK) >> 5;
-  coarseYPos++;
+  coarseYPos = Math.floor(ppu.scanline / 8);
   coarseYPos <<= 5;
   ppu.V &= POINTER_Y_MASK_INV;
   ppu.V |= coarseYPos;
@@ -455,15 +467,17 @@ const shiftBackgroundRegistersForNextScanline = ppu => {
   }
 }
 
+let flork = false;
 const handleVisibleScanline = (ppu) => {
   const { scanlineCycle } = ppu;
   if (scanlineCycle === 1) {
     clearSecondaryOAM(ppu);
   } else if (scanlineCycle === 256) {
-    // incrementVerticalV(ppu);
+    incrementVerticalV(ppu);
   } else if (scanlineCycle === 257) {
     initializeSecondaryOAM(ppu);
     resetHorizontalScroll(ppu);
+    flork = true;
   } else if (scanlineCycle === 321) {
     copyToSpriteUnits(ppu);
   }
@@ -471,14 +485,15 @@ const handleVisibleScanline = (ppu) => {
   const generatingTilesForCurrentScanline = scanlineCycle > 1 && scanlineCycle <= 249;
   const generatingTilesForNextScanline = scanlineCycle >= 328;
 
-  /*
   if (generatingTilesForCurrentScanline || generatingTilesForNextScanline) {
     if (scanlineCycle % 8 === 0) {
       // Read tile from current VRAM address and corresponding palette attributes,
       // feed into upper part of shift registers
 
-      const tileAddress = 0x2000 | (ppu.V & 0x0FFF)
+      let tileAddress = 0x2000 | (ppu.V & 0x0FFF)
+
       const nametable = (ppu.V & 0x0C00);
+      const readableNametable = nametable >> 10;
 
       // Since each entry in the palette table handles 4x4 tiles, we drop 2
       // bits of precision from the X & Y components so that they increment
@@ -486,7 +501,11 @@ const handleVisibleScanline = (ppu) => {
       const y = ((ppu.V >> 4) & 0b111000);
       const x = ((ppu.V >> 2) & 0b000111)
       const attributeAddress = 0x23C0 | nametable | y | x;
-      const tileIndex = ppu.ppuMemory[tileAddress];
+      if (isSteppingScanline) {
+        console.log('[' + ppu.scanline + ',' + ppu.scanlineCycle + ' - nt:' + hex(readableNametable) + ']  Tile address', '0x' + hex(tileAddress));
+      }
+      let tileIndex = ppu.ppuMemory[tileAddress];
+      tileIndex = (ppu.control.bgPatternAddress << 8) | tileIndex;
       const attribute = ppu.ppuMemory[attributeAddress];
 
       // The palette value is packed like this:
@@ -512,21 +531,21 @@ const handleVisibleScanline = (ppu) => {
         ppu.backgroundPaletteRegister2 |= 0b1111111100000000;
       }
 
-      let chrIndex = tileIndex * 8 * 2;
+      let lineIndex = ppu.scanline % 8;
+      let chrIndex = tileIndex * 8 * 2 + lineIndex;
+      // chrIndex = 16 + lineIndex;
       ppu.backgroundShiftRegister1 |= (ppu.CHR[chrIndex] << 8);
       ppu.backgroundShiftRegister2 |= (ppu.CHR[chrIndex + 8] << 8);
 
       incrementHorizontalV(ppu);
     }
-  }*/
+  }
 
 
   if (ppu.scanlineCycle > 0 && ppu.scanlineCycle <= 256) {
     let spriteColor = 0;
     let spritePriority = -1;
 
-    const backgroundColor = 0;
-    /*
     let backgroundColor1 = ppu.backgroundShiftRegister1 & 0b1;
     let backgroundColor2 = ppu.backgroundShiftRegister2 & 0b1;
     let backgroundPalette1 = ppu.backgroundPaletteRegister1 & 0b1;
@@ -538,7 +557,7 @@ const handleVisibleScanline = (ppu) => {
     ppu.backgroundPaletteRegister2 >>= 1;
 
     const backgroundColor = greyScaleColorForIndexedColor((backgroundColor2 << 1) | backgroundColor1);
-    const packgroundPalette = (backgroundPalette2 << 1) | backgroundPalette1;*/
+    const packgroundPalette = (backgroundPalette2 << 1) | backgroundPalette1;
 
     for (let i = 0; i < ppu.spriteUnits.length; i++) {
       let unit = ppu.spriteUnits[i];
@@ -594,8 +613,7 @@ const handleVisibleScanline = (ppu) => {
     }
   }
 
-
-  // shiftBackgroundRegistersForNextScanline(ppu);
+  shiftBackgroundRegistersForNextScanline(ppu);
 }
 
 const handleVblankScanline = (state) => {
@@ -607,14 +625,12 @@ const handleVblankScanline = (state) => {
 }
 
 const resetVerticalScroll = (ppu) => {
-  return;
   // Reset vertical part (Y scroll) of current VRAM address
   ppu.V &= POINTER_Y_MASK_INV;
   ppu.V |= (ppu.T & POINTER_Y_MASK);
 }
 
 const resetHorizontalScroll = (ppu) => {
-  return;
   // Reset horizontal part (X scroll) of current VRAM address
   ppu.V &= POINTER_X_MASK_INV;
   ppu.V |= (ppu.T & POINTER_X_MASK);
@@ -626,12 +642,15 @@ const handlePrerenderScanline = (state) => {
   if (ppu.scanlineCycle === 1) {
     state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
   } else if (ppu.scanlineCycle === 257) {
-    // resetHorizontalScroll(ppu);
+    resetHorizontalScroll(ppu);
   } else if (ppu.scanlineCycle === 304) {
-    // resetVerticalScroll(ppu);
+    resetVerticalScroll(ppu);
+    const nametable = (ppu.T & 0x0C00);
+    const readableNametable = nametable >> 10;
+
   }
 
-  // shiftBackgroundRegistersForNextScanline(ppu);
+  shiftBackgroundRegistersForNextScanline(ppu);
 }
 
 const incrementDot = (state) => {
@@ -674,12 +693,16 @@ const updatePPU = (state, cpuCycles) => {
   ppu.cycle += cpuCycles * 3;
 
   for (let i = 0; i < cpuCycles * 3; i++){
-    if (ppu.scanline < SCREEN_HEIGHT) {
-      handleVisibleScanline(ppu);
-    } else if (ppu.scanline === VBLANK_SCANLINE) {
-      handleVblankScanline(state);
-    } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
-      handlePrerenderScanline(state);
+    const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
+
+    if (renderingEnabled) {
+      if (ppu.scanline < SCREEN_HEIGHT) {
+        handleVisibleScanline(ppu, renderingEnabled);
+      } else if (ppu.scanline === VBLANK_SCANLINE) {
+        handleVblankScanline(state);
+      } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
+        handlePrerenderScanline(state);
+      }
     }
 
     incrementDot(state);
