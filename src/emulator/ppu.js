@@ -479,15 +479,15 @@ const shiftBackgroundRegistersForNextScanline = ppu => {
 }
 
 const getPaletteFromByte = (v, byte) => {
-  const coarseX = (v & 0b0000011111);
-  const coarseY = (v & 0b1111100000) >> 5;
+  const coarseX = (v & 0b0000011111) % 4;
+  const coarseY = ((v & 0b1111100000) >> 5) % 4;
 
-  if (coarseY === 1) {
+  if (coarseY >= 2) {
     byte >>= 4;
-    if (coarseX === 1) {
+    if (coarseX >= 2) {
       byte >>= 2;
     }
-  } else if (coarseX === 1) {
+  } else if (coarseX >= 2) {
     byte >>= 2;
   }
 
