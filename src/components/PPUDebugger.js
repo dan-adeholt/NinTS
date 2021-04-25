@@ -6,6 +6,7 @@ import PPUNameTableDebugger from './PPUNameTableDebugger';
 import SegmentControl from './SegmentControl';
 import PPUSpritesDebugger from './PPUSpritesDebugger';
 import PPUVRAMDebugger from './PPUVRAMDebugger';
+import PPUScanlineDebugger from './PPUScanlineDebugger';
 
 const PPUDebugger = ({ emulator, refresh }) => {
   const options = useMemo(() => {
@@ -25,6 +26,10 @@ const PPUDebugger = ({ emulator, refresh }) => {
       {
         title: 'VRAM',
         view: <PPUVRAMDebugger emulator={emulator} refresh={refresh}/>
+      },
+      {
+        title: 'Scanlines',
+        view: <PPUScanlineDebugger emulator={emulator} refresh={refresh}/>
       }
     ];
   }, [emulator, refresh]);

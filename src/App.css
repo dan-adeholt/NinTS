@@ -247,7 +247,7 @@ td label {
 .ppuContainer canvas, .displayContainer canvas, .ppuNameTableContainer canvas {
   box-sizing: border-box;
 
-  transform: scale(2);
+  transform: scale(3);
   transform-origin: 0% 0%;
   /* Firefox */
   image-rendering: crisp-edges;

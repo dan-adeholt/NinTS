@@ -1,0 +1,13 @@
+; 03-tiles.asm
+LoadPalettes                     = $803D
+Forever                          = $809A
+palette                          = $A000
+LoadPalettesLoop                 = $804C
+tiles                            = $C000
+Done                             = $8083
+vblankwait1                      = $8033
+vblankwait2                      = $8038
+clrmem                           = $8014
+RESET                            = $8000
+NMI                              = $809D
+CopyByte                         = $8072

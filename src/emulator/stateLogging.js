@@ -125,6 +125,7 @@ const logFormatters = {
 };
 
 
+export const bin8 = num => num.toString(2).padStart(8, '0');
 export const hex = num => num.toString(16).toUpperCase().padStart(2, '0');
 export const hex16 = num => num.toString(16).toUpperCase().padStart(4, '0');
 

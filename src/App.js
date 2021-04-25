@@ -18,10 +18,12 @@ export const RunModeType = Object.freeze({
   RUNNING_SINGLE_SCANLINE: 'RunningSingleScanline'
 });
 
+const frameLength = 1000.0 / 60.0;
+
 function App() {
   const [runMode, setRunMode] = useState(RunModeType.STOPPED);
   const [title, setTitle] = useState("No file selected");
-
+  const startTime = useRef(performance.now());
   const [emulator, setEmulator] = useState(null);
 
   const canvasRef = useRef();
@@ -60,23 +62,35 @@ function App() {
 
   const animationFrameRef = useRef(null);
 
-  const updateFrame = useCallback(() => {
-    if (stepFrame(emulator, runMode === RunModeType.RUNNING_SINGLE_SCANLINE ) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
-      // Hit breakpoint
-      setRunMode(RunModeType.STOPPED);
-      setIsSteppingScanline(false);
-    } else {
-      animationFrameRef.current = window.requestAnimationFrame(updateFrame);
+  const updateFrame = useCallback(timestamp => {
+    let stopped = false;
+
+    while ((timestamp - startTime.current) >= frameLength) {
+      startTime.current += frameLength;
+
+
+      if (stepFrame(emulator, runMode === RunModeType.RUNNING_SINGLE_SCANLINE) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
+        // Hit breakpoint
+        setRunMode(RunModeType.STOPPED);
+        setIsSteppingScanline(false);
+        stopped = true;
+        break;
+      }
     }
 
     if (display.framebuffer && emulator) {
       display.framebuffer.set(emulator.ppu.framebuffer, 0);
       display.context.putImageData(display.imageData, 0, 0);
     }
+
+    if (!stopped) {
+      animationFrameRef.current = window.requestAnimationFrame(updateFrame);
+    }
   }, [runMode, emulator, display]);
 
   useEffect(() => {
     if (runMode !== RunModeType.STOPPED) {
+      startTime.current = performance.now();
       updateFrame();
     }
 
