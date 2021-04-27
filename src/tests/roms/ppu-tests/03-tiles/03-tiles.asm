@@ -104,7 +104,7 @@ Done:
   LDA #%10010000   ; enable NMI, sprites from Pattern Table 0
   STA PPU_CTRL
 
-  LDA #%00011110   ; enable sprites
+  LDA #%00011110   ; enable bg rendering
   STA PPU_MASK
 
   LDA #$0
@@ -117,10 +117,13 @@ Forever:
 
 
 NMI:
-  LDA #$0
+  LDA ZP_SCROLL_X
   STA PPU_SCROLL
   LDA #$0
   STA PPU_SCROLL
 
+  LDX ZP_SCROLL_X
+  INX
+  STX ZP_SCROLL_X
   RTI        ; return from interrupt
 

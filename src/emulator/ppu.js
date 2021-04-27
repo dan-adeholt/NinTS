@@ -15,8 +15,8 @@ const PPUDATA	= 0x2007;
 
 const POINTER_Y_MASK = 0b000001111100000;
 const POINTER_Y_MASK_INV = ~POINTER_Y_MASK;
-const POINTER_X_MASK = 0b000000000011111;
-const POINTER_X_MASK_INV = ~POINTER_X_MASK;
+const POINTER_HORIZ_MASK = 0b000010000011111;
+const POINTER_HORIZ_MASK_INV = ~POINTER_HORIZ_MASK;
 
 const SPRITE_ATTRIB_FLIP_HORIZONTAL = 0b01000000;
 const SPRITE_ATTRIB_FLIP_VERTICAL   = 0b10000000;
@@ -307,7 +307,7 @@ export const setPPUMem = (state, address, value) => {
         state.ppu.X = value & 0b111;
         // Store upper five bits as part of T
         state.ppu.T = state.ppu.T & 0b111111111100000;
-        state.ppu.T = state.ppu.T | (value >> 5);
+        state.ppu.T = state.ppu.T | (value >> 3);
         state.ppu.W = 1;
       } else {
         // Second write
@@ -452,11 +452,13 @@ const copyToSpriteUnits = ppu => {
 }
 
 const incrementHorizontalV = ppu => {
-  let xValue = ((ppu.V & 0b11111) + 1) & 0b11111;
-
-  // Handle overflow by wrapping around for now
-  ppu.V &= POINTER_X_MASK_INV;
-  ppu.V |= xValue;
+  if ((ppu.V & 0b11111) === 31) {
+    ppu.V = ppu.V & (~0b11111);
+    // // Toggle bit 10 => switch horizontal namespace
+    ppu.V ^= 0b10000000000;
+  } else {
+    ppu.V += 1;
+  }
 }
 
 const incrementVerticalV = ppu => {
@@ -465,17 +467,6 @@ const incrementVerticalV = ppu => {
   coarseYPos <<= 5;
   ppu.V &= POINTER_Y_MASK_INV;
   ppu.V |= coarseYPos;
-}
-
-// Shift to make room for next tile
-const shiftBackgroundRegistersForNextScanline = ppu => {
-  const { scanlineCycle } = ppu;
-  if (scanlineCycle >= 328 && scanlineCycle < 336) {
-    ppu.backgroundShiftRegister1 <<= 1;
-    ppu.backgroundShiftRegister2 <<= 1;
-    ppu.backgroundPaletteRegister1 <<= 1;
-    ppu.backgroundPaletteRegister2 <<= 1;
-  }
 }
 
 const getPaletteFromByte = (v, byte) => {
@@ -525,10 +516,10 @@ const updateBackgroundRegisters = (ppu) => {
     let lineIndex = (ppu.scanline % 8);
 
     if (generatingTilesForNextScanline) {
-      ppu.frameDebug.push(ppu.scanline + ',' + ppu.scanlineCycle + ': ' + dumpScrollPointer(ppu.V) + ': ' + y + ', ' + x + ' - gennext');
+      // ppu.frameDebug.push(ppu.scanline + ',' + ppu.scanlineCycle + ': ' + dumpScrollPointer(ppu.V) + ': ' + y + ', ' + x + ' - gennext');
       lineIndex = (((ppu.scanline + 1) % NUM_SCANLINES) % 8);
     } else {
-      ppu.frameDebug.push(ppu.scanline + ',' + ppu.scanlineCycle + ': ' + dumpScrollPointer(ppu.V) + ': ' + y + ', ' + x + ' - gencur');
+      // ppu.frameDebug.push(ppu.scanline + ',' + ppu.scanlineCycle + ': ' + dumpScrollPointer(ppu.V) + ': ' + y + ', ' + x + ' - gencur');
     }
 
     ppu.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + lineIndex;
@@ -578,10 +569,18 @@ const handleVisibleScanline = (ppu, spritesEnabled, backgroundEnabled) => {
     let spriteColor = 0;
     let spritePriority = -1;
 
-    let backgroundColor1 = (ppu.backgroundShiftRegister1 & BIT_15) >> 15;
-    let backgroundColor2 = (ppu.backgroundShiftRegister2 & BIT_15) >> 15;
-    let backgroundPalette1 = (ppu.backgroundPaletteRegister1 & BIT_15) >> 15;
-    let backgroundPalette2 = (ppu.backgroundPaletteRegister2 & BIT_15) >> 15;
+
+    const bitNumber = 15 - ppu.X;
+    const bitMask = 1 << bitNumber;
+
+    if (ppu.scanline === 0) {
+      // ppu.frameDebug.push(ppu.scanline + ': ' + ppu.X + ' - ' + dumpScrollPointer(ppu.T));
+    }
+
+    let backgroundColor1 = (ppu.backgroundShiftRegister1 & bitMask) >> bitNumber;
+    let backgroundColor2 = (ppu.backgroundShiftRegister2 & bitMask) >> bitNumber;
+    let backgroundPalette1 = (ppu.backgroundPaletteRegister1 & bitMask) >> bitNumber;
+    let backgroundPalette2 = (ppu.backgroundPaletteRegister2 & bitMask) >> bitNumber;
 
     const backgroundPaletteIndex = (backgroundPalette2 << 1) | backgroundPalette1;
     const backgroundColorIndex = (backgroundColor2 << 1) | backgroundColor1;
@@ -670,8 +669,10 @@ const resetVerticalScroll = (ppu) => {
 
 const resetHorizontalScroll = (ppu) => {
   // Reset horizontal part (X scroll) of current VRAM address
-  ppu.V &= POINTER_X_MASK_INV;
-  ppu.V |= (ppu.T & POINTER_X_MASK);
+  ppu.V &= POINTER_HORIZ_MASK_INV;
+  ppu.V |= (ppu.T & POINTER_HORIZ_MASK);
+
+  ppu.frameDebug.push('After reset ' + ppu.scanline + ':' + dumpScrollPointer(ppu.V));
 }
 
 const handlePrerenderScanline = (state) => {
