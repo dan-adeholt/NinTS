@@ -2,7 +2,6 @@ import { COLORS } from './constants';
 import { OAM_DMA } from './cpu';
 import { tick } from './emulator';
 import { BIT_0, BIT_15, BIT_7 } from './instructions/util';
-import { hex } from './stateLogging';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
