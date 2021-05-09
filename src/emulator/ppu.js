@@ -651,14 +651,14 @@ const handleVblankScanline = (state) => {
   }
 }
 
+// Reset vertical part (Y scroll) of current VRAM address
 const resetVerticalScroll = (ppu) => {
-  // Reset vertical part (Y scroll) of current VRAM address
-  ppu.V &= POINTER_Y_MASK_INV;
+    ppu.V &= POINTER_Y_MASK_INV;
   ppu.V |= (ppu.T & POINTER_Y_MASK);
 }
 
+// Reset horizontal part (X scroll) of current VRAM address
 const resetHorizontalScroll = (ppu) => {
-  // Reset horizontal part (X scroll) of current VRAM address
   ppu.V &= POINTER_HORIZ_MASK_INV;
   ppu.V |= (ppu.T & POINTER_HORIZ_MASK);
 
