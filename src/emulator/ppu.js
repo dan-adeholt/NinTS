@@ -561,14 +561,15 @@ const updateSpriteScanning = ppu => {
   }
 }
 
-const handleVisibleScanline = (ppu, spritesEnabled, backgroundEnabled) => {
-  updateSpriteScanning(ppu);
-  updateBackgroundRegisters(ppu);
+const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, backgroundEnabled) => {
+  if (renderingEnabled) {
+    updateSpriteScanning(ppu);
+    updateBackgroundRegisters(ppu);
+  }
 
   if (ppu.scanlineCycle > 0 && ppu.scanlineCycle <= 256) {
     let spriteColor = 0;
     let spritePriority = -1;
-
 
     const bitNumber = 15 - ppu.X;
     const bitMask = 1 << bitNumber;
@@ -623,15 +624,6 @@ const handleVisibleScanline = (ppu, spritesEnabled, backgroundEnabled) => {
     const index = ppu.scanline * SCREEN_WIDTH + (ppu.scanlineCycle - 1);
     const vramBackgroundColor = ppu.ppuMemory[VRAM_BACKGROUND_COLOR];
 
-
-    //
-    // if (ppu.scanline > 48 && ppu.scanline < 54 && ppu.scanlineCycle > 76 && ppu.scanlineCycle < 88) {
-    //
-    // } else {
-    //   backgroundColor = 0;
-    // }
-
-
     if (spriteColor === 0) {
       if (backgroundColor === 0) {
         ppu.framebuffer[index] = COLORS[vramBackgroundColor];
@@ -649,8 +641,6 @@ const handleVisibleScanline = (ppu, spritesEnabled, backgroundEnabled) => {
       }
     }
   }
-
-  // shiftBackgroundRegistersForNextScanline(ppu);
 }
 
 const handleVblankScanline = (state) => {
@@ -675,15 +665,21 @@ const resetHorizontalScroll = (ppu) => {
   ppu.frameDebug.push('After reset ' + ppu.scanline + ':' + dumpScrollPointer(ppu.V));
 }
 
-const handlePrerenderScanline = (state) => {
+const handlePrerenderScanline = (state, renderingEnabled) => {
   let { ppu } = state;
 
-  updateBackgroundRegisters(ppu);
+  if (renderingEnabled) {
+    updateBackgroundRegisters(ppu);
+  }
+
 
   if (ppu.scanlineCycle === 1) {
     state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
   } else if (ppu.scanlineCycle >= 280 && ppu.scanlineCycle <= 304) {
-    resetVerticalScroll(ppu);
+    if (renderingEnabled) {
+      resetVerticalScroll(ppu);
+    }
+
     ppu.frameDebug.length = 0;
   }
 }
@@ -732,14 +728,13 @@ const updatePPU = (state, cpuCycles) => {
     const spritesEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_SPRITES;
     const backgroundEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_BACKGROUND;
 
-    if (renderingEnabled) {
-      if (ppu.scanline < SCREEN_HEIGHT) {
-        handleVisibleScanline(ppu, renderingEnabled, spritesEnabled, backgroundEnabled);
-      } else if (ppu.scanline === VBLANK_SCANLINE) {
-        handleVblankScanline(state);
-      } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
-        handlePrerenderScanline(state);
-      }
+    if (ppu.scanline < SCREEN_HEIGHT) {
+      handleVisibleScanline(ppu, renderingEnabled, spritesEnabled, backgroundEnabled);
+    } else if (ppu.scanline === VBLANK_SCANLINE) {
+      // console.log('Hit vblank, renderinEnabled', renderingEnabled, spritesEnabled, backgroundEnabled);
+      handleVblankScanline(state);
+    } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
+      handlePrerenderScanline(state, renderingEnabled);
     }
 
     incrementDot(state);
