@@ -7,7 +7,6 @@ test('Nes test rom executes properly', () =>
     'nestest.log',
     state => {
       state.PC = 0xC000;
-      state.CYC = 7; // For some reason the logs start at 7 ? Perhaps has to do with reset vector or something
       updatePPU(state, state.CYC);
     },
     false)

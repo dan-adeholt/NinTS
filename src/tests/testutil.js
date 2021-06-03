@@ -6,7 +6,7 @@ import _ from 'lodash';
 import fs from 'fs';
 
 const parseLog = (data) => data.toString().split(/[\r\n]+/);
-const prefixLine = (idx, str) => '[' + idx + '] ' + str
+export const prefixLine = (idx, str) => '[' + idx + '] ' + str
 
 const procRegex = / P:([0-9A-F][0-9A-F])/;
 const romRootPath = 'src/tests/roms/';

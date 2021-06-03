@@ -7,7 +7,7 @@ const SegmentControl = ({ currentIndex, options, onClick }) => {
     <>
       <div className="segmentControl">
         { options.map((option, idx) => (
-          <div className={classNames("segmentControlItem", idx === currentIndex && "selectedSegmentControlItem")} onClick={() => onClick(idx)}>
+          <div key={idx} className={classNames("segmentControlItem", idx === currentIndex && "selectedSegmentControlItem")} onClick={() => onClick(idx)}>
             { option.title }
           </div>)
         )}

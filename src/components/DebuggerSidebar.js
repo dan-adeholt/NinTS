@@ -52,7 +52,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
     step(emulator);
     setCurrentStep(s => s + 1);
     onRefresh();
-  }, [emulator]);
+  }, [emulator, onRefresh]);
 
   const updateDebugger = useCallback(() => {
     if (listRef.current != null && emulator != null) {
@@ -118,7 +118,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
       setRunMode(RunModeType.STOPPED);
       stopEmulator();
     }
-  }, [runMode, setRunMode]);
+  }, [runMode, setRunMode, stopEmulator]);
 
   useEffect(() => {
     if (emulator != null){
@@ -136,10 +136,12 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
         stepEmulator();
         break;
       case 'r':
-        if (running) {
-          stopEmulator();
-        } else {
-          runEmulator();
+        if (!e.metaKey) {
+          if (running) {
+            stopEmulator();
+          } else {
+            runEmulator();
+          }
         }
         break;
       case 'F11':
@@ -152,7 +154,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
       default:
         break;
     }
-  }, [stepEmulator, runEmulator, stopEmulator, runEmulatorFrame, running]);
+  }, [stepEmulator, runEmulator, stopEmulator, runEmulatorFrame, running, runScanline]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyEvent);
@@ -164,7 +166,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
 
   const data = useMemo(() => ({
     lines, emulator, breakpoints, toggleBreakpoint, running
-  }), [lines, emulator, currentStep, breakpoints, toggleBreakpoint, running]);
+  }), [lines, emulator, breakpoints, toggleBreakpoint, running]);
 
   return (
     <div className="instructionBar">

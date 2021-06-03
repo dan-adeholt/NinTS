@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import PropTypes from 'prop-types';
+import React, { useMemo } from 'react';
+import _ from 'lodash';
 
 const PPUOAMDebugger = ({ refresh, emulator}) => {
   const lines = useMemo(() => {
+    _.noop(refresh);
     if (emulator === null) {
       return [];
     }

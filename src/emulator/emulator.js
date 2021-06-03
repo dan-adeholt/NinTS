@@ -1,5 +1,5 @@
-import { hex, hex16 } from './stateLogging';
-import { opcodeTable, opcodeMetadata, opcodeReadTable, OAM_DMA } from './cpu';
+import { hex } from './stateLogging';
+import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
 
 import updatePPU, { initPPU, readPPUMem, setPPUMem, writeDMA } from './ppu';
 import { readOpcode } from './memory';
@@ -24,14 +24,14 @@ export const initMachine = (rom) => {
   memory[0x4007] = 0xFF;
 
   // PPU Registers
-  memory[0x2000] = 0xFF;
-  memory[0x2001] = 0xFF;
-  memory[0x2002] = 0xFF;
-  memory[0x2003] = 0xFF;
-  memory[0x2004] = 0xFF;
-  memory[0x2005] = 0xFF;
-  memory[0x2006] = 0xFF;
-  memory[0x2007] = 0xFF;
+  memory[0x2000] = 0x00;
+  memory[0x2001] = 0x00;
+  memory[0x2002] = 0x00;
+  memory[0x2003] = 0x00;
+  memory[0x2004] = 0x00;
+  memory[0x2005] = 0x00;
+  memory[0x2006] = 0x00;
+  memory[0x2007] = 0x00;
 
   // Reset vector
   const startingLocation = memory[0xFFFC] + (memory[0xFFFD] << 8);
@@ -44,7 +44,8 @@ export const initMachine = (rom) => {
     PF: [false, false, true, false, false, true, false, false],
     PC: startingLocation,
     SP: 0xFD,
-    CYC: 0,
+    // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine
+    CYC: 7,
     settings: rom.settings,
     breakpoints: {},
     ppu: initPPU(rom.chrData),
@@ -52,9 +53,9 @@ export const initMachine = (rom) => {
   };
 }
 
-export const readMem = (state, addr) => {
+export const readMem = (state, addr, peek = false) => {
   if (addr >= 0x2000 && addr <= 0x2007) {
-    return readPPUMem(state, addr);
+    return readPPUMem(state, addr, peek);
   } else {
     return state.memory[addr];
   }
@@ -115,6 +116,7 @@ export const step = (state) => {
     // @TODO: Use cycle later to perfect NMI triggering conditions
     nmi(state);
     state.nmiInterruptCycle = null;
+    state.lastNMI = state.CYC; // -1 for Mesen compatibility
   }
 
   return true;

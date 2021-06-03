@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import PropTypes from 'prop-types';
 import { greyScaleColorForIndexedColor } from '../emulator/ppu';
 
 const NAME_TABLE_WIDTH = 256;

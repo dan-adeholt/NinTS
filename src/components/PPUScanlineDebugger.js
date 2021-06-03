@@ -1,7 +1,11 @@
 import React, { useMemo } from 'react';
-
+import _ from 'lodash';
 const PPUScanlineDebugger = ({ emulator, refresh }) => {
   const lines = useMemo(() => {
+    _.noop(refresh);
+    if (emulator == null) {
+      return [];
+    }
     let ret = '';
 
     for (let i = 0; i < emulator.ppu.frameDebug.length; i++) {
@@ -12,9 +16,11 @@ const PPUScanlineDebugger = ({ emulator, refresh }) => {
   }, [emulator, refresh])
 
   return (
-    <div className="hexViewer">
-      { lines }
-    </div>
+    <>
+      <div className="hexViewer">
+        { lines }
+      </div>
+    </>
   );
 };
 

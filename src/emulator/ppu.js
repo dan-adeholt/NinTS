@@ -1,7 +1,7 @@
 import { COLORS } from './constants';
 import { OAM_DMA } from './cpu';
 import { tick } from './emulator';
-import { BIT_0, BIT_15, BIT_7 } from './instructions/util';
+import { BIT_0, BIT_7 } from './instructions/util';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
@@ -80,8 +80,6 @@ export const paletteIndexedColor = (ppu, indexedColor, paletteIndex, baseOffset)
       console.log('Unhandled value', indexedColor);
       return 0;
   }
-
-  return 0;
 }
 
 export const paletteIndexedSpriteColor = (ppu, indexedColor, attributes) => {
@@ -177,6 +175,7 @@ export const initPPU = (rom) => {
       generateNMI: 0
     },
     busLatch: 0,
+    dataBuffer: 0,
     ppuMemory: new Uint8Array(16384),
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
@@ -193,8 +192,6 @@ export const initPPU = (rom) => {
   }
 }
 
-
-
 const incrementVRAMAddress = state => {
   if (state.ppu.control.vramIncrement === 0) {
     state.ppu.V += 1;
@@ -205,24 +202,39 @@ const incrementVRAMAddress = state => {
   state.ppu.V = state.ppu.V % (1 << 16);
 }
 
-export const readPPUMem = (state, address) => {
+export const readPPUMem = (state, address, peek = false) => {
   let ret = state.memory[address];
 
   if (address === PPUSTATUS) {
-    ret &= PPUSTATUS_VBLANK_MASK;
+    ret = 0;
 
     if (state.ppu.nmiOccurred) {
       ret = ret | PPUSTATUS_VBLANK;
-      state.ppu.nmiOccurred = false;
+
+      if (!peek) {
+        state.ppu.nmiOccurred = false;
+      }
     }
 
-    state.ppu.W = 0;
+    ret |= (state.ppu.busLatch & 0b11111);
+
+    if (!peek) {
+      state.ppu.W = 0;
+    }
+  } else if (address === PPUDATA) {
+    const ppuAddress = state.ppu.V & 0x3FFF;
+    // TODO: Handle palette reading here (V > 0x3EFF)
+    ret = state.ppu.dataBuffer;
+    if (!peek) {
+      state.ppu.dataBuffer = state.ppu.ppuMemory[ppuAddress];
+      incrementVRAMAddress(state);
+    }
   } else {
     // Reading from write-only registers return the last value on the bus. Reading from PPUCTRL
     // increments VRAM address.
 
     if (address === PPUCTRL) {
-      if (state.ppu.control.vramIncrement === 0) {
+      if (!peek && state.ppu.control.vramIncrement === 0) {
         incrementVRAMAddress(state);
       }
 
@@ -240,6 +252,9 @@ export const readPPUMem = (state, address) => {
     }
   }
 
+  if (!peek) {
+    state.ppu.busLatch = ret;
+  }
 
   return ret;
 }
@@ -250,7 +265,11 @@ export const writeDMA = (state, address, value) => {
   // since it's too complicated (at least for now), so set the value for debugging etc
   state.memory[OAM_DMA] = value;
 
-  if (state.CYC % 2 === 1) {
+  const onOddCycle = state.CYC % 2 === 1;
+
+  tick(state); // One wait state cycle while waiting for writes to complete
+
+  if (onOddCycle) { // One additional wait state if we were on an odd cycle
     tick(state);
   }
 
@@ -281,8 +300,11 @@ const dumpScrollPointer = pointer => {
 
 export const setPPUMem = (state, address, value) => {
   state.memory[address] = value;
+  state.ppu.busLatch = value;
 
   switch (address) {
+    case PPUMASK:
+      break;
     case PPUCTRL:
       state.ppu.control = {
         baseNameTable:         (value & 0b00000011),
@@ -297,7 +319,6 @@ export const setPPUMem = (state, address, value) => {
       // Copy base name table data to T register at bits 11 and 12
       state.ppu.T = state.ppu.T & 0b111001111111111;
       state.ppu.T = state.ppu.T | (state.ppu.control.baseNameTable << 10);
-      state.ppu.busLatch = value;
       break;
     case PPUSCROLL:
       if (state.ppu.W === 0) {
@@ -321,9 +342,6 @@ export const setPPUMem = (state, address, value) => {
         state.ppu.V = state.ppu.T;
         state.ppu.W = 0;
       }
-
-      state.ppu.busLatch = value;
-
       break;
     case PPUADDR:
       if (state.ppu.W === 0) {
@@ -341,8 +359,6 @@ export const setPPUMem = (state, address, value) => {
         state.ppu.V = state.ppu.T;
         state.ppu.W = 0;
       }
-
-      state.ppu.busLatch = value;
 
       break;
     case PPUDATA:
@@ -691,12 +707,12 @@ const incrementDot = (state) => {
 
   const skipLastCycle = renderingEnabled && !ppu.evenFrame;
 
-  if (ppu.scanlineCycle === 339 && ppu.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
+  if (ppu.scanlineCycle === 340 && ppu.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
     ppu.scanlineCycle = 0;
     ppu.scanline = 0;
     ppu.evenFrame = !ppu.evenFrame;
     ppu.nmiOccurred = false;
-  } else if (ppu.scanlineCycle === 340) {
+  } else if (ppu.scanlineCycle === 341) {
     ppu.scanline++;
     ppu.scanlineCycle = 0;
 
@@ -720,7 +736,6 @@ const incrementDot = (state) => {
 
 const updatePPU = (state, cpuCycles) => {
   let { ppu } = state;
-  ppu.cycle += cpuCycles * 3;
 
   for (let i = 0; i < cpuCycles * 3; i++){
     const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
@@ -737,6 +752,7 @@ const updatePPU = (state, cpuCycles) => {
     }
 
     incrementDot(state);
+    ppu.cycle++;
   }
 
   // ppu.framebuffer[0] = 0xdadadada;

@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
-import PropTypes from 'prop-types';
-import { FixedSizeList as List } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
 import { hex, hex16 } from '../emulator/stateLogging';
+import _ from 'lodash';
 
 const PPUVRAMDebugger = ({ emulator, refresh }) => {
   const lines = useMemo(() => {
+    _.noop(refresh);
     let ret = [];
     for (let i = 0; i < 1024; i++) {
       let line = '0x' + hex16(i * 16) + ' | ';

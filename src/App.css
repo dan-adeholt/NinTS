@@ -284,10 +284,25 @@ td label {
   border-bottom-right-radius: 5px;
 }
 
-.hexViewer {
+.monospace, .hexViewer {
   white-space: pre;
   font-family: Menlo, Monaco, Consolas, 'Courier New', monospace !important;
+}
+
+.hexViewer {
   max-height: 600px;
   overflow-y: auto;
   width: 600px;
+}
+
+.dumpButton {
+  flex-grow: 0;
+}
+
+.expected {
+  color: green;
+}
+
+.found {
+  color: red;
 }

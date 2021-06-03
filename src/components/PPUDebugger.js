@@ -1,16 +1,20 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import { greyScaleColorForIndexedColor } from '../emulator/ppu';
 import PPUOAMDebugger from './PPUOAMDebugger';
 import PPUNameTableDebugger from './PPUNameTableDebugger';
 import SegmentControl from './SegmentControl';
 import PPUSpritesDebugger from './PPUSpritesDebugger';
 import PPUVRAMDebugger from './PPUVRAMDebugger';
 import PPUScanlineDebugger from './PPUScanlineDebugger';
+import PPULogDebugger from './PPULogDebugger';
 
 const PPUDebugger = ({ emulator, refresh }) => {
   const options = useMemo(() => {
     return [
+      {
+        title: 'Log',
+        view: <PPULogDebugger emulator={emulator} refresh={refresh}/>
+      },
       {
         title: 'Nametables',
         view: <PPUNameTableDebugger emulator={emulator} refresh={refresh}/>
