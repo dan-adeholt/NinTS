@@ -36,6 +36,7 @@ const PPUMASK_RENDER_ENABLED_FLAGS = PPUMASK_RENDER_BACKGROUND | PPUMASK_RENDER_
 const PPUSTATUS_VBLANK = 1 << 7;
 const PPUSTATUS_VBLANK_MASK = ~PPUSTATUS_VBLANK;
 
+const POST_RENDER_SCANLINE = 240;
 const VBLANK_SCANLINE = 241;
 const PRE_RENDER_SCANLINE = 261;
 const NUM_SCANLINES = 262;
@@ -716,11 +717,14 @@ const incrementDot = (state) => {
     ppu.scanlineCycle = 0;
     ppu.scanline = 0;
     ppu.evenFrame = !ppu.evenFrame;
-    ppu.frameCount++;
     ppu.nmiOccurred = false;
   } else if (ppu.scanlineCycle === 341) {
     ppu.scanline++;
     ppu.scanlineCycle = 0;
+
+    if (ppu.scanline === POST_RENDER_SCANLINE) {
+      ppu.frameCount++;
+    }
 
     if (ppu.scanline === VBLANK_SCANLINE) {
       // Generate vblank interrupt
@@ -735,7 +739,6 @@ const incrementDot = (state) => {
       ppu.nmiOccurred = false;
       ppu.scanline = 0;
       ppu.evenFrame = !ppu.evenFrame;
-      ppu.frameCount++;
     }
   }
 }
