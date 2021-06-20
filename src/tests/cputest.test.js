@@ -1,5 +1,4 @@
 import { testInstructionTestRom, runTestWithLogFile } from './testutil';
-import updatePPU from '../emulator/ppu';
 
 test('Nes test rom executes properly', () =>
   runTestWithLogFile(
@@ -7,7 +6,7 @@ test('Nes test rom executes properly', () =>
     'nestest.log',
     state => {
       state.PC = 0xC000;
-      updatePPU(state, state.CYC);
+      state.memory[0x4015] = 0x00;
     },
     false)
 );

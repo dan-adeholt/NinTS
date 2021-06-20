@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
-import { alignMesen, initMachine, stepFrame } from './emulator/emulator';
+import { initMachine, stepFrame } from './emulator/emulator';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
@@ -32,7 +32,6 @@ function App() {
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
     const newEmulator = initMachine(rom);
-    alignMesen(newEmulator);
     setEmulator(newEmulator);
   }, []);
 

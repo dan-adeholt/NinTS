@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { alignMesen, step } from '../emulator/emulator';
-import { hex, stateToStringMesen } from '../emulator/stateLogging';
+import { step } from '../emulator/emulator';
+import { hex, stateToString } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
 
 const fileUrl = 'http://localhost:5000/Trace%20-%20iceclimber.txt';
@@ -33,12 +33,11 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
     let lineIndex = dumpingState.current.lineIndex;
 
     if (!dumpingState.current.initialized) {
-      alignMesen(emulator);
       dumpingState.current.initialized = true;
     }
 
     while (isMatching && lineIndex < lines.length) {
-      let stateString = stateToStringMesen(emulator, false, true);
+      let stateString = stateToString(emulator, false, true);
 
       if (stateString !== lines[lineIndex] && !mutedLocations.includes(emulator.PC)) {
         const prevStart = Math.max(lineIndex - 5, 0);

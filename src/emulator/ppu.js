@@ -157,10 +157,12 @@ export const initPPU = (rom) => {
   ppuMemory.set(rom);
 
   return {
-    cycle: 0,
-    scanlineCycle: 0,
+    // Mesen PPU alignment is off with CPU at boot - set to match
+    cycle: 27,
+    scanlineCycle: 27,
     scanline: 0,
     evenFrame: true,
+    frameCount: 0,
     vblankCount: 0,
     nmiOccurred: false,
     tiles: decodeTiles(rom),
@@ -714,6 +716,7 @@ const incrementDot = (state) => {
     ppu.scanlineCycle = 0;
     ppu.scanline = 0;
     ppu.evenFrame = !ppu.evenFrame;
+    ppu.frameCount++;
     ppu.nmiOccurred = false;
   } else if (ppu.scanlineCycle === 341) {
     ppu.scanline++;
@@ -732,6 +735,7 @@ const incrementDot = (state) => {
       ppu.nmiOccurred = false;
       ppu.scanline = 0;
       ppu.evenFrame = !ppu.evenFrame;
+      ppu.frameCount++;
     }
   }
 }

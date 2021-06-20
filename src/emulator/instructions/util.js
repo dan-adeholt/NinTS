@@ -11,6 +11,8 @@ export const P_REG_BREAK     = 0b00010000;
 export const P_REG_ALWAYS_1  = 0b00100000;
 export const P_REG_OVERFLOW  = 0b01000000;
 export const P_REG_NEGATIVE  = 0b10000000;
+export const P_REG_DISCARD_AFTER_PULL   = P_REG_ALWAYS_1 | P_REG_BREAK;
+export const P_MASK_DISCARD_AFTER_PULL  = ~P_REG_DISCARD_AFTER_PULL;
 export const P_REGS_OVERFLOW_AND_NEGATIVE = P_REG_NEGATIVE | P_REG_OVERFLOW;
 export const P_MASK_OVERFLOW_AND_NEGATIVE = ~P_REGS_OVERFLOW_AND_NEGATIVE;
 
@@ -18,8 +20,6 @@ export const P_MASK_CARRY = ~P_REG_CARRY;
 export const P_MASK_ZERO = ~P_REG_ZERO;
 export const P_MASK_INTERRUPT = ~P_REG_INTERRUPT;
 export const P_MASK_DECIMAL = ~P_REG_DECIMAL;
-export const P_MASK_BREAK = ~P_REG_BREAK;
-export const P_MASK_ALWAYS_1 = ~P_REG_ALWAYS_1;
 export const P_MASK_OVERFLOW = ~P_REG_OVERFLOW;
 export const P_MASK_NEGATIVE = ~P_REG_NEGATIVE;
 
@@ -47,8 +47,6 @@ export const setZeroNegative = (state, value) => {
 export const setOverflow = (state, accumulator, value, result) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, (accumulator ^ result) & (value ^ result) & 0x80);
 export const setOverflowValue = (state, on) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, on);
 export const setInterrupt = (state, on) => setFlag(state, P_REG_INTERRUPT, P_MASK_INTERRUPT, on);
-export const setBreak = (state, on) => setFlag(state, P_REG_BREAK, P_MASK_BREAK, on);
-export const setAlwaysOne = (state) => setFlag(state, P_REG_ALWAYS_1, P_MASK_ALWAYS_1, true);
 
 export const setY = (state, value) => state.Y = value
 export const setX = (state, value) => state.X = value

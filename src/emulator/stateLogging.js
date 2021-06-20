@@ -25,9 +25,7 @@ import { onSamePageBoundary, PAGE_MASK } from './memory';
 import { readMem } from './emulator';
 import _ from 'lodash';
 
-const branchInstructions = {"JMP": 1, "JSR": 1, "BPL": 1, "BMI": 1, "BVC": 1, "BVS": 1, "BCC": 1, "BCS": 1, "BNE": 1, "BEQ": 1};
-
-const readMesenLogMem = (state, address) => {
+export const peekMem = (state, address) => {
   if (address !== 0x4015 && address !== 0x4016 && address !== 0x4017 && address > 0x4000 && address < 0x4020) {
     // Mesen does this to fake open bus behavior - instead of just returning 0 on these reads.
     // TODO: Perhaps actually return these values from readMem?
@@ -37,64 +35,48 @@ const readMesenLogMem = (state, address) => {
   }
 }
 
-const readNintendulatorLogMem = (state, address) => {
-  // Don't preview values for MMIO registers ($2000-$401F) - just return 0xFF. Aligns with Nintendulator's debugger,
-  // it assumes the value $FF whenever it is told to "preview" the value at any memory address
-  // for which a special "Debug" (side-effect-free) read handler has not been assigned.
-
-  if (address >= 0x2000 && address <= 0x401F) {
-    return 0xFF;
-  } else {
-    return readMem(state, address, true);
-  }
-}
-
 export const absoluteAddress = (state, pc) => {
   return readMem(state, pc + 1) + (readMem(state, pc + 2) << 8);
 }
 
+const HEX_PREFIX = '$';
+
 const logFormatters = {
-  [ModeAccumulator]: state => "A",
-  [ModeImmediate]: (state, pc, reader) => "#$" + hex(reader(state, pc + 1)),
-  [ModeAbsolute]: (state, pc, reader, prefix, mesenCompatible) => {
-    const opcode = reader(state, pc);
-    const { name } = opcodeMetadata[opcode];
+  [ModeAccumulator]: () => "A",
+  [ModeImmediate]: (state, pc) => "#$" + hex(peekMem(state, pc + 1)),
+  [ModeAbsolute]: (state, pc) => {
     const address = absoluteAddress(state, pc);
-    if (name in branchInstructions && !mesenCompatible) {
-      return "$" + hex16(address);
-    } else {
-      const byte = reader(state, address);
-      return "$" + hex16(address) + " = " + hex(byte, prefix);
-    }
+    const byte = peekMem(state, address);
+    return "$" + hex16(address) + " = " + hex(byte, HEX_PREFIX);
   },
-  [ModeAbsoluteX]: (state, pc, reader, prefix) => {
+  [ModeAbsoluteX]: (state, pc) => {
     const base = absoluteAddress(state, pc);
     const address = (base + state.X) & 0xFFFF;
-    const byte = reader(state, address);
-    return "$" + hex16(base) + ",X @ " + hex16(address, prefix) + ' = ' + hex(byte, prefix);
+    const byte = peekMem(state, address);
+    return "$" + hex16(base) + ",X @ " + hex16(address, HEX_PREFIX) + ' = ' + hex(byte, HEX_PREFIX);
   },
-  [ModeAbsoluteY]: (state, pc, reader, prefix) => {
+  [ModeAbsoluteY]: (state, pc) => {
     const base = absoluteAddress(state, pc);
     const address = (base + state.Y) & 0xFFFF;
-    const byte = reader(state, address);
-    return "$" + hex16(base) + ",Y @ " + hex16(address) + ' = ' + hex(byte, prefix);
+    const byte = peekMem(state, address);
+    return "$" + hex16(base) + ",Y @ " + hex16(address, HEX_PREFIX) + ' = ' + hex(byte, HEX_PREFIX);
   },
-  [ModeZeroPage]: (state, pc, reader, prefix) => {
-    const offset = reader(state, pc + 1);
-    return "$" + hex(offset) + " = " + hex(reader(state, offset), prefix);
+  [ModeZeroPage]: (state, pc) => {
+    const offset = peekMem(state, pc + 1);
+    return "$" + hex(offset) + " = " + hex(peekMem(state, offset), HEX_PREFIX);
   },
-  [ModeZeroPageX]: (state, pc, reader, prefix) => {
-    const base = reader(state, pc + 1);
+  [ModeZeroPageX]: (state, pc) => {
+    const base = peekMem(state, pc + 1);
     const address = (base + state.X) % 256;
-    return "$" + hex(base) + ",X @ " + hex(address, prefix) + " = " + hex(reader(state, address), prefix);
+    return "$" + hex(base) + ",X @ " + hex(address, HEX_PREFIX) + " = " + hex(peekMem(state, address), HEX_PREFIX);
   },
-  [ModeZeroPageY]: (state, pc, reader, prefix) => {
-    const base = reader(state, pc + 1);
+  [ModeZeroPageY]: (state, pc) => {
+    const base = peekMem(state, pc + 1);
     const address = (base + state.Y) % 256;
-    return "$" + hex(base) + ",Y @ " + hex(address) + " = " + hex(reader(state, address), prefix);
+    return "$" + hex(base) + ",Y @ " + hex(address, HEX_PREFIX) + " = " + hex(peekMem(state, address), HEX_PREFIX);
   },
   [ModeImplied]: state => "",
-  [ModeIndirect]: (state, pc, reader, prefix, mesenCompatible) => {
+  [ModeIndirect]: (state, pc) => {
     const address = absoluteAddress(state, pc);
 
     const lo = address;
@@ -104,51 +86,37 @@ const logFormatters = {
       hi = (lo & PAGE_MASK);
     }
 
-    const target = reader(state, lo) + (reader(state, hi) << 8);
+    const target = peekMem(state, lo) + (peekMem(state, hi) << 8);
 
-    if (mesenCompatible) {
-      const byte = reader(state, target);
-      return "($" + hex16(address) + ") @ " + hex16(target, prefix) + " = " + hex(byte, prefix);
-    } else {
-      return "($" + hex16(address) + ") = " + hex16(target);
-    }
+    const byte = peekMem(state, target);
+    return "($" + hex16(address) + ") @ " + hex16(target, HEX_PREFIX) + " = " + hex(byte, HEX_PREFIX);
   },
-  [ModeIndirectX]: (state, pc, reader, prefix) => {
-    const offset = reader(state, pc + 1);
+  [ModeIndirectX]: (state, pc) => {
+    const offset = peekMem(state, pc + 1);
     const addressLocation = (state.X + offset) % 256;
 
-    const address = reader(state, addressLocation) + (reader(state, (addressLocation + 1) % 256) << 8);
-    const value = reader(state, address);
-    return "($" + hex(offset) + ",X) @ " + hex(addressLocation) + " = " + hex16(address, prefix) + " = " + hex(value, prefix);
+    const address = peekMem(state, addressLocation) + (peekMem(state, (addressLocation + 1) % 256) << 8);
+    const value = peekMem(state, address);
+    return "($" + hex(offset) + ",X) @ " + hex16(address, HEX_PREFIX) + " = " + hex(value, HEX_PREFIX);
   },
-  [ModeIndirectY]: (state, pc, reader, prefix, mesenCompatible) => {
-    const zeroPageAddress = reader(state, pc + 1);
-    const base = reader(state, zeroPageAddress) + (reader(state, (zeroPageAddress + 1) % 256) << 8);
+  [ModeIndirectY]: (state, pc) => {
+    const zeroPageAddress = peekMem(state, pc + 1);
+    const base = peekMem(state, zeroPageAddress) + (peekMem(state, (zeroPageAddress + 1) % 256) << 8);
     const address = (base + state.Y) & 0xFFFF;
 
-    let value = reader(state, address);
+    let value = peekMem(state, address);
 
-    if (mesenCompatible) {
-      return "($" + hex(zeroPageAddress) + "),Y @ $" + hex16(address) + " = " + hex(value, prefix);
-    } else {
-      return "($" + hex(zeroPageAddress) + "),Y = " + hex16(base) + " @ " + hex16(address) + " = " + hex(value, prefix);
-    }
+    return "($" + hex(zeroPageAddress) + "),Y @ $" + hex16(address) + " = " + hex(value, HEX_PREFIX);
   },
-  [ModeRelative]: (state, pc, reader, prefix, mesenCompatible) => {
-    let offset = reader(state, pc + 1);
+  [ModeRelative]: (state, pc) => {
+    let offset = peekMem(state, pc + 1);
     if (offset > 0x7F) {
       offset -= 256;
     }
     const addr = pc + offset + 2;
-
-    if (mesenCompatible) {
-      return "$" + hex(addr) + ' = ' + hex(reader(state, addr) ?? 0, prefix);
-    } else {
-      return "$" + hex(addr);
-    }
+    return "$" + hex(addr) + ' = ' + hex(peekMem(state, addr) ?? 0, HEX_PREFIX);
   }
 };
-
 
 export const bin8 = num => num.toString(2).padStart(8, '0');
 export const hex = (num, prefix = '') => prefix + num.toString(16).toUpperCase().padStart(2, '0');
@@ -193,46 +161,7 @@ const appendStateRegisters = (state, str) => {
   return str;
 }
 
-export const stateToString = (state, swapPPU) => {
-  let str = hex16(state.PC) + '  ';
-  const opcode = readMem(state, state.PC);
-  str += hex(opcode);
-  str += ' ';
-
-  if (opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {
-    const { name, mode } = opcodeMetadata[opcode];
-
-    const instructionSize = InstructionLengthTranslation[mode];
-
-    for (let i = 0; i < instructionSize - 1; i++) {
-      str += hex(readMem(state, state.PC + 1 + i)) + ' ';
-    }
-
-    str = str.padEnd(16 + (3 - name.length), ' ');
-    str += name + ' ' + logFormatters[mode](state, state.PC, readNintendulatorLogMem, '', false) + ' ';
-  }
-
-  str = str.padEnd(48, ' ');
-  str = appendStateRegisters(state, str);
-
-  // Figure which PPU state ([scanline, pixel]) by deriving from cycle count
-  const PIXELS_PER_SCANLINE = 341;
-  const pixel = (state.ppu.cycle) % PIXELS_PER_SCANLINE;
-  const NUM_SCANLINES = 262;
-  const scanline = Math.floor((state.ppu.cycle) / PIXELS_PER_SCANLINE) % NUM_SCANLINES;
-
-  if (swapPPU) {
-    str += 'PPU:' + pixel.toString(10).padStart(3, ' ') +',' + scanline.toString(10).padStart(3, ' ') + ' ';
-  } else {
-    str += 'PPU:' + scanline.toString(10).padStart(3, ' ') +',' + pixel.toString(10).padStart(3, ' ') + ' ';
-  }
-
-  str += 'CYC:' + state.CYC.toString(10);
-
-  return str;
-}
-
-export const stateToStringMesen = (state, swapPPU) => {
+export const stateToString = (state) => {
   let str = hex16(state.PC) + ' ';
   const opcode = readMem(state, state.PC);
   let hexPrefix = '$';
@@ -248,9 +177,9 @@ export const stateToStringMesen = (state, swapPPU) => {
       str += hex(readMem(state, state.PC + 1 + i), hexPrefix) + ' ';
     }
 
-    str = str.padEnd(17 + (3 - name.length), ' ');
-    str += name + ' ' + logFormatters[mode](state, state.PC, readMesenLogMem, '$', true) + ' ';
-  }
+    str = str.padEnd(17, ' ');
+    str += name + ' ' + logFormatters[mode](state, state.PC) + ' ';
+    }
 
   str = str.padEnd(55, ' ');
   str = appendStateRegisters(state, str);
@@ -258,16 +187,13 @@ export const stateToStringMesen = (state, swapPPU) => {
   scanline = scanline === 261 ? -1 : scanline;
 
   str += 'CYC:' + state.ppu.scanlineCycle.toString(10).padEnd(3, ' ') +' SL:' + scanline.toString(10).padEnd(3, ' ') + ' ';
+  str += 'FC:' + (state.ppu.frameCount+1) + ' ';
   str += 'CPU Cycle:' + state.CYC.toString(10);
 
   return str;
 }
 
 const maxInstructionSize = _.max(_.map(opcodeMetadata, 'instructionSize'));
-
-const peekMem = (state, addr) => {
-  return readMem(state, addr, true);
-};
 
 export const disassembleLine = (state, address) => {
   const opcode = state.memory[address];
@@ -289,7 +215,7 @@ export const disassembleLine = (state, address) => {
       line.push(' UNSUPPORTED ' + mode);
     } else {
       line.push(name);
-      line.push(logFormatters[mode](state, address, peekMem, '', false));
+      line.push(logFormatters[mode](state, address));
     }
   } else {
     line.push(hex(state.memory[address]));

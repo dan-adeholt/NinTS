@@ -40,12 +40,13 @@ export const initMachine = (rom) => {
     A: 0,
     X: 0,
     Y: 0,
-    P: 0x24,
+    P: 0x4,
     PF: [false, false, true, false, false, true, false, false],
     PC: startingLocation,
     SP: 0xFD,
-    // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine
-    CYC: 7,
+    // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
+    // set it to match.
+    CYC: 8,
     settings: rom.settings,
     breakpoints: {},
     ppu: initPPU(rom.chrData),
@@ -69,10 +70,6 @@ export const readMem = (state, addr, peek = false) => {
   } else if (addr === 0x4016 || addr === 0x4017) {
     return readControllerMem(state, addr, peek);
   } else {
-    if (addr === 0x4016) {
-      console.log('ADDR:', hex(addr), peek, state.memory[addr]);
-    }
-
     return state.memory[addr];
   }
 }
@@ -116,17 +113,6 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
 export const tick = (state) => {
   state.CYC++;
   updatePPU(state, 1);
-}
-
-export const alignMesen = state => {
-  // Adapt to Mesen emulator - their reset routine takes 8 cycles
-  state.CYC = 8;
-  // And apparently their PPU is out of sync with CPU at boot.
-  state.ppu.cycle = 27;
-  state.ppu.scanlineCycle = 27;
-  // Also, Mesen sets bits 4&5 to zero at boot. They are irrelevant for the CPU: https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
-  // so just set them to match.
-  state.P = 0x4;
 }
 
 export const step = (state) => {
