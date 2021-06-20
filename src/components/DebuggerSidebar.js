@@ -42,7 +42,7 @@ const AddressRow = React.memo(({ data, index, style }) => {
   </div>
 });
 
-const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
+const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh }) => {
   const [lines, setLines] = useState([]);
   const [breakpoints, setBreakpoints] = useState(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
   const [currentStep, setCurrentStep] = useState(0);
@@ -55,11 +55,12 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh }) => {
   }, [emulator, onRefresh]);
 
   const updateDebugger = useCallback(() => {
+    _.noop(refresh);
     if (listRef.current != null && emulator != null) {
       const itemAddress = lines.findIndex(x => x.address === emulator.PC);
       listRef.current.scrollToItem(itemAddress, 'center');
     }
-  }, [emulator, listRef, lines]);
+  }, [emulator, listRef, lines, refresh]);
 
   const toggleBreakpoint = useCallback(address => {
     setBreakpoints(oldBreakpoints => {
