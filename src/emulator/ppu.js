@@ -152,6 +152,10 @@ const initSpriteUnits = () => {
 }
 
 export const initPPU = (rom) => {
+  // Store CHR rom in the first part of the memory
+  const ppuMemory = new Uint8Array(16384);
+  ppuMemory.set(rom);
+
   return {
     cycle: 0,
     scanlineCycle: 0,
@@ -159,7 +163,6 @@ export const initPPU = (rom) => {
     evenFrame: true,
     vblankCount: 0,
     nmiOccurred: false,
-    CHR: rom,
     tiles: decodeTiles(rom),
     V: 0,
     T: 0,
@@ -176,7 +179,7 @@ export const initPPU = (rom) => {
     },
     busLatch: 0,
     dataBuffer: 0,
-    ppuMemory: new Uint8Array(16384),
+    ppuMemory,
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
     pendingBackgroundTileIndex: 0,
@@ -460,8 +463,8 @@ const copyToSpriteUnits = ppu => {
       unit.shiftRegister1 = 0;
       unit.shiftRegister2 = 0;
     } else {
-      unit.shiftRegister1 = ppu.CHR[chrIndex];
-      unit.shiftRegister2 = ppu.CHR[chrIndex + 8];
+      unit.shiftRegister1 = ppu.ppuMemory[chrIndex];
+      unit.shiftRegister2 = ppu.ppuMemory[chrIndex + 8];
     }
   }
 }
@@ -546,8 +549,8 @@ const updateBackgroundRegisters = (ppu) => {
       incrementVerticalV(ppu);
     }
   } else if ((scanlineCycle - 1) % 8 === 0) {
-    ppu.backgroundShiftRegister1 |= (ppu.CHR[ppu.pendingBackgroundTileIndex]);
-    ppu.backgroundShiftRegister2 |= (ppu.CHR[ppu.pendingBackgroundTileIndex + 8]);
+    ppu.backgroundShiftRegister1 |= (ppu.ppuMemory[ppu.pendingBackgroundTileIndex]);
+    ppu.backgroundShiftRegister2 |= (ppu.ppuMemory[ppu.pendingBackgroundTileIndex + 8]);
 
     if (ppu.pendingBackgroundPalette & 0b01) { // Else it's already all zeroes due to shifts
       ppu.backgroundPaletteRegister1 |= 0b11111111;

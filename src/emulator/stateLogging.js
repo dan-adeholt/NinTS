@@ -94,7 +94,7 @@ const logFormatters = {
     return "$" + hex(base) + ",Y @ " + hex(address) + " = " + hex(reader(state, address), prefix);
   },
   [ModeImplied]: state => "",
-  [ModeIndirect]: (state, pc, reader) => {
+  [ModeIndirect]: (state, pc, reader, prefix, mesenCompatible) => {
     const address = absoluteAddress(state, pc);
 
     const lo = address;
@@ -105,7 +105,13 @@ const logFormatters = {
     }
 
     const target = reader(state, lo) + (reader(state, hi) << 8);
-    return "($" + hex16(address) + ") = " + hex16(target);
+
+    if (mesenCompatible) {
+      const byte = reader(state, target);
+      return "($" + hex16(address) + ") @ " + hex16(target, prefix) + " = " + hex(byte, prefix);
+    } else {
+      return "($" + hex16(address) + ") = " + hex16(target);
+    }
   },
   [ModeIndirectX]: (state, pc, reader, prefix) => {
     const offset = reader(state, pc + 1);

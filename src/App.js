@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { parseROM } from './emulator/parseROM';
-import { hex } from './emulator/stateLogging';
-import { initMachine, stepFrame } from './emulator/emulator';
+import { hex, hex16 } from './emulator/stateLogging';
+import { alignMesen, initMachine, stepFrame } from './emulator/emulator';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
@@ -32,6 +32,7 @@ function App() {
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
     const newEmulator = initMachine(rom);
+    alignMesen(newEmulator);
     setEmulator(newEmulator);
   }, []);
 
@@ -125,7 +126,7 @@ function App() {
 
   return (
     <div className="App">
-      <DebuggerSidebar emulator={emulator} runMode={runMode} setRunMode={setRunMode} onRefresh={triggerRefresh}/>
+      <DebuggerSidebar emulator={emulator} runMode={runMode} setRunMode={setRunMode} onRefresh={triggerRefresh} refresh={refresh}/>
       <div className="content">
         <h1>{ title }</h1>
         <input type="file" onChange={romFileChanged} />
@@ -141,8 +142,11 @@ function App() {
                 { registerCell('A', emulator.A) }
                 { registerCell('X', emulator.X) }
                 { registerCell('Y', emulator.Y) }
+                { registerCell('P', emulator.P) }
                 { registerCell('SP', emulator.SP) }
                 { registerCell('PC', emulator.PC) }
+                { registerCell('V', emulator.ppu.V, hex16) }
+                { registerCell('T', emulator.ppu.T, hex16) }
                 { registerCell('CYC', emulator.CYC, _.identity) }
               </tr>
               </tbody>
@@ -154,7 +158,7 @@ function App() {
           <div className="displayContainer">
             <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
           </div>
-          <PPUDebugger emulator={emulator} refresh={refresh}/>
+          <PPUDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
         </div>
 
       </div>

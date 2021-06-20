@@ -53,10 +53,26 @@ export const initMachine = (rom) => {
   };
 }
 
+const readControllerMem = (state, addr, peek) => {
+  // TODO: Implement proper controller logic
+  // TODO: Mesen peeks 0 value but returns open bus bits
+  if (peek) {
+    return 0;
+  } else {
+    return 0x40;
+  }
+}
+
 export const readMem = (state, addr, peek = false) => {
   if (addr >= 0x2000 && addr <= 0x2007) {
     return readPPUMem(state, addr, peek);
+  } else if (addr === 0x4016 || addr === 0x4017) {
+    return readControllerMem(state, addr, peek);
   } else {
+    if (addr === 0x4016) {
+      console.log('ADDR:', hex(addr), peek, state.memory[addr]);
+    }
+
     return state.memory[addr];
   }
 }
@@ -100,6 +116,17 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
 export const tick = (state) => {
   state.CYC++;
   updatePPU(state, 1);
+}
+
+export const alignMesen = state => {
+  // Adapt to Mesen emulator - their reset routine takes 8 cycles
+  state.CYC = 8;
+  // And apparently their PPU is out of sync with CPU at boot.
+  state.ppu.cycle = 27;
+  state.ppu.scanlineCycle = 27;
+  // Also, Mesen sets bits 4&5 to zero at boot. They are irrelevant for the CPU: https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
+  // so just set them to match.
+  state.P = 0x4;
 }
 
 export const step = (state) => {

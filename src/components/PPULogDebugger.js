@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { step } from '../emulator/emulator';
+import { alignMesen, step } from '../emulator/emulator';
 import { hex, stateToStringMesen } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
 
 const fileUrl = 'http://localhost:5000/Trace%20-%20iceclimber.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
 
-const PPULogDebugger = ({ emulator, refresh }) => {
+const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   const [lines, setLines] = useState([]);
   const [error, setError] = useState(null);
   const [mutedLocations, setMutedLocations] = useState(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? []) ?? []);
@@ -33,14 +33,7 @@ const PPULogDebugger = ({ emulator, refresh }) => {
     let lineIndex = dumpingState.current.lineIndex;
 
     if (!dumpingState.current.initialized) {
-      // Adapt to Mesen emulator - their reset routine takes 8 cycles
-      emulator.CYC = 8;
-      // And apparently their PPU is out of sync with CPU at boot.
-      emulator.ppu.cycle = 27;
-      emulator.ppu.scanlineCycle = 27;
-      // Also, Mesen sets bits 4&5 to zero at boot. They are irrelevant for the CPU: https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
-      // so just set them to match.
-      emulator.P = 0x4;
+      alignMesen(emulator);
       dumpingState.current.initialized = true;
     }
 
@@ -58,6 +51,7 @@ const PPULogDebugger = ({ emulator, refresh }) => {
             lineIndex++;
             continue;
           } else {
+            triggerRefresh();
             setError({
               expected: prefixLine(lineIndex, nmiString),
               found: prefixLine(lineIndex, stateString),
@@ -73,6 +67,7 @@ const PPULogDebugger = ({ emulator, refresh }) => {
 
           }
         } else {
+          triggerRefresh();
           setError({
             expected: prefixLine(lineIndex, lines[lineIndex]),
             found: prefixLine(lineIndex, stateString),
@@ -94,7 +89,7 @@ const PPULogDebugger = ({ emulator, refresh }) => {
     }
 
     dumpingState.current.lineIndex = lineIndex;
-  }, [emulator, lines, mutedLocations]);
+  }, [emulator, lines, mutedLocations, triggerRefresh]);
 
   const mute = useCallback(() => {
     setMutedLocations(oldMutedLocations => oldMutedLocations.concat([emulator.PC]));

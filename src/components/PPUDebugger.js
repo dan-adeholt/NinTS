@@ -8,12 +8,12 @@ import PPUVRAMDebugger from './PPUVRAMDebugger';
 import PPUScanlineDebugger from './PPUScanlineDebugger';
 import PPULogDebugger from './PPULogDebugger';
 
-const PPUDebugger = ({ emulator, refresh }) => {
+const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
   const options = useMemo(() => {
     return [
       {
         title: 'Log',
-        view: <PPULogDebugger emulator={emulator} refresh={refresh}/>
+        view: <PPULogDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
       },
       {
         title: 'Nametables',
@@ -36,7 +36,7 @@ const PPUDebugger = ({ emulator, refresh }) => {
         view: <PPUScanlineDebugger emulator={emulator} refresh={refresh}/>
       }
     ];
-  }, [emulator, refresh]);
+  }, [emulator, refresh, triggerRefresh]);
 
   const [index, setIndex] = useState(0);
 
