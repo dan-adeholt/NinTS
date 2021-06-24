@@ -197,10 +197,31 @@ td label {
   font-size: 0.8em;
 }
 
-.listContainer {
+.listContainer, .breakpointContainer {
   flex-grow: 1;
   flex-shrink: 0;
   min-width: 370px;
+  padding: 14px;
+}
+
+.addBreakpoint {
+  margin-top: 10px;
+}
+
+.breakpointContainer > div {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.breakpointContainer input {
+  margin-right: 10px;
+}
+
+.breakpointContainer button {
+  height: 25px;
+  flex-grow: 0;
+  margin-left: 10px;
 }
 
 .ppuContainer {
@@ -262,12 +283,21 @@ td label {
   margin-bottom: 16px;
 }
 
+
+.segmentControl.expand {
+  width: 100%;
+}
+
 .segmentControlItem {
   padding: 6px 16px;
   border: 1px solid gray;
   border-right: 0;
   cursor: pointer;
+}
 
+.segmentControlItem.expand {
+  flex-grow: 1;
+  text-align: center;
 }
 
 .selectedSegmentControlItem {
@@ -292,7 +322,7 @@ td label {
 .hexViewer {
   max-height: 600px;
   overflow-y: auto;
-  width: 600px;
+  width: 720px;
 }
 
 .dumpButton {

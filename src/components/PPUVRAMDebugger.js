@@ -5,9 +5,10 @@ import _ from 'lodash';
 const PPUVRAMDebugger = ({ emulator, refresh }) => {
   const lines = useMemo(() => {
     _.noop(refresh);
+
     let ret = [];
     for (let i = 0; i < 1024; i++) {
-      let line = '0x' + hex16(i * 16) + ' | ';
+      let line = hex16(i * 16) + ' | ';
       for (let j = i * 16; j < (i+1) * 16; j++) {
         line += hex(emulator.ppu.ppuMemory[j]) + ' ';
       }

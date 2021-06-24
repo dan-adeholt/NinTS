@@ -67,6 +67,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
           }
         } else {
           triggerRefresh();
+
           setError({
             expected: prefixLine(lineIndex, lines[lineIndex]),
             found: prefixLine(lineIndex, stateString),
@@ -124,4 +125,4 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
 
 PPULogDebugger.propTypes = {};
 
-export default PPULogDebugger;
+export default React.memo(PPULogDebugger);

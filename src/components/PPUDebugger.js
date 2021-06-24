@@ -12,10 +12,6 @@ const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
   const options = useMemo(() => {
     return [
       {
-        title: 'Log',
-        view: <PPULogDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
-      },
-      {
         title: 'Nametables',
         view: <PPUNameTableDebugger emulator={emulator} refresh={refresh}/>
       },
@@ -36,12 +32,14 @@ const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
         view: <PPUScanlineDebugger emulator={emulator} refresh={refresh}/>
       }
     ];
-  }, [emulator, refresh, triggerRefresh]);
+  }, [emulator, refresh]);
 
   const [index, setIndex] = useState(0);
 
   return (
     <div className="ppuDebugger">
+      <PPULogDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
+      <br/><br/>
       <SegmentControl options={options} onClick={setIndex} currentIndex={index}/>
     </div>
   );
