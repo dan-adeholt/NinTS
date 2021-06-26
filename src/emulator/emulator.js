@@ -1,7 +1,7 @@
 import { hex } from './stateLogging';
 import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
 
-import updatePPU, { initPPU, readPPUMem, setPPUMem, writeDMA } from './ppu';
+import updatePPU, { initPPU, readPPURegisterMem, setPPUMem, writeDMA } from './ppu';
 import { readOpcode } from './memory';
 import { nmi } from './instructions/stack';
 
@@ -66,7 +66,7 @@ const readControllerMem = (state, addr, peek) => {
 
 export const readMem = (state, addr, peek = false) => {
   if (addr >= 0x2000 && addr <= 0x2007) {
-    return readPPUMem(state, addr, peek);
+    return readPPURegisterMem(state, addr, peek);
   } else if (addr === 0x4016 || addr === 0x4017) {
     return readControllerMem(state, addr, peek);
   } else {

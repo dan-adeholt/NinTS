@@ -208,8 +208,8 @@ const incrementVRAMAddress = state => {
   state.ppu.V = state.ppu.V % (1 << 16);
 }
 
-export const readPPUMem = (state, address, peek = false) => {
-  let ret = state.memory[address];
+export const readPPURegisterMem = (state, address, peek = false) => {
+  let ret;
 
   if (address === PPUSTATUS) {
     ret = 0;
