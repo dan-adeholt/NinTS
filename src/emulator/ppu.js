@@ -208,12 +208,12 @@ const incrementVRAMAddress = state => {
   state.ppu.V = state.ppu.V % (1 << 16);
 }
 
-export const readPPUMem = (state, ppuAddress) => {
-  return state.ppu.ppuMemory[ppuAddress];
+export const readPPUMem = (ppu, ppuAddress) => {
+  return ppu.ppuMemory[ppuAddress];
 }
 
-export const writePPUMem = (state, ppuAddress, value) => {
-  state.ppu.ppuMemory[ppuAddress] = value;
+export const writePPUMem = (ppu, ppuAddress, value) => {
+  ppu.ppuMemory[ppuAddress] = value;
 }
 
 export const readPPURegisterMem = (state, address, peek = false) => {
@@ -240,7 +240,7 @@ export const readPPURegisterMem = (state, address, peek = false) => {
     // TODO: Handle palette reading here (V > 0x3EFF)
     ret = state.ppu.dataBuffer;
     if (!peek) {
-      state.ppu.dataBuffer = readPPUMem(state, ppuAddress);
+      state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress);
       incrementVRAMAddress(state);
     }
   } else {
@@ -377,7 +377,7 @@ export const setPPUMem = (state, address, value) => {
       break;
     case PPUDATA:
       const ppuAddress = state.ppu.V & 0x3FFF;
-      writePPUMem(state, ppuAddress, value);
+      writePPUMem(state.ppu, ppuAddress, value);
 
       incrementVRAMAddress(state);
       break;
