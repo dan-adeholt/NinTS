@@ -60,9 +60,9 @@ export const paletteIndexedColor = (ppu, indexedColor, paletteIndex, baseOffset)
     // console.log('Color', hex(paletteIndex), spritePalette);
   }
 
-  const p1Color = COLORS[ppu.ppuMemory[paletteAddress++]];
-  const p2Color = COLORS[ppu.ppuMemory[paletteAddress++]];
-  const p3Color = COLORS[ppu.ppuMemory[paletteAddress++]];
+  const p1Color = COLORS[readPPUMem(ppu, paletteAddress++)];
+  const p2Color = COLORS[readPPUMem(ppu, paletteAddress++)];
+  const p3Color = COLORS[readPPUMem(ppu, paletteAddress++)];
 
   if (isSteppingScanline) {
     // console.log('Colors', p1Color, p2Color, p3Color)
@@ -474,8 +474,8 @@ const copyToSpriteUnits = ppu => {
       unit.shiftRegister1 = 0;
       unit.shiftRegister2 = 0;
     } else {
-      unit.shiftRegister1 = ppu.ppuMemory[chrIndex];
-      unit.shiftRegister2 = ppu.ppuMemory[chrIndex + 8];
+      unit.shiftRegister1 = readPPUMem(ppu, chrIndex);
+      unit.shiftRegister2 = readPPUMem(ppu, chrIndex + 8);
     }
   }
 }
@@ -537,9 +537,9 @@ const updateBackgroundRegisters = (ppu) => {
     const x = ((ppu.V >> 2) & 0b000111)  // precision from the X & Y components so that they increment every 4 tiles
 
     const attributeAddress = 0x23C0 | nametable | y | x;
-    let tileIndex = ppu.ppuMemory[0x2000 | (ppu.V & 0x0FFF)];
+    let tileIndex = readPPUMem(ppu, 0x2000 | (ppu.V & 0x0FFF));
     tileIndex = (ppu.control.bgPatternAddress << 8) | tileIndex;
-    const attribute = ppu.ppuMemory[attributeAddress];
+    const attribute = readPPUMem(ppu, attributeAddress);
     const palette = getPaletteFromByte(ppu.V, attribute);
 
     let lineIndex = (ppu.scanline % 8);
@@ -560,8 +560,8 @@ const updateBackgroundRegisters = (ppu) => {
       incrementVerticalV(ppu);
     }
   } else if ((scanlineCycle - 1) % 8 === 0) {
-    ppu.backgroundShiftRegister1 |= (ppu.ppuMemory[ppu.pendingBackgroundTileIndex]);
-    ppu.backgroundShiftRegister2 |= (ppu.ppuMemory[ppu.pendingBackgroundTileIndex + 8]);
+    ppu.backgroundShiftRegister1 |= (readPPUMem(ppu, ppu.pendingBackgroundTileIndex));
+    ppu.backgroundShiftRegister2 |= (readPPUMem(ppu, ppu.pendingBackgroundTileIndex + 8));
 
     if (ppu.pendingBackgroundPalette & 0b01) { // Else it's already all zeroes due to shifts
       ppu.backgroundPaletteRegister1 |= 0b11111111;
@@ -651,7 +651,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
 
     // Draw pixel
     const index = ppu.scanline * SCREEN_WIDTH + (ppu.scanlineCycle - 1);
-    const vramBackgroundColor = ppu.ppuMemory[VRAM_BACKGROUND_COLOR];
+    const vramBackgroundColor = readPPUMem(ppu, VRAM_BACKGROUND_COLOR);
 
     if (spriteColor === 0) {
       if (backgroundColor === 0) {

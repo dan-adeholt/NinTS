@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { greyScaleColorForIndexedColor } from '../emulator/ppu';
+import { greyScaleColorForIndexedColor, readPPUMem } from '../emulator/ppu';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
@@ -34,7 +34,7 @@ const generateFrameBuffer = emulator => {
 
   for (let row = 0; row < 30; row++) {
     for (let col = 0; col < 32; col++) {
-      let tileIndex = emulator.ppu.ppuMemory[curAddress];
+      let tileIndex = readPPUMem(emulator.ppu, curAddress);
       let tile = emulator.ppu.tiles[tileIndex + tileIndexOffset];
       blit(tile, texture, col * 8, row * 8);
       curAddress++;

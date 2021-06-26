@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { hex, hex16 } from '../emulator/stateLogging';
 import _ from 'lodash';
+import { readPPUMem } from '../emulator/ppu';
 
 const PPUVRAMDebugger = ({ emulator, refresh }) => {
   const lines = useMemo(() => {
@@ -10,7 +11,7 @@ const PPUVRAMDebugger = ({ emulator, refresh }) => {
     for (let i = 0; i < 1024; i++) {
       let line = hex16(i * 16) + ' | ';
       for (let j = i * 16; j < (i+1) * 16; j++) {
-        line += hex(emulator.ppu.ppuMemory[j]) + ' ';
+        line += hex(readPPUMem(emulator.ppu, j)) + ' ';
       }
 
       line += '\n';
