@@ -146,7 +146,8 @@ function App() {
                 { registerCell('PC', emulator.PC) }
                 { registerCell('V', emulator.ppu.V, hex16) }
                 { registerCell('T', emulator.ppu.T, hex16) }
-                { registerCell('CYC', emulator.CYC, _.identity) }
+                { registerCell('CYC', emulator.ppu.scanlineCycle, _.identity) }
+                { registerCell('CPU CYC', emulator.CYC, _.identity) }
               </tr>
               </tbody>
             </table>
