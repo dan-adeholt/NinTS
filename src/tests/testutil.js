@@ -127,7 +127,7 @@ export const testPPURom = (location, testCase) => {
   const rom = parseROM(data);
   let state = initMachine(rom);
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     stepFrame(state);
   }
 
@@ -137,7 +137,7 @@ export const testPPURom = (location, testCase) => {
 // Remove top and bottom 8 pixels, i.e. go from 240 screen height to 224. FCEUX unfortunately dumps 224px screens.
 const convertBufferToVisibleArea = buffer => buffer.slice(8 * 256, buffer.length - 8 * 256)
 
-const dumpFramebuffer = (visibleBuffer32) => {
+export const dumpFramebuffer = (visibleBuffer32) => {
   const width = 256;
   const height = visibleBuffer32.length / width;
   let outPNG = new PNG({ width, height });

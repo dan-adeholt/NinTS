@@ -1,13 +1,14 @@
 import { COLORS } from './constants';
 import { OAM_DMA } from './cpu';
-import { tick } from './emulator';
+import { readMem, tick } from './emulator';
 import { BIT_0, BIT_7 } from './instructions/util';
+import { hex } from './stateLogging';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
 const PPUSTATUS = 0x2002;
 const OAMADDR =	0x2003;
-// const OAMDATA	= 0x2004;
+const OAMDATA	= 0x2004;
 const PPUSCROLL	= 0x2005;
 const PPUADDR	= 0x2006;
 const PPUDATA	= 0x2007;
@@ -34,6 +35,7 @@ const PPUMASK_RENDER_SPRITES = 1 << 4;
 const PPUMASK_RENDER_ENABLED_FLAGS = PPUMASK_RENDER_BACKGROUND | PPUMASK_RENDER_SPRITES;
 
 const PPUSTATUS_VBLANK = 1 << 7;
+const PPUSTATUS_SPRITE_ZERO_HIT = 1 << 6;
 const PPUSTATUS_VBLANK_MASK = ~PPUSTATUS_VBLANK;
 
 const POST_RENDER_SCANLINE = 240;
@@ -157,6 +159,12 @@ export const initPPU = (rom) => {
   const ppuMemory = new Uint8Array(16384);
   ppuMemory.set(rom);
 
+  // Boot palette values are the same as Mesens in order to be compatible with value peeking
+  ppuMemory.set([
+    0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08, 0x24, 0x00, 0x00, 0x04, 0x2C,
+    0x09, 0x01, 0x34, 0x03, 0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08],
+    0x3F00);
+
   return {
     // Mesen PPU alignment is off with CPU at boot - set to match
     cycle: 27,
@@ -183,6 +191,8 @@ export const initPPU = (rom) => {
     busLatch: 0,
     dataBuffer: 0,
     ppuMemory,
+      paletteRAM: new Uint8Array(),
+    oamAddress: 0,
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
     pendingBackgroundTileIndex: 0,
@@ -191,6 +201,7 @@ export const initPPU = (rom) => {
     backgroundShiftRegister2: 0,
     backgroundPaletteRegister1: 0,
     backgroundPaletteRegister2: 0,
+    spriteZeroHit: false,
     spriteUnits: initSpriteUnits(),
     framebuffer: new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT),
     scanlineDebug: new Array(256),
@@ -208,11 +219,35 @@ const incrementVRAMAddress = state => {
   state.ppu.V = state.ppu.V % (1 << 16);
 }
 
+const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 0x3F11;
+
+const writePPUPaletteMem = (ppu, ppuAddress, value) => {
+  if (ppuAddress === 0x3F00 || ppuAddress === 0x3F10) {
+    ppu.ppuMemory[0x3F00] = value;
+    ppu.ppuMemory[0x3F10] = value;
+  } else if (ppuAddress === 0x3F04 || ppuAddress === 0x3F14) {
+    ppu.ppuMemory[0x3F04] = value;
+    ppu.ppuMemory[0x3F14] = value;
+  } else if (ppuAddress === 0x3F08 || ppuAddress === 0x3F18) {
+    ppu.ppuMemory[0x3F08] = value;
+    ppu.ppuMemory[0x3F18] = value;
+  } else if (ppuAddress === 0x3F1c || ppuAddress === 0x3F0c) {
+    ppu.ppuMemory[0x3F0C] = value;
+    ppu.ppuMemory[0x3F1C] = value;
+  } else {
+    ppu.ppuMemory[ppuAddress] = value;
+  }
+}
+
 export const readPPUMem = (ppu, ppuAddress) => {
   return ppu.ppuMemory[ppuAddress];
 }
 
 export const writePPUMem = (ppu, ppuAddress, value) => {
+  if (isPPUPaletteAddress(ppuAddress)) {
+    return writePPUPaletteMem(ppu, ppuAddress, value);
+  }
+
   ppu.ppuMemory[ppuAddress] = value;
 }
 
@@ -230,6 +265,10 @@ export const readPPURegisterMem = (state, address, peek = false) => {
       }
     }
 
+    if (state.ppu.spriteZeroHit) {
+      ret |= PPUSTATUS_SPRITE_ZERO_HIT;
+    }
+
     ret |= (state.ppu.busLatch & 0b11111);
 
     if (!peek) {
@@ -238,11 +277,24 @@ export const readPPURegisterMem = (state, address, peek = false) => {
   } else if (address === PPUDATA) {
     const ppuAddress = state.ppu.V & 0x3FFF;
     // TODO: Handle palette reading here (V > 0x3EFF)
-    ret = state.ppu.dataBuffer;
-    if (!peek) {
-      state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress);
-      incrementVRAMAddress(state);
+
+    if (ppuAddress >= 0x3F00) {
+      ret = readPPUMem(state.ppu, ppuAddress);
+      if (!peek) {
+        // From: https://wiki.nesdev.com/w/index.php/PPU_registers#Data_.28.242007.29_.3C.3E_read.2Fwrite
+        // Reading the palettes still updates the internal buffer though, but the data placed in it is the mirrored nametable data that would appear "underneath" the palette.
+        state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress - 0x1000);
+        incrementVRAMAddress(state);
+      }
+    } else {
+      ret = state.ppu.dataBuffer;
+      if (!peek) {
+        state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress);
+        incrementVRAMAddress(state);
+      }
     }
+  } else if (address === OAMDATA) {
+    ret = state.ppu.oamMemory[state.ppu.oamAddress];
   } else {
     // Reading from write-only registers return the last value on the bus. Reading from PPUCTRL
     // increments VRAM address.
@@ -270,6 +322,9 @@ export const readPPURegisterMem = (state, address, peek = false) => {
     state.ppu.busLatch = ret;
   }
 
+  if (ret === undefined) {
+    console.error('Read PPU register returned undefined', hex(address, '0x'));
+  }
   return ret;
 }
 
@@ -289,15 +344,18 @@ export const writeDMA = (state, address, value) => {
 
   const baseAddress = value << 8;
 
-  let oamAddress = state.memory[OAMADDR];
   for (let i = 0; i < 256; i++) {
     const addr = baseAddress + i;
     tick(state);
-    const value = state.memory[addr];
+    const value = readMem(state, addr);
     tick(state);
-    state.ppu.oamMemory[oamAddress] = value;
-    oamAddress = (oamAddress + 1) & 0xFF;
+    state.ppu.oamMemory[state.ppu.oamAddress] = value;
+    incrementOAMAddress(state.ppu);
   }
+}
+
+const incrementOAMAddress = ppu => {
+  ppu.oamAddress = (ppu.oamAddress + 1) & 0xFF;
 }
 
 const getSpriteSize = ppu => {
@@ -312,11 +370,18 @@ const dumpScrollPointer = pointer => {
   return '[FY: ' + FY + ', NT: ' + NT + ', CY: ' + CY + ', CX: ' + CX + ']';
 }
 
-export const setPPUMem = (state, address, value) => {
+export const setPPURegisterMem = (state, address, value) => {
   state.memory[address] = value;
   state.ppu.busLatch = value;
 
   switch (address) {
+    case OAMDATA:
+      state.ppu.oamMemory[state.ppu.oamAddress] = value;
+      incrementOAMAddress(state.ppu);
+      break;
+    case OAMADDR:
+      state.ppu.oamAddress = value;
+      break;
     case PPUMASK:
       break;
     case PPUCTRL:
@@ -417,7 +482,7 @@ const initializeSecondaryOAM = ppu => {
 
   let secondaryIndex = 0;
   let scanline = ppu.scanline;
-  for (let i = 0; i < ppu.oamMemory.length && secondaryIndex < ppu.secondaryOamMemory.length; i+=4) {
+  for (let i = ppu.oamAddress; i < (ppu.oamMemory.length - 3) && secondaryIndex < ppu.secondaryOamMemory.length; i+=4) {
     const y = ppu.oamMemory[i];
     if (scanline >= y && scanline < (y + spriteSize)) {
       if (isSteppingScanline) {
@@ -580,6 +645,10 @@ const updateBackgroundRegisters = (ppu) => {
 const updateSpriteScanning = ppu => {
   const { scanlineCycle } = ppu;
 
+  if (ppu.scanlineCycle >= 257 && ppu.scanlineCycle <= 320) {
+    ppu.oamAddress = 0;
+  }
+
   if (scanlineCycle === 1) {
     clearSecondaryOAM(ppu);
     ppu.scanlineDebug[ppu.scanline] = dumpScrollPointer(ppu.V);
@@ -599,6 +668,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
   if (ppu.scanlineCycle > 0 && ppu.scanlineCycle <= 256) {
     let spriteColor = 0;
     let spritePriority = -1;
+    let spriteNumber = -1;
 
     const bitNumber = 15 - ppu.X;
     const bitMask = 1 << bitNumber;
@@ -641,6 +711,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
         if (spriteColor === 0) {
           spriteColor = spritesEnabled ? paletteIndexedSpriteColor(ppu, color, unit.attributes) : 0;
           spritePriority = (unit.attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
+          spriteNumber = i;
         }
       }
     }
@@ -663,6 +734,10 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
       ppu.framebuffer[index] = spriteColor;
     } else {
       // Both colors set
+      if (spriteNumber === 0) {
+        // ppu.spriteZeroHit = true;
+      }
+
       if (spritePriority === 0) {
         ppu.framebuffer[index] = spriteColor;
       } else {
@@ -674,6 +749,13 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
 
 const handleVblankScanline = (state) => {
   let { ppu } = state;
+
+  if (ppu.scanlineCycle === 1) {
+    // Generate vblank interrupt
+    ppu.nmiOccurred = true;
+
+    ppu.vblankCount++;
+  }
 
   if (ppu.scanlineCycle === 1) {
     state.memory[PPUSTATUS] = state.memory[PPUSTATUS] | PPUSTATUS_VBLANK;
@@ -701,9 +783,15 @@ const handlePrerenderScanline = (state, renderingEnabled) => {
     updateBackgroundRegisters(ppu);
   }
 
+  if (ppu.scanlineCycle === 0) {
+    state.ppu.nmiOccurred = false;
+  }
 
   if (ppu.scanlineCycle === 1) {
+    state.ppu.spriteZeroHit = false;
     state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
+  } else if (ppu.scanlineCycle >= 257 && ppu.scanlineCycle <= 320) {
+    state.ppu.oamAddress = 0;
   } else if (ppu.scanlineCycle >= 280 && ppu.scanlineCycle <= 304) {
     if (renderingEnabled) {
       resetVerticalScroll(ppu);
@@ -725,7 +813,6 @@ const incrementDot = (state) => {
     ppu.scanlineCycle = 0;
     ppu.scanline = 0;
     ppu.evenFrame = !ppu.evenFrame;
-    ppu.nmiOccurred = false;
   } else if (ppu.scanlineCycle === 341) {
     ppu.scanline++;
     ppu.scanlineCycle = 0;
@@ -734,17 +821,7 @@ const incrementDot = (state) => {
       ppu.frameCount++;
     }
 
-    if (ppu.scanline === VBLANK_SCANLINE) {
-      // Generate vblank interrupt
-      ppu.nmiOccurred = true;
-
-      if (ppu.control.generateNMI && ppu.scanlineCycle === 0) {
-        state.nmiInterruptCycle = state.CYC;
-      }
-
-      ppu.vblankCount++;
-    } else if (ppu.scanline > PRE_RENDER_SCANLINE) {
-      ppu.nmiOccurred = false;
+    if (ppu.scanline > PRE_RENDER_SCANLINE) {
       ppu.scanline = 0;
       ppu.evenFrame = !ppu.evenFrame;
     }

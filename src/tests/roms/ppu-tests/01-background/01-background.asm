@@ -24,7 +24,7 @@ RESET:
   .include "../util/init.asm"
 
 ResetCycleColor:
-  LDX #$0
+  LDX #$FF
 
 CycleColor:
   INX

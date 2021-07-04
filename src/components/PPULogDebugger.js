@@ -3,7 +3,7 @@ import { step } from '../emulator/emulator';
 import { hex, stateToString } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
 
-const fileUrl = 'http://localhost:5000/Trace%20-%20iceclimber.txt';
+const fileUrl = 'http://localhost:5000/Trace%20-%20smb.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
 
 const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
@@ -52,8 +52,8 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
           } else {
             triggerRefresh();
             setError({
-              expected: prefixLine(lineIndex, nmiString),
-              found: prefixLine(lineIndex, stateString),
+              expected: prefixLine(lineIndex, lines[lineIndex]),
+              found: prefixLine(lineIndex, nmiString),
               prevLines: prevLines.map((line, j) => prefixLine(prevStart + j, line)),
               debug: [
                 {

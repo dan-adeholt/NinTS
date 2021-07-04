@@ -1,7 +1,7 @@
-import { hex } from './stateLogging';
+import { hex, hex16, stateToString } from './stateLogging';
 import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
 
-import updatePPU, { initPPU, readPPURegisterMem, setPPUMem, writeDMA } from './ppu';
+import updatePPU, { initPPU, readPPURegisterMem, setPPURegisterMem, writeDMA } from './ppu';
 import { readOpcode } from './memory';
 import { nmi } from './instructions/stack';
 
@@ -50,6 +50,7 @@ export const initMachine = (rom) => {
     settings: rom.settings,
     breakpoints: {},
     ppu: initPPU(rom.chrData),
+    nmiCounter: null,
     memory,
   };
 }
@@ -65,8 +66,15 @@ const readControllerMem = (state, addr, peek) => {
 }
 
 export const readMem = (state, addr, peek = false) => {
-  if (addr >= 0x2000 && addr <= 0x2007) {
-    return readPPURegisterMem(state, addr, peek);
+  if (addr >= 0x2000 && addr <= 0x3FFF) {
+    const modAddr = 0x2000 + (addr & 0b111);
+    const ret = readPPURegisterMem(state, modAddr, peek);
+
+    if (ret == null) {
+      console.log('Attempted to read from', hex16(modAddr));
+    }
+
+    return ret;
   } else if (addr === 0x4016 || addr === 0x4017) {
     return readControllerMem(state, addr, peek);
   } else {
@@ -79,7 +87,7 @@ export const setMem = (state, addr, value) => {
   if (addr === OAM_DMA) {
     writeDMA(state, addr, value);
   } else if (addr >= 0x2000 && addr <= 0x2007) {
-    setPPUMem(state, addr, value);
+    setPPURegisterMem(state, addr, value);
   } else {
     state.memory[addr] = value;
   }
@@ -112,7 +120,22 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
 
 export const tick = (state) => {
   state.CYC++;
+  const prevNmiOccurred = state.ppu.nmiOccurred;
   updatePPU(state, 1);
+
+  // From NESDEV:
+  // The NMI input is connected to an edge detector. This edge detector polls the status of the NMI line during φ2 of each
+  // CPU cycle (i.e., during the second half of each cycle) and raises an internal signal if the input goes from being high
+  // during one cycle to being low during the next. The internal signal goes high during φ1 of the cycle that follows the one
+  // where the edge is detected, and stays high until the NMI has been handled.
+  // This basically means that we detected the NMI this cycle, but we should not trigger the actual NMI until the next cycle.
+  // Set an internal counter that will tick down each cycle until reaching zero. nmiCounter === 0 means that the emulator should
+  // handle the NMI after the current opcode has completed execution.
+  if (state.ppu.nmiOccurred && !prevNmiOccurred && state.ppu.control.generateNMI) {
+    state.nmiCounter = 1;
+  } else if (state.nmiCounter != null) {
+    state.nmiCounter--;
+  }
 }
 
 export const step = (state) => {
@@ -125,10 +148,12 @@ export const step = (state) => {
     return false;
   }
 
-  if (state.nmiInterruptCycle != null) {
-    // @TODO: Use cycle later to perfect NMI triggering conditions
+  // This actually annoys me a bit, if an NMI triggers we won't get the log output from the preceding opcode.
+  // But this is the way Mesen does it so we do it to stay compatible.
+  if (state.nmiCounter != null && state.nmiCounter <= 0 && state.ppu.control.generateNMI) {
+    console.log('Triggering NMI', stateToString(state), state.nmiCounter);
+    state.nmiCounter = null;
     nmi(state);
-    state.nmiInterruptCycle = null;
     state.lastNMI = state.CYC; // -1 for Mesen compatibility
   }
 
