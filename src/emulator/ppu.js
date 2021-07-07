@@ -191,7 +191,7 @@ export const initPPU = (rom) => {
     busLatch: 0,
     dataBuffer: 0,
     ppuMemory,
-      paletteRAM: new Uint8Array(),
+    paletteRAM: new Uint8Array(),
     oamAddress: 0,
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
@@ -833,6 +833,7 @@ const updatePPU = (state, cpuCycles) => {
   let { ppu } = state;
 
   for (let i = 0; i < cpuCycles * 3; i++){
+    incrementDot(state);
     const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
     const spritesEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_SPRITES;
     const backgroundEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_BACKGROUND;
@@ -846,7 +847,7 @@ const updatePPU = (state, cpuCycles) => {
       handlePrerenderScanline(state, renderingEnabled);
     }
 
-    incrementDot(state);
+
     ppu.cycle++;
   }
 
