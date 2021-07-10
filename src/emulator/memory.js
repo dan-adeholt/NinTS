@@ -102,11 +102,6 @@ const readIndirectYHelper = (state, shortenCycle) => {
 export const readIndirectYShortenCycle = (state) => readIndirectYHelper(state, true)
 export const readIndirectY = (state) => readIndirectYHelper(state, false)
 
-export const readOpcode = state => {
-  const opcode = readByte(state, state.PC);
-  state.PC++;
-  return opcode;
-}
 
 export const popStack = (state) => {
   const ret = readByte(state, 0x100 + ((state.SP + 1) & 0xFF));

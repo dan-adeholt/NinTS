@@ -16,10 +16,10 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
   const log = parseLog(fs.readFileSync(romRootPath + logPath));
 
   const rom = parseROM(data);
-  const machine = initMachine(rom);
+  const state = initMachine(rom, true);
 
   if (adjustState != null) {
-    adjustState(machine);
+    adjustState(state);
   }
 
   let prevStateString = '';
@@ -31,10 +31,17 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
       break;
     }
 
-    const entryLine = prefixLine(i, entry);
-    let stateString = prefixLine(i, stateToString(machine, swapPPU));
+    if (i >= state.traceLogLines.length) {
+      if (!step(state)) {
+        break;
+      }
+    }
 
-    let flagsString = procFlagsToString(machine.P);
+
+    const entryLine = prefixLine(i, entry);
+    let stateString = prefixLine(i, state.traceLogLines[i]);
+
+    let flagsString = procFlagsToString(state.P);
 
     if (stateString !== entryLine) {
       const match = procRegex.exec(entryLine);
@@ -43,7 +50,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
       if (match?.length > 0) {
         const expectedP = parseInt(match[1], 16);
 
-        if (expectedP !== machine.P) {
+        if (expectedP !== state.P) {
           console.log('PRV: ' + prevFlagString + "\nNEW: " + flagsString + "\nEXP:", procFlagsToString(expectedP));
         }
       } else {
@@ -55,9 +62,6 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
     prevFlagString = flagsString;
 
     expect(stateString).toEqual(entryLine);
-    if (!step(machine)) {
-      break;
-    }
   }
 }
 

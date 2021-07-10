@@ -179,16 +179,16 @@ export const stateToString = (state) => {
 
     str = str.padEnd(17, ' ');
     str += name + ' ' + logFormatters[mode](state, state.PC) + ' ';
-    }
+  }
 
+  let scanline = state.ppu.scanline;
   str = str.padEnd(55, ' ');
   str = appendStateRegisters(state, str);
-  let scanline = state.ppu.scanline;
   scanline = scanline === 261 ? -1 : scanline;
 
   str += 'CYC:' + state.ppu.scanlineCycle.toString(10).padEnd(3, ' ') +' SL:' + scanline.toString(10).padEnd(3, ' ') + ' ';
   str += 'FC:' + (state.ppu.frameCount+1) + ' ';
-  str += 'CPU Cycle:' + state.CYC.toString(10);
+  str += 'CPU Cycle:' + (state.CYC).toString(10);
 
   return str;
 }

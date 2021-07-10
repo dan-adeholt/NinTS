@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { step } from '../emulator/emulator';
-import { hex, stateToString } from '../emulator/stateLogging';
+import { initMachine, step } from '../emulator/emulator';
+import { hex } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
 
 const fileUrl = 'http://localhost:5000/Trace%20-%20smb.txt';
@@ -34,57 +34,40 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
 
     if (!dumpingState.current.initialized) {
       dumpingState.current.initialized = true;
+      Object.assign(emulator, initMachine(emulator.rom, true));
     }
 
     while (isMatching && lineIndex < lines.length) {
-      let stateString = stateToString(emulator, false, true);
+      if (lineIndex >= emulator.traceLogLines.length) {
+        step(emulator);
+      }
+
+      let stateString = emulator.traceLogLines[lineIndex];
 
       if (stateString !== lines[lineIndex] && !mutedLocations.includes(emulator.PC)) {
         const prevStart = Math.max(lineIndex - 5, 0);
         const prevEnd = Math.max(lineIndex, 0);
         const prevLines = lines.slice(prevStart, prevEnd);
 
-        if (emulator.lastNMI === emulator.CYC) {
-          const nmiString = '[NMI - Cycle: ' + (emulator.lastNMI - 1) + ']';
-          if (nmiString === lines[lineIndex]) {
-            lineIndex++;
-            continue;
-          } else {
-            triggerRefresh();
-            setError({
-              expected: prefixLine(lineIndex, lines[lineIndex]),
-              found: prefixLine(lineIndex, nmiString),
-              prevLines: prevLines.map((line, j) => prefixLine(prevStart + j, line)),
-              debug: [
-                {
-                  name: 'busLatch',
-                  value: emulator.ppu.busLatch
-                }
-              ]
-            });
-            break;
+        triggerRefresh();
 
-          }
-        } else {
-          triggerRefresh();
+        setError({
+          expected: prefixLine(lineIndex, lines[lineIndex]),
+          found: prefixLine(lineIndex, stateString),
+          prevLines: prevLines.map((line, j) => prefixLine(prevStart + j, line)),
+          debug: [
+            {
+              name: 'busLatch',
+              value: emulator.ppu.busLatch
+            }
+          ]
+        });
 
-          setError({
-            expected: prefixLine(lineIndex, lines[lineIndex]),
-            found: prefixLine(lineIndex, stateString),
-            prevLines: prevLines.map((line, j) => prefixLine(prevStart + j, line)),
-            debug: [
-              {
-                name: 'busLatch',
-                value: emulator.ppu.busLatch
-              }
-            ]
-          });
-
-          break;
-        }
+        lineIndex++;
+        break;
       }
 
-      step(emulator);
+
       lineIndex++;
     }
 
@@ -92,6 +75,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   }, [emulator, lines, mutedLocations, triggerRefresh]);
 
   const mute = useCallback(() => {
+    console.log('Muting', hex(emulator.PC), emulator.PC);
     setMutedLocations(oldMutedLocations => oldMutedLocations.concat([emulator.PC]));
   }, [emulator]);
 

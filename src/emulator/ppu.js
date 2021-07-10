@@ -166,10 +166,11 @@ export const initPPU = (rom) => {
     0x3F00);
 
   return {
-    // Mesen PPU alignment is off with CPU at boot - set to match
-    cycle: 27,
-    scanlineCycle: 27,
+    cycle: -1,
+    scanlineCycle: -1,
     scanline: 0,
+    masterClock: 0,
+    ppuDivider: 4,
     evenFrame: true,
     frameCount: 0,
     vblankCount: 0,
@@ -334,7 +335,10 @@ export const writeDMA = (state, address, value) => {
   // since it's too complicated (at least for now), so set the value for debugging etc
   state.memory[OAM_DMA] = value;
 
-  const onOddCycle = state.CYC % 2 === 1;
+  // The actual write really takes place AFTER the write tick has been completed.
+  // Thus whether or not the cycle is odd is determined based on the following tick.
+  // That's why we add 1 here. TODO: Do actual DMA transfer after tick instead
+  const onOddCycle = (state.CYC + 1) % 2 === 1;
 
   tick(state); // One wait state cycle while waiting for writes to complete
 
@@ -735,7 +739,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
     } else {
       // Both colors set
       if (spriteNumber === 0) {
-        // ppu.spriteZeroHit = true;
+        ppu.spriteZeroHit = true;
       }
 
       if (spritePriority === 0) {
@@ -801,7 +805,7 @@ const handlePrerenderScanline = (state, renderingEnabled) => {
   }
 }
 
-const incrementDot = (state) => {
+export const incrementDot = (state) => {
   const { ppu } = state;
   const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
 
@@ -828,11 +832,10 @@ const incrementDot = (state) => {
   }
 }
 
-
-const updatePPU = (state, cpuCycles) => {
+const updatePPU = (state, targetMasterClock) => {
   let { ppu } = state;
 
-  for (let i = 0; i < cpuCycles * 3; i++){
+  while (ppu.masterClock + ppu.ppuDivider <= targetMasterClock) {
     incrementDot(state);
     const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
     const spritesEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_SPRITES;
@@ -849,7 +852,10 @@ const updatePPU = (state, cpuCycles) => {
 
 
     ppu.cycle++;
+    ppu.masterClock += ppu.ppuDivider;
   }
+
+  ppu.slack = targetMasterClock - ppu.masterClock;
 
   // ppu.framebuffer[0] = 0xdadadada;
 }
