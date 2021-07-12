@@ -27,7 +27,6 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   });
 
   const dumpStates = useCallback(() => {
-
     let isMatching = true;
 
     let lineIndex = dumpingState.current.lineIndex;
@@ -90,7 +89,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   return (
     <>
       <div>
-        <button onClick={dumpStates}>Compare trace</button>&nbsp;
+        <button onClick={dumpStates} disabled={lines.length === 0}>Compare trace</button>&nbsp;
         <button onClick={mute}>Mute</button>&nbsp;
         <button onClick={clearMuted}>Clear muted</button>&nbsp;
       </div>
