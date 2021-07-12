@@ -24,8 +24,8 @@ const SPRITE_ATTRIB_PRIORITY        = 0b00100000;
 const SPRITE_ATTRIBS_PALETTE        = 0b00000011;
 
 // const PPUMASK_GREYSCALE = 1;
-// const PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS = 1 << 1;
-// const PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS = 1 << 2;
+const PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS = 1 << 1;
+const PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS = 1 << 2;
 const PPUMASK_RENDER_BACKGROUND = 1 << 3;
 const PPUMASK_RENDER_SPRITES = 1 << 4;
 // const PPUMASK_EMPHASIZE_RED = 1 << 5;
@@ -663,7 +663,7 @@ const updateSpriteScanning = ppu => {
   }
 }
 
-const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, backgroundEnabled) => {
+const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, backgroundEnabled, renderBackgroundLeft, renderSpritesLeft) => {
   if (renderingEnabled) {
     updateSpriteScanning(ppu);
     updateBackgroundRegisters(ppu);
@@ -671,6 +671,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
 
   if (ppu.scanlineCycle > 0 && ppu.scanlineCycle <= 256) {
     let spriteColor = 0;
+    let spritePatternColor = 0;
     let spritePriority = -1;
     let spriteNumber = -1;
 
@@ -713,6 +714,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
         const color = (c2 << 1) | c1;
 
         if (spriteColor === 0) {
+          spritePatternColor = color;
           spriteColor = spritesEnabled ? paletteIndexedSpriteColor(ppu, color, unit.attributes) : 0;
           spritePriority = (unit.attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
           spriteNumber = i;
@@ -728,6 +730,19 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
     const index = ppu.scanline * SCREEN_WIDTH + (ppu.scanlineCycle - 1);
     const vramBackgroundColor = readPPUMem(ppu, VRAM_BACKGROUND_COLOR);
 
+    // Sprite zero handling
+    if (!ppu.spriteZeroHit &&
+      spriteNumber === 0 &&
+      spritesEnabled &&
+      backgroundEnabled &&
+      spritePatternColor !== 0 &&
+      backgroundColorIndex !== 0 &&
+      ppu.scanlineCycle !== 255 &&
+      ((ppu.scanlineCycle > 8) || (renderBackgroundLeft && renderSpritesLeft))
+    ) {
+      ppu.spriteZeroHit = true;
+    }
+
     if (spriteColor === 0) {
       if (backgroundColor === 0) {
         ppu.framebuffer[index] = COLORS[vramBackgroundColor];
@@ -738,9 +753,6 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
       ppu.framebuffer[index] = spriteColor;
     } else {
       // Both colors set
-      if (spriteNumber === 0) {
-        ppu.spriteZeroHit = true;
-      }
 
       if (spritePriority === 0) {
         ppu.framebuffer[index] = spriteColor;
@@ -837,12 +849,15 @@ const updatePPU = (state, targetMasterClock) => {
 
   while (ppu.masterClock + ppu.ppuDivider <= targetMasterClock) {
     incrementDot(state);
+    const renderBackgroundLeft = state.memory[PPUMASK] & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS;
+    const renderSpritesLeft = state.memory[PPUMASK] & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
     const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
     const spritesEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_SPRITES;
     const backgroundEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_BACKGROUND;
 
+
     if (ppu.scanline < SCREEN_HEIGHT) {
-      handleVisibleScanline(ppu, renderingEnabled, spritesEnabled, backgroundEnabled);
+      handleVisibleScanline(ppu, renderingEnabled, spritesEnabled, backgroundEnabled, renderBackgroundLeft, renderSpritesLeft);
     } else if (ppu.scanline === VBLANK_SCANLINE) {
       // console.log('Hit vblank, renderinEnabled', renderingEnabled, spritesEnabled, backgroundEnabled);
       handleVblankScanline(state);
