@@ -2,12 +2,13 @@
  * Register update instructions.
  */
 import { setA, setX, setY, setZeroNegative } from './util';
-import { tick } from '../emulator';
+import { endReadTick, startReadTick } from '../emulator';
 
 const writeRegister = (state, value, setter) => {
-  tick(state);
+  startReadTick(state);
   setZeroNegative(state, value);
   setter(state, value);
+  endReadTick(state);
 }
 
 export const iny = state => writeRegister(state, (state.Y + 1) & 0xFF, setY);
@@ -21,6 +22,7 @@ export const txa = state => writeRegister(state, state.X, setA)
 export const tya = state => writeRegister(state, state.Y, setA)
 
 export const txs = state => {
-  tick(state);
+  startReadTick(state);
   state.SP = state.X;
+  endReadTick(state);
 }

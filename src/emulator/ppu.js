@@ -1,6 +1,6 @@
 import { COLORS } from './constants';
 import { OAM_DMA } from './cpu';
-import { readMem, tick } from './emulator';
+import { dummyReadTick, endReadTick, readMem, startReadTick  } from './emulator';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
 
@@ -340,19 +340,20 @@ export const writeDMA = (state, address, value) => {
   // That's why we add 1 here. TODO: Do actual DMA transfer after tick instead
   const onOddCycle = (state.CYC + 1) % 2 === 1;
 
-  tick(state); // One wait state cycle while waiting for writes to complete
+  dummyReadTick(state); // One wait state cycle while waiting for writes to complete
 
   if (onOddCycle) { // One additional wait state if we were on an odd cycle
-    tick(state);
+    dummyReadTick(state);
   }
 
   const baseAddress = value << 8;
 
   for (let i = 0; i < 256; i++) {
     const addr = baseAddress + i;
-    tick(state);
+    startReadTick(state);
     const value = readMem(state, addr);
-    tick(state);
+    endReadTick(state);
+    dummyReadTick(state);
     state.ppu.oamMemory[state.ppu.oamAddress] = value;
     incrementOAMAddress(state.ppu);
   }
@@ -803,8 +804,9 @@ const handlePrerenderScanline = (state, renderingEnabled) => {
     state.ppu.nmiOccurred = false;
   }
 
-  if (ppu.scanlineCycle === 1) {
+  if (ppu.scanlineCycle === 0) {
     state.ppu.spriteZeroHit = false;
+  } else if (ppu.scanlineCycle === 1) {
     state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
   } else if (ppu.scanlineCycle >= 257 && ppu.scanlineCycle <= 320) {
     state.ppu.oamAddress = 0;

@@ -35,7 +35,8 @@ export const initMachine = (rom, enableTraceLogging = false) => {
   // Reset vector
   const startingLocation = memory[0xFFFC] + (memory[0xFFFD] << 8);
 
-  const cpuDivider = 12;
+  const cpuStep = 12;
+  const cpuHalfStep = cpuStep / 2;
 
   let state = {
     A: 0,
@@ -45,10 +46,10 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     PF: [false, false, true, false, false, true, false, false],
     PC: startingLocation,
     SP: 0xFD,
-    masterClock: cpuDivider, // For some reason the master clock is set forward 1 cycle in Mesen. Causes PPU to get delayed.
+    masterClock: cpuStep, // For some reason the master clock is set forward 1 cycle in Mesen. Causes PPU to get delayed.
     ppuOffset: 1, // But there is also a PPU offset - very weird.
-    cpuDivider,
-    cpuHalfStep: cpuDivider / 2,
+    cpuStep,
+    cpuHalfStep,
     // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
     // set it to match.
     CYC: -1,
@@ -64,7 +65,7 @@ export const initMachine = (rom, enableTraceLogging = false) => {
 
   // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
   for (let i = 0; i < 8; i++) {
-    tick(state);
+    dummyReadTick(state);
   }
 
   return state;
@@ -134,7 +135,6 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
 }
 
 const _updatePPUAndHandleNMI = (state) => {
-  const prevNmiOccurred = state.ppu.nmiOccurred;
   updatePPU(state, state.masterClock - state.ppuOffset);
 
   // From NESDEV:
@@ -145,7 +145,7 @@ const _updatePPUAndHandleNMI = (state) => {
   // This basically means that we detected the NMI this cycle, but we should not trigger the actual NMI until the next cycle.
   // Set an internal counter that will tick down each cycle until reaching zero. nmiCounter === 0 means that the emulator should
   // handle the NMI after the current opcode has completed execution.
-  if (state.ppu.nmiOccurred && !prevNmiOccurred && state.ppu.control.generateNMI) {
+  if (state.ppu.nmiOccurred && !state.prevNmiOccurred && state.ppu.control.generateNMI) {
     state.nmiCounter = 1;
   } else if (state.nmiCounter != null) {
     state.nmiCounter--;
@@ -154,7 +154,7 @@ const _updatePPUAndHandleNMI = (state) => {
 
 export const tick = (state) => {
   state.CYC++;
-  state.masterClock += state.cpuDivider;
+  state.masterClock += state.cpuStep;
   _updatePPUAndHandleNMI(state);
 }
 
@@ -163,14 +163,33 @@ export const tick = (state) => {
  * and update the PPU in both instances. Perhaps helps with accuracy in some way I
  * do not understand yet.
  */
-export const startTick = (state, forRead) => {
+
+export const dummyReadTick = state => {
+  startReadTick(state);
+  endReadTick(state);
+}
+
+export const startReadTick = (state) => {
   state.CYC++;
-  state.masterClock += forRead ? state.cpuHalfStep - 1 : state.cpuHalfStep + 1;
+  state.masterClock += state.cpuHalfStep - 1;
+  state.prevNmiOccurred = state.ppu.nmiOccurred;
+  updatePPU(state, state.masterClock - state.ppuOffset);
+}
+
+export const endReadTick = (state) => {
+  state.masterClock += state.cpuHalfStep + 1;
   _updatePPUAndHandleNMI(state);
 }
 
-export const endTick = (state, forRead) => {
-  state.masterClock += forRead ? state.cpuHalfStep + 1 : state.cpuHalfStep - 1;
+export const startWriteTick = (state) => {
+  state.CYC++;
+  state.masterClock += state.cpuHalfStep + 1;
+  state.prevNmiOccurred = state.ppu.nmiOccurred;
+  updatePPU(state, state.masterClock - state.ppuOffset);
+}
+
+export const endWriteTick = (state) => {
+  state.masterClock += state.cpuHalfStep - 1;
   _updatePPUAndHandleNMI(state);
 }
 
@@ -203,7 +222,7 @@ export const endTick = (state, forRead) => {
  *
  */
 const readOpcode = (state) => {
-  startTick(state, true);
+  startReadTick(state);
 
   if (state.enableTraceLogging) {
     if (state.lastNMI != null && state.lastNMI <= state.CYC) {
@@ -215,7 +234,7 @@ const readOpcode = (state) => {
   }
 
   const opcode = readMem(state, state.PC);
-  endTick(state, true);
+  endReadTick(state);
 
   state.PC++;
   return opcode;

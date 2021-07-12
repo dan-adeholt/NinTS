@@ -2,13 +2,13 @@
  * Jump instructions
  */
 import { pushStackWord, readByte } from '../memory';
-import { tick } from '../emulator';
+import { dummyReadTick } from '../emulator';
 
 export const jmp = (state, address) => state.PC = address
 
 export const jsr = state => {
   const low = readByte(state, state.PC);
-  tick(state);
+  dummyReadTick(state);
 
   const jumpBackAddress = state.PC + 1; // Next instruction - 1
 
