@@ -43,7 +43,7 @@ const AddressRow = React.memo(({ data, index, style }) => {
   </div>
 });
 
-const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh }) => {
+const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, addKeyListener, removeKeyListener }) => {
   const [lines, setLines] = useState([]);
   const [breakpoints, setBreakpoints] = useState(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
   const [currentStep, setCurrentStep] = useState(0);
@@ -180,18 +180,16 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh }) 
   }, [stepEmulator, runEmulator, stopEmulator, runEmulatorFrame, running, runScanline]);
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyEvent);
+    addKeyListener(handleKeyEvent);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyEvent);
+      removeKeyListener(handleKeyEvent);
     }
-  }, [handleKeyEvent])
+  }, [handleKeyEvent, addKeyListener, removeKeyListener]);
 
   const data = useMemo(() => ({
     lines, emulator, breakpoints, toggleBreakpoint, running
   }), [lines, emulator, breakpoints, toggleBreakpoint, running]);
-
-
 
   const options = useMemo(()=> ([
       {

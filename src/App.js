@@ -29,6 +29,37 @@ function App() {
   const canvasRef = useRef();
   const [display, setDisplay] = useState({ imageData: null, framebuffer: null, context: null });
 
+  const [keyListeners, setKeyListeners] = useState([]);
+
+  const addKeyListener = useCallback(listener => {
+    setKeyListeners(oldListeners => {
+      oldListeners.push(listener);
+      return oldListeners;
+    })
+  }, []);
+
+  const removeKeyListener = useCallback(listener => {
+    setKeyListeners(oldListeners => _.without(oldListeners, listener));
+  }, []);
+
+  const handleKeyEvent = useCallback(e => {
+    if (e.target.type === 'text') {
+      return;
+    }
+
+    for (let listener of keyListeners) {
+      listener(e);
+    }
+  }, [keyListeners]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyEvent);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyEvent);
+    }
+  }, [handleKeyEvent])
+
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
     const newEmulator = initMachine(rom);
@@ -125,7 +156,15 @@ function App() {
 
   return (
     <div className="App">
-      <DebuggerSidebar emulator={emulator} runMode={runMode} setRunMode={setRunMode} onRefresh={triggerRefresh} refresh={refresh}/>
+      <DebuggerSidebar
+        emulator={emulator}
+        runMode={runMode}
+        setRunMode={setRunMode}
+        onRefresh={triggerRefresh}
+        refresh={refresh}
+        addKeyListener={addKeyListener}
+        removeKeyListener={removeKeyListener}
+      />
       <div className="content">
         <h1>{ title }</h1>
         <input type="file" onChange={romFileChanged} />
