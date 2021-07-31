@@ -8,6 +8,15 @@ const getResetVectorAddress = state => {
   return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
 }
 
+export const INPUT_A        = 0b00000001;
+export const INPUT_B        = 0b00000010;
+export const INPUT_SELECT   = 0b00000100;
+export const INPUT_START    = 0b00001000;
+export const INPUT_UP       = 0b00010000;
+export const INPUT_DOWN     = 0b00100000;
+export const INPUT_LEFT     = 0b01000000;
+export const INPUT_RIGHT    = 0b10000000;
+
 export const initMachine = (rom, enableTraceLogging = false) => {
   let memory = new Uint8Array(1 << 16);
   memory.set(rom.prgData, 0x8000);
@@ -58,6 +67,10 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     ppu: initPPU(rom.chrData),
     nmiCounter: null,
     traceLogLines: [],
+    controller1: new Uint8Array(8),
+    controller2: new Uint8Array(8),
+    controller1Latch: new Uint8Array(8),
+    controller2Latch: new Uint8Array(8),
     enableTraceLogging,
     memory,
     rom
@@ -71,17 +84,44 @@ export const initMachine = (rom, enableTraceLogging = false) => {
   return state;
 }
 
-const readControllerMem = (state, addr, peek) => {
-  // TODO: Implement proper controller logic
-  // TODO: Mesen peeks 0 value but returns open bus bits
-  if (peek) {
-    return 0;
-  } else {
-    return 0x40;
+export const setInputController = (state, button, isDown) => {
+  const mask = ~button;
+
+  state.controller1 &= mask;
+
+  if (isDown) {
+    state.controller1 |= button;
   }
 }
 
+const readControllerMem = (state, addr, peek) => {
+  let openBus = 0x40;
+
+  // TODO: Mesen peeks 0 value but returns open bus bits
+  if (peek) {
+    openBus = 0;
+  }
+
+  let value;
+
+  if (addr === 0x4016) {
+    value = state.controller1Latch & 0x1;
+    if (!peek) {
+      state.controller1Latch >>= 1;
+    }
+  } else {
+    value = state.controller2Latch & 0x1;
+
+    if (!peek) {
+      state.controller2Latch >>= 1;
+    }
+  }
+
+  return openBus | value;
+}
+
 export const readMem = (state, addr, peek = false) => {
+  // TODO: Add mirroring here
   if (addr >= 0x2000 && addr <= 0x3FFF) {
     const modAddr = 0x2000 + (addr & 0b111);
     const ret = readPPURegisterMem(state, modAddr, peek);
@@ -98,12 +138,25 @@ export const readMem = (state, addr, peek = false) => {
   }
 }
 
+const setInputMem = (state, addr, value) => {
+  if (value === 1) {
+    if (addr === 0x4016) {
+      state.controller1Latch = state.controller1;
+    } else {
+      state.controller2Latch = state.controller2;
+    }
+  }
+}
+
 
 export const setMem = (state, addr, value) => {
+  // TODO: Add mirroring here
   if (addr === OAM_DMA) {
     writeDMA(state, addr, value);
   } else if (addr >= 0x2000 && addr <= 0x2007) {
     setPPURegisterMem(state, addr, value);
+  } else if (addr === 0x4016 || addr === 0x4017) {
+    setInputMem(state, addr, value);
   } else {
     state.memory[addr] = value;
   }

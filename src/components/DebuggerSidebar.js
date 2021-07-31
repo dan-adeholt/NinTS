@@ -149,7 +149,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   const running = runMode !== RunModeType.STOPPED;
 
   const handleKeyEvent = useCallback(e => {
-    if (e.target.type === 'text') {
+    if (e.target.type === 'text' || e.type !== 'keydown') {
       return;
     }
 
@@ -171,7 +171,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
       case 'f':
         runEmulatorFrame();
         break;
-      case 's':
+      case 'l':
         runScanline();
         break;
       default:

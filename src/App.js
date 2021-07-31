@@ -2,7 +2,16 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
-import { initMachine, stepFrame } from './emulator/emulator';
+import {
+  initMachine,
+  INPUT_A,
+  INPUT_B,
+  INPUT_DOWN,
+  INPUT_LEFT,
+  INPUT_RIGHT, INPUT_SELECT, INPUT_START,
+  INPUT_UP, setInputController,
+  stepFrame
+} from './emulator/emulator';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
@@ -18,6 +27,17 @@ export const RunModeType = Object.freeze({
   RUNNING_SINGLE_SCANLINE: 'RunningSingleScanline'
 });
 
+const KeyTable = {
+  'w': INPUT_UP,
+  'a': INPUT_LEFT,
+  's': INPUT_DOWN,
+  'd': INPUT_RIGHT,
+  ' ': INPUT_A,
+  'l': INPUT_B,
+  '.': INPUT_SELECT,
+  '-': INPUT_START
+};
+
 const frameLength = 1000.0 / 60.0;
 
 function App() {
@@ -28,6 +48,10 @@ function App() {
 
   const canvasRef = useRef();
   const [display, setDisplay] = useState({ imageData: null, framebuffer: null, context: null });
+
+  const handleGameInput = useCallback(e => {
+
+  }, []);
 
   const [keyListeners, setKeyListeners] = useState([]);
 
@@ -42,21 +66,35 @@ function App() {
     setKeyListeners(oldListeners => _.without(oldListeners, listener));
   }, []);
 
+  useEffect(() => {
+    addKeyListener(handleGameInput);
+
+    return () => {
+      removeKeyListener(handleGameInput);
+    }
+  }, [handleGameInput, addKeyListener, removeKeyListener]);
+
   const handleKeyEvent = useCallback(e => {
     if (e.target.type === 'text') {
       return;
     }
 
+    if (e.key in KeyTable) {
+      setInputController(emulator, KeyTable[e.key], e.type === 'keydown');
+      e.preventDefault();
+    }
+
     for (let listener of keyListeners) {
       listener(e);
     }
-  }, [keyListeners]);
+  }, [keyListeners, emulator]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyEvent);
-
+    document.addEventListener('keyup', handleKeyEvent);
     return () => {
       document.removeEventListener('keydown', handleKeyEvent);
+      document.removeEventListener('keyup', handleKeyEvent);
     }
   }, [handleKeyEvent])
 
