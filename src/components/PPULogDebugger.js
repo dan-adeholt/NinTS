@@ -9,7 +9,7 @@ const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
 const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   const [lines, setLines] = useState([]);
   const [error, setError] = useState(null);
-  const [mutedLocations, setMutedLocations] = useState(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? []) ?? []);
+  const [mutedLocations, setMutedLocations] = useState(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? '[]') ?? []);
 
   useEffect(() => {
     if (fileUrl !== '') {
