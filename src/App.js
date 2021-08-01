@@ -89,14 +89,21 @@ function App() {
     }
   }, [keyListeners, emulator]);
 
+  const handleGamepad = useCallback(e => {
+    console.log(e);
+  }, []);
+
   useEffect(() => {
     document.addEventListener('keydown', handleKeyEvent);
     document.addEventListener('keyup', handleKeyEvent);
+    window.addEventListener('gamepadconnected', handleGamepad);
+
     return () => {
       document.removeEventListener('keydown', handleKeyEvent);
       document.removeEventListener('keyup', handleKeyEvent);
+      window.removeEventListener('gamepadconnected', handleGamepad);
     }
-  }, [handleKeyEvent])
+  }, [handleKeyEvent, handleGamepad])
 
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
@@ -137,6 +144,19 @@ function App() {
     while ((timestamp - startTime.current) >= frameLength) {
       startTime.current += frameLength;
 
+      const gamepads = navigator.getGamepads();
+
+      if (gamepads[0] != null) {
+        const gamepad = gamepads[0];
+        setInputController(emulator, INPUT_RIGHT, gamepad.axes[0] > 0.5);
+        setInputController(emulator, INPUT_LEFT, gamepad.axes[0] < -0.5);
+        setInputController(emulator, INPUT_DOWN, gamepad.axes[1] > 0.5);
+        setInputController(emulator, INPUT_UP, gamepad.axes[1] < -0.5);
+        setInputController(emulator, INPUT_START, gamepad.buttons[8].pressed);
+        setInputController(emulator, INPUT_SELECT, gamepad.buttons[9].pressed);
+        setInputController(emulator, INPUT_A, gamepad.buttons[1].pressed);
+        setInputController(emulator, INPUT_B, gamepad.buttons[0].pressed);
+      }
 
       if (stepFrame(emulator, runMode === RunModeType.RUNNING_SINGLE_SCANLINE) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
         // Hit breakpoint
