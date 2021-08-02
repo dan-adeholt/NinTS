@@ -148,10 +148,15 @@ function App() {
 
       if (gamepads[0] != null) {
         const gamepad = gamepads[0];
-        setInputController(emulator, INPUT_RIGHT, gamepad.axes[0] > 0.5);
-        setInputController(emulator, INPUT_LEFT, gamepad.axes[0] < -0.5);
-        setInputController(emulator, INPUT_DOWN, gamepad.axes[1] > 0.5);
-        setInputController(emulator, INPUT_UP, gamepad.axes[1] < -0.5);
+        const a0 = gamepad.axes[0];
+        const a1 = gamepad.axes[1];
+        const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
+
+        
+        setInputController(emulator, INPUT_RIGHT, a0 > 0 && deg >= 0.125);
+        setInputController(emulator, INPUT_LEFT, a0 < 0 && deg >= 0.125);
+        setInputController(emulator, INPUT_UP, a1 < 0 && deg <= 0.325);
+        setInputController(emulator, INPUT_DOWN, a1 > 0 && deg <= 0.325);
         setInputController(emulator, INPUT_START, gamepad.buttons[8].pressed);
         setInputController(emulator, INPUT_SELECT, gamepad.buttons[9].pressed);
         setInputController(emulator, INPUT_A, gamepad.buttons[1].pressed);
