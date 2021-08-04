@@ -196,6 +196,7 @@ export const initPPU = (rom) => {
     oamAddress: 0,
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
+    spriteZeroIsInSpriteUnits: false,
     pendingBackgroundTileIndex: 0,
     pendingBackgroundPalette: 0,
     backgroundShiftRegister1: 0,
@@ -487,6 +488,8 @@ const initializeSecondaryOAM = ppu => {
 
   let secondaryIndex = 0;
   let scanline = ppu.scanline;
+
+  ppu.spriteZeroIsInSpriteUnits = false;
   for (let i = ppu.oamAddress; i < (ppu.oamMemory.length - 3) && secondaryIndex < ppu.secondaryOamMemory.length; i+=4) {
     const y = ppu.oamMemory[i];
     if (scanline >= y && scanline < (y + spriteSize)) {
@@ -498,6 +501,11 @@ const initializeSecondaryOAM = ppu => {
       ppu.secondaryOamMemory[secondaryIndex++] = ppu.oamMemory[i+1];
       ppu.secondaryOamMemory[secondaryIndex++] = ppu.oamMemory[i+2];
       ppu.secondaryOamMemory[secondaryIndex++] = ppu.oamMemory[i+3];
+
+      // Sprite zero resides in at address OAM...OAM+3. If it is visible on screen, set flag
+      if (i === 0) {
+        ppu.spriteZeroIsInSpriteUnits = true;
+      }
     }
   }
 }
@@ -714,7 +722,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
 
         const color = (c2 << 1) | c1;
 
-        if (spriteColor === 0) {
+        if (spritePatternColor === 0 && color !== 0) {
           spritePatternColor = color;
           spriteColor = spritesEnabled ? paletteIndexedSpriteColor(ppu, color, unit.attributes) : 0;
           spritePriority = (unit.attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
@@ -733,13 +741,15 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
 
     // Sprite zero handling
     if (!ppu.spriteZeroHit &&
-      spriteNumber === 0 &&
-      spritesEnabled &&
-      backgroundEnabled &&
-      spritePatternColor !== 0 &&
-      backgroundColorIndex !== 0 &&
-      ppu.scanlineCycle !== 255 &&
-      ((ppu.scanlineCycle > 8) || (renderBackgroundLeft && renderSpritesLeft))
+        ppu.spriteZeroIsInSpriteUnits &&
+        // If sprite zero is among the sprite units, it's always at sprite number 0
+        spriteNumber === 0 &&
+        spritesEnabled &&
+        backgroundEnabled &&
+        spritePatternColor !== 0 &&
+        backgroundColorIndex !== 0 &&
+        ppu.scanlineCycle !== 255 &&
+        ((ppu.scanlineCycle > 8) || (renderBackgroundLeft && renderSpritesLeft))
     ) {
       ppu.spriteZeroHit = true;
     }
