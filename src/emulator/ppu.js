@@ -348,14 +348,14 @@ export const writeDMA = (state, address, value) => {
     const value = readMem(state, addr);
     endReadTick(state);
     dummyReadTick(state);
-    state.ppu.oamMemory[state.ppu.oamAddress] = value;
-    incrementOAMAddress(state.ppu);
+    pushOAMValue(state.ppu, value);
   }
 }
 
-const incrementOAMAddress = ppu => {
+const pushOAMValue = (ppu, value) => {
+  ppu.oamMemory[ppu.oamAddress] = value;
   ppu.oamAddress = (ppu.oamAddress + 1) & 0xFF;
-}
+};
 
 const getSpriteSize = ppu => {
   return ppu.control.spriteSize === 1 ? 16 : 8;
@@ -374,8 +374,7 @@ export const setPPURegisterMem = (state, address, value) => {
 
   switch (address) {
     case OAMDATA:
-      state.ppu.oamMemory[state.ppu.oamAddress] = value;
-      incrementOAMAddress(state.ppu);
+      pushOAMValue(state.ppu, value);
       break;
     case OAMADDR:
       state.ppu.oamAddress = value;
