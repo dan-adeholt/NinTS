@@ -251,60 +251,60 @@ export const writePPUMem = (ppu, ppuAddress, value) => {
   ppu.ppuMemory[ppuAddress] = value;
 }
 
-export const readPPURegisterMem = (state, address, peek = false) => {
+export const readPPURegisterMem = (ppu, address, peek = false) => {
   let ret;
 
   if (address === PPUSTATUS) {
     ret = 0;
 
-    if (state.ppu.nmiOccurred) {
+    if (ppu.nmiOccurred) {
       ret = ret | PPUSTATUS_VBLANK;
 
       if (!peek) {
-        state.ppu.nmiOccurred = false;
+        ppu.nmiOccurred = false;
       }
     }
 
-    if (state.ppu.spriteZeroHit) {
+    if (ppu.spriteZeroHit) {
       ret |= PPUSTATUS_SPRITE_ZERO_HIT;
     }
 
-    ret |= (state.ppu.busLatch & 0b11111);
+    ret |= (ppu.busLatch & 0b11111);
 
     if (!peek) {
-      state.ppu.W = 0;
+      ppu.W = 0;
     }
   } else if (address === PPUDATA) {
-    const ppuAddress = state.ppu.V & 0x3FFF;
+    const ppuAddress = ppu.V & 0x3FFF;
     // TODO: Handle palette reading here (V > 0x3EFF)
 
     if (ppuAddress >= 0x3F00) {
-      ret = readPPUMem(state.ppu, ppuAddress);
+      ret = readPPUMem(ppu, ppuAddress);
       if (!peek) {
         // From: https://wiki.nesdev.com/w/index.php/PPU_registers#Data_.28.242007.29_.3C.3E_read.2Fwrite
         // Reading the palettes still updates the internal buffer though, but the data placed in it is the mirrored nametable data that would appear "underneath" the palette.
-        state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress - 0x1000);
-        incrementVRAMAddress(state.ppu);
+        ppu.dataBuffer = readPPUMem(ppu, ppuAddress - 0x1000);
+        incrementVRAMAddress(ppu);
       }
     } else {
-      ret = state.ppu.dataBuffer;
+      ret = ppu.dataBuffer;
       if (!peek) {
-        state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress);
-        incrementVRAMAddress(state.ppu);
+        ppu.dataBuffer = readPPUMem(ppu, ppuAddress);
+        incrementVRAMAddress(ppu);
       }
     }
   } else if (address === OAMDATA) {
-    ret = state.ppu.oamMemory[state.ppu.oamAddress];
+    ret = ppu.oamMemory[ppu.oamAddress];
   } else {
     // Reading from write-only registers return the last value on the bus. Reading from PPUCTRL
     // increments VRAM address.
 
     if (address === PPUCTRL) {
-      if (!peek && state.ppu.control.vramIncrement === 0) {
-        incrementVRAMAddress(state.ppu);
+      if (!peek && ppu.control.vramIncrement === 0) {
+        incrementVRAMAddress(ppu);
       }
 
-      return state.ppu.busLatch;
+      return ppu.busLatch;
     }
 
     switch (address) {
@@ -312,14 +312,14 @@ export const readPPURegisterMem = (state, address, peek = false) => {
       case OAMADDR:
       case PPUSCROLL:
       case PPUADDR:
-        return state.ppu.busLatch;
+        return ppu.busLatch;
       default:
         break;
     }
   }
 
   if (!peek) {
-    state.ppu.busLatch = ret;
+    ppu.busLatch = ret;
   }
 
   if (ret === undefined) {

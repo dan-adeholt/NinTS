@@ -124,7 +124,7 @@ export const readMem = (state, addr, peek = false) => {
   // TODO: Add mirroring here
   if (addr >= 0x2000 && addr <= 0x3FFF) {
     const modAddr = 0x2000 + (addr & 0b111);
-    const ret = readPPURegisterMem(state, modAddr, peek);
+    const ret = readPPURegisterMem(state.ppu, modAddr, peek);
 
     if (ret == null) {
       console.log('Attempted to read from', hex16(modAddr));
