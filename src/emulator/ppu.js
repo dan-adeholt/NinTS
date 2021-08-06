@@ -344,21 +344,21 @@ const dumpScrollPointer = pointer => {
   return '[FY: ' + FY + ', NT: ' + NT + ', CY: ' + CY + ', CX: ' + CX + ']';
 }
 
-export const setPPURegisterMem = (state, address, value) => {
-  state.ppu.busLatch = value;
+export const setPPURegisterMem = (ppu, address, value) => {
+  ppu.busLatch = value;
 
   switch (address) {
     case OAMDATA:
-      pushOAMValue(state.ppu, value);
+      pushOAMValue(ppu, value);
       break;
     case OAMADDR:
-      state.ppu.oamAddress = value;
+      ppu.oamAddress = value;
       break;
     case PPUMASK:
-      state.ppu.ppuMask = value;
+      ppu.ppuMask = value;
       break;
     case PPUCTRL:
-      state.ppu.control = {
+      ppu.control = {
         baseNameTable:         (value & 0b00000011),
         vramIncrement:         (value & 0b00000100) >> 2,
         spritePatternAddress:  (value & 0b00001000) >> 3,
@@ -369,55 +369,54 @@ export const setPPURegisterMem = (state, address, value) => {
       };
 
       // Copy base name table data to T register at bits 11 and 12
-      state.ppu.T = state.ppu.T & 0b111001111111111;
-      state.ppu.T = state.ppu.T | (state.ppu.control.baseNameTable << 10);
+      ppu.T = ppu.T & 0b111001111111111;
+      ppu.T = ppu.T | (ppu.control.baseNameTable << 10);
       break;
     case PPUSCROLL:
-      if (state.ppu.W === 0) {
+      if (ppu.W === 0) {
         // First write
         // Store lower three bits as X fine scroll
-        state.ppu.X = value & 0b111;
+        ppu.X = value & 0b111;
         // Store upper five bits as part of T
-        state.ppu.T = state.ppu.T & 0b111111111100000;
-        state.ppu.T = state.ppu.T | (value >> 3);
-        state.ppu.W = 1;
+        ppu.T = ppu.T & 0b111111111100000;
+        ppu.T = ppu.T | (value >> 3);
+        ppu.W = 1;
       } else {
         // Second write
         const p1 = value & 0b00111000;
         const p2 = value & 0b11000000;
         const p3 = value & 0b00000111;
 
-        state.ppu.T = state.ppu.T & 0b000000000011111;
-        state.ppu.T = state.ppu.T | (p1 << 2);
-        state.ppu.T = state.ppu.T | (p2 << 2);
-        state.ppu.T = state.ppu.T | (p3 << 10);
-        state.ppu.V = state.ppu.T;
-        state.ppu.W = 0;
+        ppu.T = ppu.T & 0b000000000011111;
+        ppu.T = ppu.T | (p1 << 2);
+        ppu.T = ppu.T | (p2 << 2);
+        ppu.T = ppu.T | (p3 << 10);
+        ppu.V = ppu.T;
+        ppu.W = 0;
       }
       break;
     case PPUADDR:
-      if (state.ppu.W === 0) {
+      if (ppu.W === 0) {
         // Copy first six bytes of value
         const p = value & 0b00111111;
 
         // Clear bits for value (and reset 15th bit)
-        state.ppu.T = state.ppu.T & 0b000000011111111;
-        state.ppu.T = state.ppu.T | (p << 8);
+        ppu.T = ppu.T & 0b000000011111111;
+        ppu.T = ppu.T | (p << 8);
 
-        state.ppu.W = 1;
+        ppu.W = 1;
       } else {
-        state.ppu.T = state.ppu.T & 0b111111100000000;
-        state.ppu.T = state.ppu.T | value;
-        state.ppu.V = state.ppu.T;
-        state.ppu.W = 0;
+        ppu.T = ppu.T & 0b111111100000000;
+        ppu.T = ppu.T | value;
+        ppu.V = ppu.T;
+        ppu.W = 0;
       }
 
       break;
     case PPUDATA:
-      const ppuAddress = state.ppu.V & 0x3FFF;
-      writePPUMem(state.ppu, ppuAddress, value);
-
-      incrementVRAMAddress(state.ppu);
+      const ppuAddress = ppu.V & 0x3FFF;
+      writePPUMem(ppu, ppuAddress, value);
+      incrementVRAMAddress(ppu);
       break;
     default:
   }

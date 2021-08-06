@@ -178,7 +178,7 @@ export const setMem = (state, addr, value) => {
   if (addr === OAM_DMA) {
     writeDMA(state, addr, value);
   } else if (addr >= 0x2000 && addr <= 0x2007) {
-    setPPURegisterMem(state, addr, value);
+    setPPURegisterMem(state.ppu, addr, value);
   } else if (addr === 0x4016 || addr === 0x4017) {
     setInputMem(state, addr, value);
   } else {
