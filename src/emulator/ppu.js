@@ -36,13 +36,11 @@ const PPUMASK_RENDER_ENABLED_FLAGS = PPUMASK_RENDER_BACKGROUND | PPUMASK_RENDER_
 
 const PPUSTATUS_VBLANK = 1 << 7;
 const PPUSTATUS_SPRITE_ZERO_HIT = 1 << 6;
-const PPUSTATUS_VBLANK_MASK = ~PPUSTATUS_VBLANK;
 
 const POST_RENDER_SCANLINE = 240;
 const VBLANK_SCANLINE = 241;
 const PRE_RENDER_SCANLINE = 261;
 const NUM_SCANLINES = 262;
-const PPU_CYCLES_PER_SCANLINE = 341;
 
 const VRAM_BACKGROUND_COLOR = 0x3f00;
 const VRAM_BG_PALETTE_1_ADDRESS = 0x3F01;
@@ -456,19 +454,6 @@ export const setPPURegisterMem = (state, address, value) => {
   }
 }
 
-export const ppuCyclesPerFrame = state => {
-  const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
-  const skipLastCycle = renderingEnabled && !state.ppu.evenFrame;
-
-  const ppuCycles = NUM_SCANLINES * PPU_CYCLES_PER_SCANLINE;
-
-  if (skipLastCycle) {
-    return ppuCycles - 1;
-  }
-
-  return ppuCycles;
-}
-
 const clearSecondaryOAM = ppu => {
   if (isSteppingScanline) {
     console.log('Clearing secondary OAM');
@@ -783,10 +768,6 @@ const handleVblankScanline = (state) => {
 
     ppu.vblankCount++;
   }
-
-  if (ppu.scanlineCycle === 1) {
-    state.memory[PPUSTATUS] = state.memory[PPUSTATUS] | PPUSTATUS_VBLANK;
-  }
 }
 
 // Reset vertical part (Y scroll) of current VRAM address
@@ -816,8 +797,6 @@ const handlePrerenderScanline = (state, renderingEnabled) => {
 
   if (ppu.scanlineCycle === 0) {
     state.ppu.spriteZeroHit = false;
-  } else if (ppu.scanlineCycle === 1) {
-    state.memory[PPUSTATUS] = state.memory[PPUSTATUS] & PPUSTATUS_VBLANK_MASK;
   } else if (ppu.scanlineCycle >= 257 && ppu.scanlineCycle <= 320) {
     state.ppu.oamAddress = 0;
   } else if (ppu.scanlineCycle >= 280 && ppu.scanlineCycle <= 304) {
