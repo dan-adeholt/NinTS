@@ -211,15 +211,15 @@ export const initPPU = (rom) => {
   }
 }
 
-const incrementVRAMAddress = state => {
-  if (state.ppu.control.vramIncrement === 0) {
-    state.ppu.V += 1;
+const incrementVRAMAddress = ppu => {
+  if (ppu.control.vramIncrement === 0) {
+    ppu.V += 1;
   } else {
-    state.ppu.V += 32;
+    ppu.V += 32;
   }
 
-  state.ppu.V = state.ppu.V % (1 << 16);
-}
+  ppu.V = ppu.V % (1 << 16);
+};
 
 const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 0x3F11;
 
@@ -286,13 +286,13 @@ export const readPPURegisterMem = (state, address, peek = false) => {
         // From: https://wiki.nesdev.com/w/index.php/PPU_registers#Data_.28.242007.29_.3C.3E_read.2Fwrite
         // Reading the palettes still updates the internal buffer though, but the data placed in it is the mirrored nametable data that would appear "underneath" the palette.
         state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress - 0x1000);
-        incrementVRAMAddress(state);
+        incrementVRAMAddress(state.ppu);
       }
     } else {
       ret = state.ppu.dataBuffer;
       if (!peek) {
         state.ppu.dataBuffer = readPPUMem(state.ppu, ppuAddress);
-        incrementVRAMAddress(state);
+        incrementVRAMAddress(state.ppu);
       }
     }
   } else if (address === OAMDATA) {
@@ -303,7 +303,7 @@ export const readPPURegisterMem = (state, address, peek = false) => {
 
     if (address === PPUCTRL) {
       if (!peek && state.ppu.control.vramIncrement === 0) {
-        incrementVRAMAddress(state);
+        incrementVRAMAddress(state.ppu);
       }
 
       return state.ppu.busLatch;
@@ -450,7 +450,7 @@ export const setPPURegisterMem = (state, address, value) => {
       const ppuAddress = state.ppu.V & 0x3FFF;
       writePPUMem(state.ppu, ppuAddress, value);
 
-      incrementVRAMAddress(state);
+      incrementVRAMAddress(state.ppu);
       break;
     default:
   }
