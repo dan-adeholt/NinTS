@@ -192,6 +192,7 @@ export const initPPU = (rom) => {
     ppuMemory,
     paletteRAM: new Uint8Array(),
     oamAddress: 0,
+    ppuMask: 0,
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
     spriteZeroIsInSpriteUnits: false,
@@ -387,6 +388,7 @@ export const setPPURegisterMem = (state, address, value) => {
       state.ppu.oamAddress = value;
       break;
     case PPUMASK:
+      state.ppu.ppuMask = value;
       break;
     case PPUCTRL:
       state.ppu.control = {
@@ -810,7 +812,7 @@ const handlePrerenderScanline = (state, renderingEnabled) => {
 
 export const incrementDot = (state) => {
   const { ppu } = state;
-  const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
+  const renderingEnabled = state.ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
 
   ppu.scanlineCycle++;
 
@@ -840,11 +842,11 @@ const updatePPU = (state, targetMasterClock) => {
 
   while (ppu.masterClock + ppu.ppuDivider <= targetMasterClock) {
     incrementDot(state);
-    const renderBackgroundLeft = state.memory[PPUMASK] & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS;
-    const renderSpritesLeft = state.memory[PPUMASK] & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
-    const renderingEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_ENABLED_FLAGS;
-    const spritesEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_SPRITES;
-    const backgroundEnabled = state.memory[PPUMASK] & PPUMASK_RENDER_BACKGROUND;
+    const renderBackgroundLeft = state.ppu.ppuMask & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS;
+    const renderSpritesLeft = state.ppu.ppuMask & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
+    const renderingEnabled = state.ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
+    const spritesEnabled = state.ppu.ppuMask & PPUMASK_RENDER_SPRITES;
+    const backgroundEnabled = state.ppu.ppuMask & PPUMASK_RENDER_BACKGROUND;
 
 
     if (ppu.scanline < SCREEN_HEIGHT) {
