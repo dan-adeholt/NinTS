@@ -1,5 +1,4 @@
 import { COLORS } from './constants';
-import { OAM_DMA } from './cpu';
 import { dummyReadTick, endReadTick, readMem, startReadTick  } from './emulator';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
@@ -330,11 +329,6 @@ export const readPPURegisterMem = (state, address, peek = false) => {
 }
 
 export const writeDMA = (state, address, value) => {
-  // Setting the memory value is actually incorrect. When reading from OAM_DMA there is no decoding circuit for that particular
-  // address, and the value returned is the last value on the open bus. But we don't emulate that behavior
-  // since it's too complicated (at least for now), so set the value for debugging etc
-  state.memory[OAM_DMA] = value;
-
   // The actual write really takes place AFTER the write tick has been completed.
   // Thus whether or not the cycle is odd is determined based on the following tick.
   // That's why we add 1 here. TODO: Do actual DMA transfer after tick instead
@@ -376,7 +370,6 @@ const dumpScrollPointer = pointer => {
 }
 
 export const setPPURegisterMem = (state, address, value) => {
-  state.memory[address] = value;
   state.ppu.busLatch = value;
 
   switch (address) {
