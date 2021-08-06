@@ -727,9 +727,7 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
   }
 }
 
-const handleVblankScanline = (state) => {
-  let { ppu } = state;
-
+const handleVblankScanline = (ppu) => {
   if (ppu.scanlineCycle === 1) {
     // Generate vblank interrupt
     ppu.nmiOccurred = true;
@@ -752,21 +750,19 @@ const resetHorizontalScroll = (ppu) => {
   ppu.frameDebug.push('After reset ' + ppu.scanline + ':' + dumpScrollPointer(ppu.V));
 }
 
-const handlePrerenderScanline = (state, renderingEnabled) => {
-  let { ppu } = state;
-
+const handlePrerenderScanline = (ppu, renderingEnabled) => {
   if (renderingEnabled) {
     updateBackgroundRegisters(ppu);
   }
 
   if (ppu.scanlineCycle === 0) {
-    state.ppu.nmiOccurred = false;
+    ppu.nmiOccurred = false;
   }
 
   if (ppu.scanlineCycle === 0) {
-    state.ppu.spriteZeroHit = false;
+    ppu.spriteZeroHit = false;
   } else if (ppu.scanlineCycle >= 257 && ppu.scanlineCycle <= 320) {
-    state.ppu.oamAddress = 0;
+    ppu.oamAddress = 0;
   } else if (ppu.scanlineCycle >= 280 && ppu.scanlineCycle <= 304) {
     if (renderingEnabled) {
       resetVerticalScroll(ppu);
@@ -776,9 +772,8 @@ const handlePrerenderScanline = (state, renderingEnabled) => {
   }
 }
 
-export const incrementDot = (state) => {
-  const { ppu } = state;
-  const renderingEnabled = state.ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
+export const incrementDot = (ppu) => {
+  const renderingEnabled = ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
 
   ppu.scanlineCycle++;
 
@@ -803,25 +798,23 @@ export const incrementDot = (state) => {
   }
 }
 
-const updatePPU = (state, targetMasterClock) => {
-  let { ppu } = state;
-
+const updatePPU = (ppu, targetMasterClock) => {
   while (ppu.masterClock + ppu.ppuDivider <= targetMasterClock) {
-    incrementDot(state);
-    const renderBackgroundLeft = state.ppu.ppuMask & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS;
-    const renderSpritesLeft = state.ppu.ppuMask & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
-    const renderingEnabled = state.ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
-    const spritesEnabled = state.ppu.ppuMask & PPUMASK_RENDER_SPRITES;
-    const backgroundEnabled = state.ppu.ppuMask & PPUMASK_RENDER_BACKGROUND;
+    incrementDot(ppu);
+    const renderBackgroundLeft = ppu.ppuMask & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS;
+    const renderSpritesLeft = ppu.ppuMask & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
+    const renderingEnabled = ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
+    const spritesEnabled = ppu.ppuMask & PPUMASK_RENDER_SPRITES;
+    const backgroundEnabled = ppu.ppuMask & PPUMASK_RENDER_BACKGROUND;
 
 
     if (ppu.scanline < SCREEN_HEIGHT) {
       handleVisibleScanline(ppu, renderingEnabled, spritesEnabled, backgroundEnabled, renderBackgroundLeft, renderSpritesLeft);
     } else if (ppu.scanline === VBLANK_SCANLINE) {
       // console.log('Hit vblank, renderinEnabled', renderingEnabled, spritesEnabled, backgroundEnabled);
-      handleVblankScanline(state);
+      handleVblankScanline(ppu);
     } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
-      handlePrerenderScanline(state, renderingEnabled);
+      handlePrerenderScanline(ppu, renderingEnabled);
     }
 
 
@@ -830,8 +823,6 @@ const updatePPU = (state, targetMasterClock) => {
   }
 
   ppu.slack = targetMasterClock - ppu.masterClock;
-
-  // ppu.framebuffer[0] = 0xdadadada;
 }
 
 

@@ -212,7 +212,7 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
 }
 
 const _updatePPUAndHandleNMI = (state) => {
-  updatePPU(state, state.masterClock - state.ppuOffset);
+  updatePPU(state.ppu, state.masterClock - state.ppuOffset);
 
   // From NESDEV:
   // The NMI input is connected to an edge detector. This edge detector polls the status of the NMI line during φ2 of each
@@ -250,7 +250,7 @@ export const startReadTick = (state) => {
   state.CYC++;
   state.masterClock += state.cpuHalfStep - 1;
   state.prevNmiOccurred = state.ppu.nmiOccurred;
-  updatePPU(state, state.masterClock - state.ppuOffset);
+  updatePPU(state.ppu, state.masterClock - state.ppuOffset);
 }
 
 export const endReadTick = (state) => {
@@ -262,7 +262,7 @@ export const startWriteTick = (state) => {
   state.CYC++;
   state.masterClock += state.cpuHalfStep + 1;
   state.prevNmiOccurred = state.ppu.nmiOccurred;
-  updatePPU(state, state.masterClock - state.ppuOffset);
+  updatePPU(state.ppu, state.masterClock - state.ppuOffset);
 }
 
 export const endWriteTick = (state) => {
