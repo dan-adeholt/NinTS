@@ -1,7 +1,7 @@
 import { hex, hex16, stateToString } from './stateLogging';
 import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
 
-import updatePPU, { initPPU, readPPURegisterMem, setPPURegisterMem, writeDMA } from './ppu';
+import updatePPU, {initPPU, pushOAMValue, readPPURegisterMem, setPPURegisterMem } from './ppu';
 import { nmi } from './instructions/stack';
 
 const getResetVectorAddress = state => {
@@ -147,6 +147,30 @@ const setInputMem = (state, addr, value) => {
     }
   }
 }
+
+const writeDMA = (state, address, value) => {
+  // The actual write really takes place AFTER the write tick has been completed.
+  // Thus whether or not the cycle is odd is determined based on the following tick.
+  // That's why we add 1 here. TODO: Do actual DMA transfer after tick instead
+  const onOddCycle = (state.CYC + 1) % 2 === 1;
+
+  dummyReadTick(state); // One wait state cycle while waiting for writes to complete
+
+  if (onOddCycle) { // One additional wait state if we were on an odd cycle
+    dummyReadTick(state);
+  }
+
+  const baseAddress = value << 8;
+
+  for (let i = 0; i < 256; i++) {
+    const addr = baseAddress + i;
+    startReadTick(state);
+    const value = readMem(state, addr);
+    endReadTick(state);
+    dummyReadTick(state);
+    pushOAMValue(state.ppu, value);
+  }
+};
 
 
 export const setMem = (state, addr, value) => {

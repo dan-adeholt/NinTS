@@ -1,5 +1,4 @@
 import { COLORS } from './constants';
-import { dummyReadTick, endReadTick, readMem, startReadTick  } from './emulator';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
 
@@ -328,31 +327,7 @@ export const readPPURegisterMem = (ppu, address, peek = false) => {
   return ret;
 }
 
-export const writeDMA = (state, address, value) => {
-  // The actual write really takes place AFTER the write tick has been completed.
-  // Thus whether or not the cycle is odd is determined based on the following tick.
-  // That's why we add 1 here. TODO: Do actual DMA transfer after tick instead
-  const onOddCycle = (state.CYC + 1) % 2 === 1;
-
-  dummyReadTick(state); // One wait state cycle while waiting for writes to complete
-
-  if (onOddCycle) { // One additional wait state if we were on an odd cycle
-    dummyReadTick(state);
-  }
-
-  const baseAddress = value << 8;
-
-  for (let i = 0; i < 256; i++) {
-    const addr = baseAddress + i;
-    startReadTick(state);
-    const value = readMem(state, addr);
-    endReadTick(state);
-    dummyReadTick(state);
-    pushOAMValue(state.ppu, value);
-  }
-}
-
-const pushOAMValue = (ppu, value) => {
+export const pushOAMValue = (ppu, value) => {
   ppu.oamMemory[ppu.oamAddress] = value;
   ppu.oamAddress = (ppu.oamAddress + 1) & 0xFF;
 };
