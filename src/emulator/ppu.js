@@ -204,7 +204,8 @@ export const initPPU = (rom) => {
     spriteUnits: initSpriteUnits(),
     framebuffer: new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT),
     scanlineDebug: new Array(256),
-    frameDebug: []
+    frameDebug: [],
+    slack: 0
   }
 }
 
