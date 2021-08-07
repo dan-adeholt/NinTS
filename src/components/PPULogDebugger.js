@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { initMachine, step } from '../emulator/emulator';
 import { hex } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
+import updatePPU from "../emulator/ppu";
 
 const fileUrl = 'http://localhost:5000/Trace%20-%20smb.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
@@ -73,6 +74,14 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
     dumpingState.current.lineIndex = lineIndex;
   }, [emulator, lines, mutedLocations, triggerRefresh]);
 
+  const [perfStr, setPerfStr] = useState(null);
+
+  const profile = useCallback(() => {
+    const t0 = performance.now();
+    updatePPU(emulator.ppu, 200000000);
+    setPerfStr('Elapsed ' + (performance.now() - t0));
+  }, [emulator]);
+
   const mute = useCallback(() => {
     console.log('Muting', hex(emulator.PC), emulator.PC);
     setMutedLocations(oldMutedLocations => oldMutedLocations.concat([emulator.PC]));
@@ -89,9 +98,12 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   return (
     <>
       <div>
+        <button onClick={profile}>Profile PPU</button>
         <button onClick={dumpStates} disabled={lines.length === 0}>Compare trace</button>&nbsp;
         <button onClick={mute}>Mute</button>&nbsp;
         <button onClick={clearMuted}>Clear muted</button>&nbsp;
+        <br/>
+        { perfStr }
       </div>
       { error && (
         <div className="monospace">
