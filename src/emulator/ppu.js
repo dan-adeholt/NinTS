@@ -31,6 +31,7 @@ const PPUMASK_RENDER_SPRITES = 1 << 4;
 // const PPUMASK_EMPHASIZE_BLUE = 1 << 7;
 
 const PPUMASK_RENDER_ENABLED_FLAGS = PPUMASK_RENDER_BACKGROUND | PPUMASK_RENDER_SPRITES;
+const PPUMASK_RENDER_LEFT_SIDE = PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS | PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
 
 const PPUSTATUS_VBLANK = 1 << 7;
 const PPUSTATUS_SPRITE_ZERO_HIT = 1 << 6;
@@ -54,17 +55,9 @@ export const setIsSteppingScanline = (_isSteppingScanline) => isSteppingScanline
 export const paletteIndexedColor = (ppu, indexedColor, paletteIndex, baseOffset) => {
   let paletteAddress = baseOffset + paletteIndex * 4;
 
-  if (isSteppingScanline) {
-    // console.log('Color', hex(paletteIndex), spritePalette);
-  }
-
   const p1Color = COLORS[readPPUMem(ppu, paletteAddress++)];
   const p2Color = COLORS[readPPUMem(ppu, paletteAddress++)];
   const p3Color = COLORS[readPPUMem(ppu, paletteAddress++)];
-
-  if (isSteppingScanline) {
-    // console.log('Colors', p1Color, p2Color, p3Color)
-  }
 
   switch (indexedColor) {
     case 0x0:
@@ -76,7 +69,6 @@ export const paletteIndexedColor = (ppu, indexedColor, paletteIndex, baseOffset)
     case 0x3:
       return p3Color;
     default:
-      console.log('Unhandled value', indexedColor);
       return 0;
   }
 }
@@ -173,6 +165,10 @@ export const initPPU = (rom) => {
     paletteRAM: new Uint8Array(),
     oamAddress: 0,
     ppuMask: 0,
+    maskRenderLeftSide: false,
+    maskRenderingEnabled: false,
+    maskSpritesEnabled: false,
+    maskBackgroundEnabled: false,
     oamMemory: (new Uint8Array(256)).fill(0xFF),
     secondaryOamMemory: new Uint8Array(32),
     spriteZeroIsInSpriteUnits: false,
@@ -339,6 +335,10 @@ export const setPPURegisterMem = (ppu, address, value) => {
       break;
     case PPUMASK:
       ppu.ppuMask = value;
+      ppu.maskRenderLeftSide = (value & PPUMASK_RENDER_LEFT_SIDE) !== 0;
+      ppu.maskRenderingEnabled = (value & PPUMASK_RENDER_ENABLED_FLAGS) !== 0;
+      ppu.maskSpritesEnabled = (value & PPUMASK_RENDER_SPRITES) !== 0;
+      ppu.maskBackgroundEnabled = (value & PPUMASK_RENDER_BACKGROUND) !== 0;
       break;
     case PPUCTRL:
       ppu.control = {
@@ -609,7 +609,7 @@ const updateBackgroundRegisters = (ppu) => {
 const updateSpriteScanning = ppu => {
   const { scanlineCycle } = ppu;
 
-  if (ppu.scanlineCycle >= 257 && ppu.scanlineCycle <= 320) {
+  if (scanlineCycle >= 257 && scanlineCycle <= 320) {
     ppu.oamAddress = 0;
   }
 
@@ -623,13 +623,17 @@ const updateSpriteScanning = ppu => {
   }
 }
 
-const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, backgroundEnabled, renderBackgroundLeft, renderSpritesLeft) => {
-  if (renderingEnabled) {
+const handleVisibleScanline = (ppu) => {
+  const { maskRenderingEnabled, maskSpritesEnabled, maskBackgroundEnabled, maskRenderLeftSide } = ppu;
+
+  if (maskRenderingEnabled) {
     updateSpriteScanning(ppu);
     updateBackgroundRegisters(ppu);
   }
 
-  if (ppu.scanlineCycle > 0 && ppu.scanlineCycle <= 256) {
+  const scanlineCycle = ppu.scanlineCycle;
+
+  if (scanlineCycle > 0 && scanlineCycle <= 256) {
     let spriteColor = 0;
 
     const bitNumber = 15 - ppu.X;
@@ -642,57 +646,50 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
 
     const backgroundPaletteIndex = (backgroundPalette2 << 1) | backgroundPalette1;
     const backgroundColorIndex = (backgroundColor2 << 1) | backgroundColor1;
-    let backgroundColor = backgroundEnabled ? paletteIndexedColor(ppu, backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
+    let backgroundColor = maskBackgroundEnabled ? paletteIndexedColor(ppu, backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
 
-    const spriteData = ppu.spriteScanline[ppu.scanlineCycle - 1];
+    const pixel = scanlineCycle - 1;
+    const spriteData = ppu.spriteScanline[pixel];
     const spritePatternColor = spriteData & 0b11;
     const spritePriority = (spriteData >> 2) & 0b1;
-    const spritePalette = (spriteData >> 3) & 0b11;
-    const spriteNumber = (spriteData >> 5) & 0b11;
 
-    if (spritePatternColor !== 0 && spritesEnabled) {
+    if (spritePatternColor !== 0 && maskSpritesEnabled) {
+      const spritePalette = (spriteData >> 3) & 0b11;
       spriteColor = paletteIndexedSpriteColor(ppu, spritePatternColor, spritePalette);
     }
 
-    if (spriteColor !== 0 && isSteppingScanline) {
-      console.log(ppu.scanline, ppu.scanlineCycle - 1, spriteColor);
-    }
-
     // Draw pixel
-    const index = ppu.scanline * SCREEN_WIDTH + (ppu.scanlineCycle - 1);
-    const vramBackgroundColor = readPPUMem(ppu, VRAM_BACKGROUND_COLOR);
-
-    // Sprite zero handling
-    if (!ppu.spriteZeroHit &&
-        ppu.spriteZeroIsInSpriteUnits &&
-        // If sprite zero is among the sprite units, it's always at sprite number 0
-        spriteNumber === 0 &&
-        spritesEnabled &&
-        backgroundEnabled &&
-        spritePatternColor !== 0 &&
-        backgroundColorIndex !== 0 &&
-        ppu.scanlineCycle !== 255 &&
-        ((ppu.scanlineCycle > 8) || (renderBackgroundLeft && renderSpritesLeft))
-    ) {
-      ppu.spriteZeroHit = true;
-    }
+    const index = (ppu.scanline * SCREEN_WIDTH) + pixel;
 
     if (spriteColor === 0) {
-      if (backgroundColor === 0) {
-        ppu.framebuffer[index] = COLORS[vramBackgroundColor];
-      } else {
+      if (backgroundColor !== 0) {
         ppu.framebuffer[index] = backgroundColor;
+      } else {
+        const vramBackgroundColor = readPPUMem(ppu, VRAM_BACKGROUND_COLOR);
+        ppu.framebuffer[index] = COLORS[vramBackgroundColor];
       }
-    } else if (backgroundColor === 0) {
-      ppu.framebuffer[index] = spriteColor;
-    } else {
+    } else if (backgroundColor !== 0) {
       // Both colors set
-
       if (spritePriority === 0) {
         ppu.framebuffer[index] = spriteColor;
       } else {
         ppu.framebuffer[index] = backgroundColor;
       }
+
+      const spriteNumber = (spriteData >> 5);
+
+      // Sprite zero handling
+      if (!ppu.spriteZeroHit &&
+          ppu.spriteZeroIsInSpriteUnits &&
+          // If sprite zero is among the sprite units, it's always at sprite number 0
+          spriteNumber === 0 &&
+          scanlineCycle !== 255 &&
+          ((scanlineCycle > 8) || maskRenderLeftSide)
+      ) {
+        ppu.spriteZeroHit = true;
+      }
+    } else {
+      ppu.framebuffer[index] = spriteColor;
     }
   }
 }
@@ -718,8 +715,10 @@ const resetHorizontalScroll = (ppu) => {
   ppu.V |= (ppu.T & POINTER_HORIZ_MASK);
 }
 
-const handlePrerenderScanline = (ppu, renderingEnabled) => {
-  if (renderingEnabled) {
+const handlePrerenderScanline = (ppu) => {
+  const { maskRenderingEnabled } = ppu;
+
+  if (maskRenderingEnabled) {
     updateBackgroundRegisters(ppu);
   }
 
@@ -732,7 +731,7 @@ const handlePrerenderScanline = (ppu, renderingEnabled) => {
   } else if (ppu.scanlineCycle >= 257 && ppu.scanlineCycle <= 320) {
     ppu.oamAddress = 0;
   } else if (ppu.scanlineCycle >= 280 && ppu.scanlineCycle <= 304) {
-    if (renderingEnabled) {
+    if (maskRenderingEnabled) {
       resetVerticalScroll(ppu);
     }
   }
@@ -771,22 +770,15 @@ const updatePPU = (ppu, targetMasterClock) => {
 
   while (ppu.masterClock + ppu.ppuDivider <= targetMasterClock) {
     incrementDot(ppu);
-    const renderBackgroundLeft = ppu.ppuMask & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS;
-    const renderSpritesLeft = ppu.ppuMask & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
-    const renderingEnabled = ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
-    const spritesEnabled = ppu.ppuMask & PPUMASK_RENDER_SPRITES;
-    const backgroundEnabled = ppu.ppuMask & PPUMASK_RENDER_BACKGROUND;
-
 
     if (ppu.scanline < SCREEN_HEIGHT) {
-      handleVisibleScanline(ppu, renderingEnabled, spritesEnabled, backgroundEnabled, renderBackgroundLeft, renderSpritesLeft);
+      handleVisibleScanline(ppu);
     } else if (ppu.scanline === VBLANK_SCANLINE) {
       // console.log('Hit vblank, renderinEnabled', renderingEnabled, spritesEnabled, backgroundEnabled);
       handleVblankScanline(ppu);
     } else if (ppu.scanline === PRE_RENDER_SCANLINE) {
-      handlePrerenderScanline(ppu, renderingEnabled);
+      handlePrerenderScanline(ppu);
     }
-
 
     ppu.cycle++;
     ppu.masterClock += ppu.ppuDivider;

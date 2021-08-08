@@ -18,7 +18,7 @@ export const COLOR_NAMES = {
   TEAL:  0x2C
 };
 
-export const COLORS = [
+export const COLORS = new Uint32Array([
   0xFF747474, //00
   0xFF8C1824, //01
   0xFFA80000, //02
@@ -83,4 +83,4 @@ export const COLORS = [
   0xFFC4C4C4, //3D
   0xFF000000, //3E
   0xFF000000  //3F
-]
+]);

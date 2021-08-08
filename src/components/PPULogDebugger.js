@@ -78,21 +78,24 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
 
   const profilePPU = useCallback(() => {
     const t0 = performance.now();
-    updatePPU(emulator.ppu, 200000000);
-    setPerfStr('Elapsed ' + (performance.now() - t0));
+    const startCycle = emulator.ppu.cycle;
+    updatePPU(emulator.ppu, emulator.ppu.masterClock + 200000000);
+    const diffMs = (performance.now() - t0);
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + ((emulator.ppu.cycle - startCycle) / (diffMs * 1000)).toFixed(1) + 'MHz');
   }, [emulator]);
 
   const profileCPU = useCallback(() => {
     const t0 = performance.now();
     emulator.ppu.disabled = true;
+    const startCyc = emulator.CYC;
 
-    for (let i = 0; i < 20_500_000; i++) {
+    for (let i = 0; i < 10_500_000; i++) {
      step(emulator);
     }
 
     emulator.ppu.disabled = false;
     const diffMs = (performance.now() - t0);
-    setPerfStr('Elapsed ' + diffMs + 'ms, ' + (emulator.CYC / (diffMs * 1000)).toFixed(2) + ' Mhz');
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + ((emulator.CYC - startCyc) / (diffMs * 1000)).toFixed(1) + ' MHz');
   }, [emulator]);
 
   const mute = useCallback(() => {
