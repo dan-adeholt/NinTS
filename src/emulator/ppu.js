@@ -186,7 +186,6 @@ export const initPPU = (rom) => {
     spriteScanline: new Uint32Array(SCREEN_WIDTH),
     framebuffer: new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT),
     scanlineDebug: new Array(256),
-    frameDebug: [],
     slack: 0
   }
 }
@@ -577,10 +576,7 @@ const updateBackgroundRegisters = (ppu) => {
     let lineIndex = (ppu.scanline % 8);
 
     if (generatingTilesForNextScanline) {
-      // ppu.frameDebug.push(ppu.scanline + ',' + ppu.scanlineCycle + ': ' + dumpScrollPointer(ppu.V) + ': ' + y + ', ' + x + ' - gennext');
       lineIndex = (((ppu.scanline + 1) % NUM_SCANLINES) % 8);
-    } else {
-      // ppu.frameDebug.push(ppu.scanline + ',' + ppu.scanlineCycle + ': ' + dumpScrollPointer(ppu.V) + ': ' + y + ', ' + x + ' - gencur');
     }
 
     ppu.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + lineIndex;
@@ -637,10 +633,6 @@ const handleVisibleScanline = (ppu, renderingEnabled, spritesEnabled, background
 
     const bitNumber = 15 - ppu.X;
     const bitMask = 1 << bitNumber;
-
-    if (ppu.scanline === 0) {
-      // ppu.frameDebug.push(ppu.scanline + ': ' + ppu.X + ' - ' + dumpScrollPointer(ppu.T));
-    }
 
     let backgroundColor1 = (ppu.backgroundShiftRegister1 & bitMask) >> bitNumber;
     let backgroundColor2 = (ppu.backgroundShiftRegister2 & bitMask) >> bitNumber;
@@ -723,8 +715,6 @@ const resetVerticalScroll = (ppu) => {
 const resetHorizontalScroll = (ppu) => {
   ppu.V &= POINTER_HORIZ_MASK_INV;
   ppu.V |= (ppu.T & POINTER_HORIZ_MASK);
-
-  ppu.frameDebug.push('After reset ' + ppu.scanline + ':' + dumpScrollPointer(ppu.V));
 }
 
 const handlePrerenderScanline = (ppu, renderingEnabled) => {
@@ -744,8 +734,6 @@ const handlePrerenderScanline = (ppu, renderingEnabled) => {
     if (renderingEnabled) {
       resetVerticalScroll(ppu);
     }
-
-    ppu.frameDebug.length = 0;
   }
 }
 
