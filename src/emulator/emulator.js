@@ -229,12 +229,6 @@ const _updatePPUAndHandleNMI = (state) => {
   }
 }
 
-export const tick = (state) => {
-  state.CYC++;
-  state.masterClock += state.cpuStep;
-  _updatePPUAndHandleNMI(state);
-}
-
 /**
  * Mesen compatible ways of ticking, split the cycle updating into two phases
  * and update the PPU in both instances. Perhaps helps with accuracy in some way I
