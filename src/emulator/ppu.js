@@ -186,7 +186,8 @@ export const initPPU = (rom) => {
     spriteScanline: new Uint32Array(SCREEN_WIDTH),
     framebuffer: new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT),
     scanlineDebug: new Array(256),
-    slack: 0
+    slack: 0,
+    disabled: false
   }
 }
 
@@ -764,6 +765,10 @@ export const incrementDot = (ppu) => {
 }
 
 const updatePPU = (ppu, targetMasterClock) => {
+  if (ppu.disabled) {
+    return;
+  }
+
   while (ppu.masterClock + ppu.ppuDivider <= targetMasterClock) {
     incrementDot(ppu);
     const renderBackgroundLeft = ppu.ppuMask & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS;

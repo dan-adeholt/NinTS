@@ -76,10 +76,23 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
 
   const [perfStr, setPerfStr] = useState(null);
 
-  const profile = useCallback(() => {
+  const profilePPU = useCallback(() => {
     const t0 = performance.now();
     updatePPU(emulator.ppu, 200000000);
     setPerfStr('Elapsed ' + (performance.now() - t0));
+  }, [emulator]);
+
+  const profileCPU = useCallback(() => {
+    const t0 = performance.now();
+    emulator.ppu.disabled = true;
+
+    for (let i = 0; i < 20_500_000; i++) {
+     step(emulator);
+    }
+
+    emulator.ppu.disabled = false;
+    const diffMs = (performance.now() - t0);
+    setPerfStr('Elapsed ' + diffMs + 'ms, ' + (emulator.CYC / (diffMs * 1000)).toFixed(2) + ' Mhz');
   }, [emulator]);
 
   const mute = useCallback(() => {
@@ -98,7 +111,8 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   return (
     <>
       <div>
-        <button onClick={profile}>Profile PPU</button>
+        <button onClick={profilePPU}>Profile PPU</button>&nbsp;
+        <button onClick={profileCPU}>Profile CPU</button>&nbsp;
         <button onClick={dumpStates} disabled={lines.length === 0}>Compare trace</button>&nbsp;
         <button onClick={mute}>Mute</button>&nbsp;
         <button onClick={clearMuted}>Clear muted</button>&nbsp;
