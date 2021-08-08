@@ -164,7 +164,6 @@ export const initPPU = (rom) => {
     ppuMemory,
     paletteRAM: new Uint8Array(),
     oamAddress: 0,
-    ppuMask: 0,
     maskRenderLeftSide: false,
     maskRenderingEnabled: false,
     maskSpritesEnabled: false,
@@ -334,7 +333,6 @@ export const setPPURegisterMem = (ppu, address, value) => {
       ppu.oamAddress = value;
       break;
     case PPUMASK:
-      ppu.ppuMask = value;
       ppu.maskRenderLeftSide = (value & PPUMASK_RENDER_LEFT_SIDE) !== 0;
       ppu.maskRenderingEnabled = (value & PPUMASK_RENDER_ENABLED_FLAGS) !== 0;
       ppu.maskSpritesEnabled = (value & PPUMASK_RENDER_SPRITES) !== 0;
@@ -738,11 +736,9 @@ const handlePrerenderScanline = (ppu) => {
 }
 
 export const incrementDot = (ppu) => {
-  const renderingEnabled = ppu.ppuMask & PPUMASK_RENDER_ENABLED_FLAGS;
-
   ppu.scanlineCycle++;
 
-  const skipLastCycle = renderingEnabled && !ppu.evenFrame;
+  const skipLastCycle = ppu.maskRenderingEnabled && !ppu.evenFrame;
 
   if (ppu.scanlineCycle === 340 && ppu.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
     ppu.scanlineCycle = 0;
