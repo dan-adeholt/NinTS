@@ -222,7 +222,7 @@ const _updatePPUAndHandleNMI = (state) => {
   // This basically means that we detected the NMI this cycle, but we should not trigger the actual NMI until the next cycle.
   // Set an internal counter that will tick down each cycle until reaching zero. nmiCounter === 0 means that the emulator should
   // handle the NMI after the current opcode has completed execution.
-  if (state.ppu.nmiOccurred && !state.prevNmiOccurred && state.ppu.control.generateNMI) {
+  if (state.ppu.nmiOccurred && !state.prevNmiOccurred && state.ppu.controlGenerateNMI) {
     state.nmiCounter = 1;
   } else if (state.nmiCounter != null) {
     state.nmiCounter--;
@@ -323,7 +323,7 @@ export const step = (state, logState = false) => {
 
   // This actually annoys me a bit, if an NMI triggers we won't get the log output from the preceding opcode.
   // But this is the way Mesen does it so we do it to stay compatible.
-  if (state.nmiCounter != null && state.nmiCounter <= 0 && state.ppu.control.generateNMI) {
+  if (state.nmiCounter != null && state.nmiCounter <= 0 && state.ppu.controlGenerateNMI) {
     state.nmiCounter = null;
     nmi(state);
     state.lastNMI = state.CYC;

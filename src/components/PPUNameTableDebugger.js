@@ -30,7 +30,7 @@ const generateFrameBuffer = emulator => {
   }
 
   let curAddress = NAMETABLE_START;
-  let tileIndexOffset = emulator.ppu.control.bgPatternAddress === 1 ? 256 : 0;
+  let tileIndexOffset = emulator.ppu.controlBgPatternAddress === 1 ? 256 : 0;
 
   for (let row = 0; row < 30; row++) {
     for (let col = 0; col < 32; col++) {

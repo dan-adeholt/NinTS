@@ -140,15 +140,13 @@ class PPU {
   T = 0;
   X = 0;
   W = 0;
-  control = {
-    baseNameTable: 0,
-    vramIncrement: 0,
-    spritePatternAddress: 0,
-    bgPatternAddress: 0,
-    spriteSize: 0,
-    ppuMasterSlave: 0,
-    generateNMI: 0
-  };
+  controlBaseNameTable = 0;
+  controlVramIncrement = 0;
+  controlSpritePatternAddress = 0;
+  controlBgPatternAddress = 0;
+  controlSpriteSize = 0;
+  controlPpuMasterSlave = 0;
+  controlGenerateNMI = 0;
   busLatch = 0;
   dataBuffer = 0;
   oamAddress = 0;
@@ -209,7 +207,7 @@ class PPU {
   }
 
   incrementVRAMAddress = () => {
-    if (this.control.vramIncrement === 0) {
+    if (this.controlVramIncrement === 0) {
       this.V += 1;
     } else {
       this.V += 32;
@@ -297,7 +295,7 @@ class PPU {
       // increments VRAM address.
 
       if (address === PPUCTRL) {
-        if (!peek && this.control.vramIncrement === 0) {
+        if (!peek && this.controlVramIncrement === 0) {
           this.incrementVRAMAddress();
         }
 
@@ -331,7 +329,7 @@ class PPU {
   };
 
   getSpriteSize = () => {
-    return this.control.spriteSize === 1 ? 16 : 8;
+    return this.controlSpriteSize === 1 ? 16 : 8;
   }
 
   setPPURegisterMem = (address, value) => {
@@ -351,19 +349,17 @@ class PPU {
         this.maskBackgroundEnabled = (value & PPUMASK_RENDER_BACKGROUND) !== 0;
         break;
       case PPUCTRL:
-        this.control = {
-          baseNameTable:         (value & 0b00000011),
-          vramIncrement:         (value & 0b00000100) >> 2,
-          spritePatternAddress:  (value & 0b00001000) >> 3,
-          bgPatternAddress:      (value & 0b00010000) >> 4,
-          spriteSize:            (value & 0b00100000) >> 5,
-          ppuMasterSlave:        (value & 0b01000000) >> 6,
-          generateNMI:           (value & 0b10000000) >> 7
-        };
+        this.controlBaseNameTable =         (value & 0b00000011);
+        this.controlVramIncrement =         (value & 0b00000100) >> 2;
+        this.controlSpritePatternAddress =  (value & 0b00001000) >> 3;
+        this.controlBgPatternAddress =      (value & 0b00010000) >> 4;
+        this.controlSpriteSize =            (value & 0b00100000) >> 5;
+        this.controlPpuMasterSlave =        (value & 0b01000000) >> 6;
+        this.controlGenerateNMI =           (value & 0b10000000) >> 7;
 
         // Copy base name table data to T register at bits 11 and 12
         this.T = this.T & 0b111001111111111;
-        this.T = this.T | (this.control.baseNameTable << 10);
+        this.T = this.T | (this.controlBaseNameTable << 10);
         break;
       case PPUSCROLL:
         if (this.W === 0) {
@@ -482,7 +478,7 @@ class PPU {
           tileIndex += 16;
         }
       } else {
-        tileIndex = (this.control.spritePatternAddress << 8) | tileIndex;
+        tileIndex = (this.controlSpritePatternAddress << 8) | tileIndex;
       }
 
       let chrIndex = tileIndex * 8 * 2 + pixelRow;
@@ -562,7 +558,7 @@ class PPU {
 
       const attributeAddress = 0x23C0 | nametable | y | x;
       let tileIndex = this.readPPUMem(0x2000 | (this.V & 0x0FFF));
-      tileIndex = (this.control.bgPatternAddress << 8) | tileIndex;
+      tileIndex = (this.controlBgPatternAddress << 8) | tileIndex;
       const attribute = this.readPPUMem(attributeAddress);
       const palette = getPaletteFromByte(this.V, attribute);
 
