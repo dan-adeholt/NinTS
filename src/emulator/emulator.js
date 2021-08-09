@@ -1,7 +1,7 @@
 import { hex, hex16, stateToString } from './stateLogging';
 import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
 
-import updatePPU, {initPPU, pushOAMValue, readPPURegisterMem, setPPURegisterMem } from './ppu';
+import PPU from './ppu';
 import { nmi } from './instructions/stack';
 
 const getResetVectorAddress = state => {
@@ -64,7 +64,7 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     CYC: -1,
     settings: rom.settings,
     breakpoints: {},
-    ppu: initPPU(rom.chrData),
+    ppu: new PPU(rom.chrData),
     nmiCounter: null,
     traceLogLines: [],
     controller1: new Uint8Array(8),
@@ -124,7 +124,7 @@ export const readMem = (state, addr, peek = false) => {
   // TODO: Add mirroring here
   if (addr >= 0x2000 && addr <= 0x3FFF) {
     const modAddr = 0x2000 + (addr & 0b111);
-    const ret = readPPURegisterMem(state.ppu, modAddr, peek);
+    const ret = state.ppu.readPPURegisterMem(modAddr, peek);
 
     if (ret == null) {
       console.log('Attempted to read from', hex16(modAddr));
@@ -168,7 +168,7 @@ const writeDMA = (state, address, value) => {
     const value = readMem(state, addr);
     endReadTick(state);
     dummyReadTick(state);
-    pushOAMValue(state.ppu, value);
+    state.ppu.pushOAMValue(value);
   }
 };
 
@@ -178,7 +178,7 @@ export const setMem = (state, addr, value) => {
   if (addr === OAM_DMA) {
     writeDMA(state, addr, value);
   } else if (addr >= 0x2000 && addr <= 0x2007) {
-    setPPURegisterMem(state.ppu, addr, value);
+    state.ppu.setPPURegisterMem(addr, value);
   } else if (addr === 0x4016 || addr === 0x4017) {
     setInputMem(state, addr, value);
   } else {
@@ -212,7 +212,7 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
 }
 
 const _updatePPUAndHandleNMI = (state) => {
-  updatePPU(state.ppu, state.masterClock - state.ppuOffset);
+  state.ppu.updatePPU(state.masterClock - state.ppuOffset);
 
   // From NESDEV:
   // The NMI input is connected to an edge detector. This edge detector polls the status of the NMI line during φ2 of each
@@ -244,7 +244,7 @@ export const startReadTick = (state) => {
   state.CYC++;
   state.masterClock += state.cpuHalfStep - 1;
   state.prevNmiOccurred = state.ppu.nmiOccurred;
-  updatePPU(state.ppu, state.masterClock - state.ppuOffset);
+  state.ppu.updatePPU(state.masterClock - state.ppuOffset);
 }
 
 export const endReadTick = (state) => {
@@ -256,7 +256,7 @@ export const startWriteTick = (state) => {
   state.CYC++;
   state.masterClock += state.cpuHalfStep + 1;
   state.prevNmiOccurred = state.ppu.nmiOccurred;
-  updatePPU(state.ppu, state.masterClock - state.ppuOffset);
+  state.ppu.updatePPU(state.masterClock - state.ppuOffset);
 }
 
 export const endWriteTick = (state) => {

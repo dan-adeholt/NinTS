@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { initMachine, step } from '../emulator/emulator';
 import { hex } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
-import updatePPU from "../emulator/ppu";
 
 const fileUrl = 'http://localhost:5000/Trace%20-%20smb.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
@@ -83,7 +82,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
     emulator.ppu.maskBackgroundEnabled = true;
     emulator.ppu.maskRenderLeftSide = true;
     emulator.ppu.maskSpritesEnabled = true;
-    updatePPU(emulator.ppu, emulator.ppu.masterClock + 200000000);
+    emulator.ppu.updatePPU(emulator.ppu.masterClock + 200000000);
     const diffMs = (performance.now() - t0);
     const ppuClockSpeed = 7.15909066666666666666;
     const clockSpeed = ((emulator.ppu.cycle - startCycle) / (diffMs * 1000));
