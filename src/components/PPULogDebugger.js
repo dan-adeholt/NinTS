@@ -79,9 +79,16 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   const profilePPU = useCallback(() => {
     const t0 = performance.now();
     const startCycle = emulator.ppu.cycle;
+    emulator.ppu.maskRenderingEnabled = true;
+    emulator.ppu.maskBackgroundEnabled = true;
+    emulator.ppu.maskRenderLeftSide = true;
+    emulator.ppu.maskSpritesEnabled = true;
     updatePPU(emulator.ppu, emulator.ppu.masterClock + 200000000);
     const diffMs = (performance.now() - t0);
-    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + ((emulator.ppu.cycle - startCycle) / (diffMs * 1000)).toFixed(1) + 'MHz');
+    const ppuClockSpeed = 7.15909066666666666666;
+    const clockSpeed = ((emulator.ppu.cycle - startCycle) / (diffMs * 1000));
+    const ratio = (clockSpeed / ppuClockSpeed).toFixed(2);
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz: ' + ratio);
   }, [emulator]);
 
   const profileCPU = useCallback(() => {
@@ -95,7 +102,10 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
 
     emulator.ppu.disabled = false;
     const diffMs = (performance.now() - t0);
-    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + ((emulator.CYC - startCyc) / (diffMs * 1000)).toFixed(1) + ' MHz');
+    const cpuClockSpeed = 1.789773;
+    const clockSpeed = ((emulator.CYC - startCyc) / (diffMs * 1000));
+    const ratio = (clockSpeed / cpuClockSpeed).toFixed(2);
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + ' MHz: ' + ratio);
   }, [emulator]);
 
   const mute = useCallback(() => {
