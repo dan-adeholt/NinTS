@@ -580,12 +580,13 @@ class PPU {
       let lowByte = this.readPPUMem(this.pendingBackgroundTileIndex);
       let highByte = this.readPPUMem(this.pendingBackgroundTileIndex + 8);
 
+      const palette = this.pendingBackgroundPalette << 2;
       for (let i = 0; i < 8; i++) {
         const c1 = (lowByte & BIT_7) >> 7;
-        const c2 = (highByte & BIT_7) >> 7;
+        const c2 = (highByte & BIT_7) >> 6;
         lowByte <<= 1;
         highByte <<= 1;
-        this.tileScanline[this.tileScanlineIndex++] = (this.pendingBackgroundPalette << 2) | (c2 << 1) | c1;
+        this.tileScanline[this.tileScanlineIndex++] = palette | c2 | c1;
       }
     }
 
