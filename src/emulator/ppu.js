@@ -160,12 +160,10 @@ class PPU {
   spriteZeroIsInSpriteUnits = false;
   pendingBackgroundTileIndex = 0;
   pendingBackgroundPalette = 0;
-  backgroundShiftRegister1 = 0;
-  backgroundShiftRegister2 = 0;
-  backgroundPaletteRegister1 = 0;
-  backgroundPaletteRegister2 = 0;
   spriteZeroHit = false;
   spriteScanline = new Uint32Array(SCREEN_WIDTH);
+  tileScanlineIndex = 0;
+  tileScanline = new Uint32Array(SCREEN_WIDTH + 8);
   framebuffer = new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT);
   slack = 0;
   disabled = false;
@@ -544,17 +542,16 @@ class PPU {
       return;
     }
 
-    this.backgroundShiftRegister1 <<= 1;
-    this.backgroundShiftRegister2 <<= 1;
-    this.backgroundPaletteRegister1 <<= 1;
-    this.backgroundPaletteRegister2 <<= 1;
+    if (scanlineCycle === 328) {
+      this.tileScanlineIndex = 0;
+    }
 
     if (scanlineCycle % 8 === 0) {
       // Read attributes into temporary registers. We cheat a bit and do this in one pass, in
       // reality it's a sequential process taking place across several cycles
 
       const nametable = (this.V & 0x0C00);
-      const y = ((this.V >> 4) & 0b111000); // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
+      const y = ((this.V >> 4) & 0b111000);  // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
       const x = ((this.V >> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
 
       const attributeAddress = 0x23C0 | nametable | y | x;
@@ -580,15 +577,15 @@ class PPU {
         this.incrementVerticalV();
       }
     } else if ((scanlineCycle - 1) % 8 === 0) {
-      this.backgroundShiftRegister1 |= (this.readPPUMem(this.pendingBackgroundTileIndex));
-      this.backgroundShiftRegister2 |= (this.readPPUMem(this.pendingBackgroundTileIndex + 8));
+      let lowByte = this.readPPUMem(this.pendingBackgroundTileIndex);
+      let highByte = this.readPPUMem(this.pendingBackgroundTileIndex + 8);
 
-      if (this.pendingBackgroundPalette & 0b01) { // Else it's already all zeroes due to shifts
-        this.backgroundPaletteRegister1 |= 0b11111111;
-      }
-
-      if (this.pendingBackgroundPalette & 0b10) {
-        this.backgroundPaletteRegister2 |= 0b11111111;
+      for (let i = 0; i < 8; i++) {
+        const c1 = (lowByte & BIT_7) >> 7;
+        const c2 = (highByte & BIT_7) >> 7;
+        lowByte <<= 1;
+        highByte <<= 1;
+        this.tileScanline[this.tileScanlineIndex++] = (this.pendingBackgroundPalette << 2) | (c2 << 1) | c1;
       }
     }
 
@@ -638,16 +635,11 @@ class PPU {
     if (scanlineCycle > 0 && scanlineCycle <= 256) {
       let spriteColor = 0;
 
-      const bitNumber = 15 - this.X;
-      const bitMask = 1 << bitNumber;
 
-      let backgroundColor1 = (this.backgroundShiftRegister1 & bitMask) >> bitNumber;
-      let backgroundColor2 = (this.backgroundShiftRegister2 & bitMask) >> bitNumber;
-      let backgroundPalette1 = (this.backgroundPaletteRegister1 & bitMask) >> bitNumber;
-      let backgroundPalette2 = (this.backgroundPaletteRegister2 & bitMask) >> bitNumber;
+      const tileData = this.tileScanline[scanlineCycle - 1 + this.X]
+      let backgroundColorIndex = tileData & 0b11;
+      let backgroundPaletteIndex = (tileData & 0b1100) >> 2;
 
-      const backgroundPaletteIndex = (backgroundPalette2 << 1) | backgroundPalette1;
-      const backgroundColorIndex = (backgroundColor2 << 1) | backgroundColor1;
       let backgroundColor = maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
 
       const pixel = scanlineCycle - 1;
