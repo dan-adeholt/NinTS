@@ -556,8 +556,6 @@ const updateBackgroundRegisters = (ppu) => {
   ppu.backgroundPaletteRegister1 <<= 1;
   ppu.backgroundPaletteRegister2 <<= 1;
 
-  const generatingTilesForNextScanline = scanlineCycle >= 328;
-
   if (scanlineCycle % 8 === 0) {
     // Read attributes into temporary registers. We cheat a bit and do this in one pass, in
     // reality it's a sequential process taking place across several cycles
@@ -573,6 +571,8 @@ const updateBackgroundRegisters = (ppu) => {
     const palette = getPaletteFromByte(ppu.V, attribute);
 
     let lineIndex = (ppu.scanline % 8);
+
+    const generatingTilesForNextScanline = scanlineCycle >= 328;
 
     if (generatingTilesForNextScanline) {
       lineIndex = (((ppu.scanline + 1) % NUM_SCANLINES) % 8);
