@@ -105,7 +105,7 @@ const decodeTiles = rom => {
   }
 
   return tiles;
-}
+};
 
 const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 0x3F11;
 
@@ -136,6 +136,7 @@ class PPU {
   vblankCount = 0;
   nmiOccurred = false;
   tiles = null;
+  ppuMemory = null;
   V = 0;
   T = 0;
   X = 0;
@@ -232,11 +233,11 @@ class PPU {
     } else {
       this.ppuMemory[ppuAddress] = value;
     }
-  }
+  };
 
   readPPUMem = (ppuAddress) => {
     return this.ppuMemory[ppuAddress];
-  }
+  };
 
   writePPUMem = (ppuAddress, value) => {
     if (isPPUPaletteAddress(ppuAddress)) {
@@ -244,7 +245,7 @@ class PPU {
     }
 
     this.ppuMemory[ppuAddress] = value;
-  }
+  };
 
   readPPURegisterMem = (address, peek = false) => {
     let ret;
@@ -321,7 +322,7 @@ class PPU {
       console.error('Read PPU register returned undefined', hex(address, '0x'));
     }
     return ret;
-  }
+  };
 
   pushOAMValue = (value) => {
     this.oamMemory[this.oamAddress] = value;
@@ -330,7 +331,7 @@ class PPU {
 
   getSpriteSize = () => {
     return this.controlSpriteSize === 1 ? 16 : 8;
-  }
+  };
 
   setPPURegisterMem = (address, value) => {
     this.busLatch = value;
@@ -409,7 +410,7 @@ class PPU {
         break;
       default:
     }
-  }
+  };
 
   clearSecondaryOAM = () => {
     if (isSteppingScanline) {
@@ -419,7 +420,7 @@ class PPU {
     for (let i = 0; i < this.secondaryOamMemory.length; i++) {
       this.secondaryOamMemory[i] = 0xFF;
     }
-  }
+  };
 
   initializeSecondaryOAM = () => {
     if (isSteppingScanline) {
@@ -450,7 +451,7 @@ class PPU {
         }
       }
     }
-  }
+  };
 
   copyToSpriteUnits = () => {
     let oamAddress = 0;
@@ -526,7 +527,7 @@ class PPU {
     } else {
       this.V += 1;
     }
-  }
+  };
 
   incrementVerticalV = () => {
     let coarseYPos = (this.V & POINTER_Y_MASK) >> 5;
@@ -534,7 +535,7 @@ class PPU {
     coarseYPos <<= 5;
     this.V &= POINTER_Y_MASK_INV;
     this.V |= coarseYPos;
-  }
+  };
 
   updateBackgroundRegisters = () => {
     const { scanlineCycle } = this;
@@ -554,7 +555,7 @@ class PPU {
 
       const nametable = (this.V & 0x0C00);
       const y = ((this.V >> 4) & 0b111000); // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
-      const x = ((this.V >> 2) & 0b000111)  // precision from the X & Y components so that they increment every 4 tiles
+      const x = ((this.V >> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
 
       const attributeAddress = 0x23C0 | nametable | y | x;
       let tileIndex = this.readPPUMem(0x2000 | (this.V & 0x0FFF));
@@ -594,7 +595,7 @@ class PPU {
     if (scanlineCycle === 257) {
       this.resetHorizontalScroll();
     }
-  }
+  };
 
   updateSpriteScanning = () => {
     const { scanlineCycle } = this;
@@ -610,19 +611,19 @@ class PPU {
     } else if (scanlineCycle === 321) {
       this.copyToSpriteUnits();
     }
-  }
+  };
 
   // Reset vertical part (Y scroll) of current VRAM address
   resetVerticalScroll = () => {
     this.V &= POINTER_Y_MASK_INV;
     this.V |= (this.T & POINTER_Y_MASK);
-  }
+  };
 
   // Reset horizontal part (X scroll) of current VRAM address
   resetHorizontalScroll = () => {
     this.V &= POINTER_HORIZ_MASK_INV;
     this.V |= (this.T & POINTER_HORIZ_MASK);
-  }
+  };
 
   handleVisibleScanline = () => {
     const { maskRenderingEnabled, maskSpritesEnabled, maskBackgroundEnabled, maskRenderLeftSide } = this;
@@ -702,7 +703,7 @@ class PPU {
 
       this.vblankCount++;
     }
-  }
+  };
 
   handlePrerenderScanline = () => {
     const { maskRenderingEnabled } = this;
@@ -724,7 +725,7 @@ class PPU {
         this.resetVerticalScroll();
       }
     }
-  }
+  };
 
   incrementDot = () => {
     this.scanlineCycle++;
@@ -748,7 +749,7 @@ class PPU {
         this.evenFrame = !this.evenFrame;
       }
     }
-  }
+  };
 
   updatePPU = (targetMasterClock) => {
     if (this.disabled) {
