@@ -151,7 +151,6 @@ class PPU {
   };
   busLatch = 0;
   dataBuffer = 0;
-  paletteRAM = new Uint8Array();
   oamAddress = 0;
   maskRenderLeftSide = false;
   maskRenderingEnabled = false;
@@ -169,7 +168,6 @@ class PPU {
   spriteZeroHit = false;
   spriteScanline = new Uint32Array(SCREEN_WIDTH);
   framebuffer = new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT);
-  scanlineDebug = new Array(256);
   slack = 0;
   disabled = false;
 
@@ -779,7 +777,7 @@ class PPU {
 
     this.slack = targetMasterClock - this.masterClock;
   }
-};
+}
 
 
 export default PPU;
