@@ -373,14 +373,12 @@ class PPU {
           this.W = 1;
         } else {
           // Second write
-          const p1 = value & 0b00111000;
-          const p2 = value & 0b11000000;
-          const p3 = value & 0b00000111;
+          const ABCDE  = value & 0b11111000;
+          const FGH    = value & 0b00000111;
 
           this.T = this.T & 0b000000000011111;
-          this.T = this.T | (p1 << 2);
-          this.T = this.T | (p2 << 2);
-          this.T = this.T | (p3 << 10);
+          this.T = this.T | (ABCDE << 2);
+          this.T = this.T | (FGH << 12);
 
           this.W = 0;
         }
