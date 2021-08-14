@@ -11,10 +11,13 @@ const PPUSCROLL	= 0x2005;
 const PPUADDR	= 0x2006;
 const PPUDATA	= 0x2007;
 
-const POINTER_Y_MASK = 0b000001111100000;
-const POINTER_Y_MASK_INV = ~POINTER_Y_MASK;
 const POINTER_HORIZ_MASK = 0b000010000011111;
 const POINTER_HORIZ_MASK_INV = ~POINTER_HORIZ_MASK;
+
+const POINTER_Y_MASK = POINTER_HORIZ_MASK_INV;
+const POINTER_Y_MASK_INV = POINTER_HORIZ_MASK;
+
+const POINTER_FINE_Y_MASK = 0b111000000000000;
 
 const SPRITE_ATTRIB_FLIP_HORIZONTAL = 0b01000000;
 const SPRITE_ATTRIB_FLIP_VERTICAL   = 0b10000000;
@@ -39,7 +42,6 @@ const PPUSTATUS_SPRITE_ZERO_HIT = 1 << 6;
 const POST_RENDER_SCANLINE = 240;
 const VBLANK_SCANLINE = 241;
 const PRE_RENDER_SCANLINE = 261;
-const NUM_SCANLINES = 262;
 
 const VRAM_BACKGROUND_COLOR = 0x3f00;
 const VRAM_BG_PALETTE_1_ADDRESS = 0x3F01;
@@ -379,7 +381,7 @@ class PPU {
           this.T = this.T | (p1 << 2);
           this.T = this.T | (p2 << 2);
           this.T = this.T | (p3 << 10);
-          this.V = this.T;
+
           this.W = 0;
         }
         break;
@@ -520,7 +522,7 @@ class PPU {
   incrementHorizontalV = () => {
     if ((this.V & 0b11111) === 31) {
       this.V = this.V & (~0b11111);
-      // // Toggle bit 10 => switch horizontal namespace
+      // Toggle bit 10 => switch horizontal namespace
       this.V ^= 0b10000000000;
     } else {
       this.V += 1;
@@ -528,11 +530,28 @@ class PPU {
   };
 
   incrementVerticalV = () => {
-    let coarseYPos = (this.V & POINTER_Y_MASK) >> 5;
-    coarseYPos = (Math.floor((this.scanline + 1) / 8)) & 0b11111;
-    coarseYPos <<= 5;
-    this.V &= POINTER_Y_MASK_INV;
-    this.V |= coarseYPos;
+    // If fine Y less than 7 (upper 3 bits of V = fine Y scroll)
+    if ((this.V & POINTER_FINE_Y_MASK) !== POINTER_FINE_Y_MASK) {
+      this.V += 0b001000000000000;
+    } else {
+      this.V &= ~POINTER_FINE_Y_MASK; // Reset fine Y to 0
+      let coarseY = (this.V & 0b1111100000) >> 5;
+      if (coarseY === 29) {
+        coarseY = 0;
+        // Toggle bit 11 => switch vertical namespace
+        this.V ^= 0b100000000000;
+      } else if (coarseY === 31) {
+        // Row 29 is the last row of tiles in a nametable, so wrapping typically happens after that.
+        // However, it can be set explicitly to point at values > 29. In this case 31 will increment
+        // to 0 without incrementing the nametable.
+        coarseY = 0;
+      } else {
+        coarseY++;
+      }
+
+      this.V &= ~0b1111100000; // Clear coarse Y portion of V
+      this.V |= (coarseY << 5); // Put modified coarse Y back into V
+    }
   };
 
   updateBackgroundRegisters = () => {
@@ -560,15 +579,9 @@ class PPU {
       const attribute = this.readPPUMem(attributeAddress);
       const palette = getPaletteFromByte(this.V, attribute);
 
-      let lineIndex;
+      const fineY = (this.V & POINTER_FINE_Y_MASK) >> 12;
 
-      if (scanlineCycle < 328) {
-        lineIndex = (this.scanline % 8);
-      } else {
-        lineIndex = (((this.scanline + 1) % NUM_SCANLINES) % 8);
-      }
-
-      this.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + lineIndex;
+      this.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + fineY;
       this.pendingBackgroundPalette = palette;
 
       this.incrementHorizontalV();
@@ -708,9 +721,13 @@ class PPU {
       this.spriteZeroHit = false;
     } else if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320) {
       this.oamAddress = 0;
-    } else if (this.scanlineCycle >= 280 && this.scanlineCycle <= 304) {
+
       if (this.maskRenderingEnabled) {
-        this.resetVerticalScroll();
+        if (this.scanlineCycle === 257) {
+          this.resetHorizontalScroll();
+        } else if (this.scanlineCycle === 280) {
+          this.resetVerticalScroll();
+        }
       }
     }
   };
