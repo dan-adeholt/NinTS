@@ -89,8 +89,8 @@ const decodeTiles = rom => {
       let plane2 = rom[address + 8];
 
       for (let col = 0; col < 8; col++) {
-        const c1 = (plane1 & BIT_7) >> 7;
-        const c2 = (plane2 & BIT_7) >> 7;
+        const c1 = (plane1 & BIT_7) >>> 7;
+        const c2 = (plane2 & BIT_7) >>> 7;
 
         tileData[tileDataIndex++] = (c2 << 1) | c1;
         plane1 <<= 1;
@@ -111,15 +111,15 @@ const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 
 
 const getPaletteFromByte = (v, byte) => {
   const coarseX = (v & 0b0000011111) % 4;
-  const coarseY = ((v & 0b1111100000) >> 5) % 4;
+  const coarseY = ((v & 0b1111100000) >>> 5) % 4;
 
   if (coarseY >= 2) {
-    byte >>= 4;
+    byte >>>= 4;
     if (coarseX >= 2) {
-      byte >>= 2;
+      byte >>>= 2;
     }
   } else if (coarseX >= 2) {
-    byte >>= 2;
+    byte >>>= 2;
   }
 
   return byte & 0b11;
@@ -349,12 +349,12 @@ class PPU {
         break;
       case PPUCTRL:
         this.controlBaseNameTable =         (value & 0b00000011);
-        this.controlVramIncrement =         (value & 0b00000100) >> 2;
-        this.controlSpritePatternAddress =  (value & 0b00001000) >> 3;
-        this.controlBgPatternAddress =      (value & 0b00010000) >> 4;
-        this.controlSpriteSize =            (value & 0b00100000) >> 5;
-        this.controlPpuMasterSlave =        (value & 0b01000000) >> 6;
-        this.controlGenerateNMI =           (value & 0b10000000) >> 7;
+        this.controlVramIncrement =         (value & 0b00000100) >>> 2;
+        this.controlSpritePatternAddress =  (value & 0b00001000) >>> 3;
+        this.controlBgPatternAddress =      (value & 0b00010000) >>> 4;
+        this.controlSpriteSize =            (value & 0b00100000) >>> 5;
+        this.controlPpuMasterSlave =        (value & 0b01000000) >>> 6;
+        this.controlGenerateNMI =           (value & 0b10000000) >>> 7;
 
         // Copy base name table data to T register at bits 11 and 12
         this.T = this.T & 0b111001111111111;
@@ -367,7 +367,7 @@ class PPU {
           this.X = value & 0b111;
           // Store upper five bits as part of T
           this.T = this.T & 0b111111111100000;
-          this.T = this.T | (value >> 3);
+          this.T = this.T | (value >>> 3);
           this.W = 1;
         } else {
           // Second write
@@ -483,7 +483,7 @@ class PPU {
       let chrIndex = tileIndex * 8 * 2 + pixelRow;
 
       const flipHorizontal = attributes & SPRITE_ATTRIB_FLIP_HORIZONTAL;
-      const spritePriority = (attributes & SPRITE_ATTRIB_PRIORITY) >> 5;
+      const spritePriority = (attributes & SPRITE_ATTRIB_PRIORITY) >>> 5;
       const paletteIndex = attributes & SPRITE_ATTRIBS_PALETTE;
 
       if (y !== 0xFF) {
@@ -498,11 +498,11 @@ class PPU {
           if (flipHorizontal) {
             c1 = (shiftRegister1 & BIT_0);
             c2 = (shiftRegister2 & BIT_0);
-            shiftRegister1 >>= 1;
-            shiftRegister2 >>= 1;
+            shiftRegister1 >>>= 1;
+            shiftRegister2 >>>= 1;
           } else {
-            c1 = (shiftRegister1 & BIT_7) >> 7;
-            c2 = (shiftRegister2 & BIT_7) >> 7;
+            c1 = (shiftRegister1 & BIT_7) >>> 7;
+            c2 = (shiftRegister2 & BIT_7) >>> 7;
             shiftRegister1 <<= 1;
             shiftRegister2 <<= 1;
           }
@@ -536,9 +536,9 @@ class PPU {
   };
 
   updateBackgroundRegisters = () => {
-    const { scanlineCycle } = this;
+    const scanlineCycle = this.scanlineCycle;
 
-    if (this.scanlineCycle < 2 || (this.scanlineCycle > 257 && this.scanlineCycle < 322) || this.scanlineCycle > 337) {
+    if (scanlineCycle < 2 || (scanlineCycle > 257 && scanlineCycle < 322) || scanlineCycle > 337) {
       return;
     }
 
@@ -551,8 +551,8 @@ class PPU {
       // reality it's a sequential process taking place across several cycles
 
       const nametable = (this.V & 0x0C00);
-      const y = ((this.V >> 4) & 0b111000);  // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
-      const x = ((this.V >> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
+      const y = ((this.V >>> 4) & 0b111000);  // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
+      const x = ((this.V >>> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
 
       const attributeAddress = 0x23C0 | nametable | y | x;
       let tileIndex = this.readPPUMem(0x2000 | (this.V & 0x0FFF));
@@ -560,11 +560,11 @@ class PPU {
       const attribute = this.readPPUMem(attributeAddress);
       const palette = getPaletteFromByte(this.V, attribute);
 
-      let lineIndex = (this.scanline % 8);
+      let lineIndex;
 
-      const generatingTilesForNextScanline = scanlineCycle >= 328;
-
-      if (generatingTilesForNextScanline) {
+      if (scanlineCycle < 328) {
+        lineIndex = (this.scanline % 8);
+      } else {
         lineIndex = (((this.scanline + 1) % NUM_SCANLINES) % 8);
       }
 
@@ -582,8 +582,8 @@ class PPU {
 
       const palette = this.pendingBackgroundPalette << 2;
       for (let i = 0; i < 8; i++) {
-        const c1 = (lowByte & BIT_7) >> 7;
-        const c2 = (highByte & BIT_7) >> 6;
+        const c1 = (lowByte & BIT_7) >>> 7;
+        const c2 = (highByte & BIT_7) >>> 6;
         lowByte <<= 1;
         highByte <<= 1;
         this.tileScanline[this.tileScanlineIndex++] = palette | c2 | c1;
@@ -624,9 +624,7 @@ class PPU {
   };
 
   handleVisibleScanline = () => {
-    const { maskRenderingEnabled, maskSpritesEnabled, maskBackgroundEnabled, maskRenderLeftSide } = this;
-
-    if (maskRenderingEnabled) {
+    if (this.maskRenderingEnabled) {
       this.updateSpriteScanning();
       this.updateBackgroundRegisters();
     }
@@ -635,21 +633,18 @@ class PPU {
 
     if (scanlineCycle > 0 && scanlineCycle <= 256) {
       let spriteColor = 0;
-
-
-      const tileData = this.tileScanline[scanlineCycle - 1 + this.X]
-      let backgroundColorIndex = tileData & 0b11;
-      let backgroundPaletteIndex = (tileData & 0b1100) >> 2;
-
-      let backgroundColor = maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
-
       const pixel = scanlineCycle - 1;
+      const tileData = this.tileScanline[pixel + this.X];
+      let backgroundColorIndex = tileData & 0b11;
+      let backgroundPaletteIndex = (tileData & 0b1100) >>> 2;
+
+      let backgroundColor = this.maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
+
       const spriteData = this.spriteScanline[pixel];
       const spritePatternColor = spriteData & 0b11;
-      const spritePriority = (spriteData >> 2) & 0b1;
 
-      if (spritePatternColor !== 0 && maskSpritesEnabled) {
-        const spritePalette = (spriteData >> 3) & 0b11;
+      if (spritePatternColor !== 0 && this.maskSpritesEnabled) {
+        const spritePalette = (spriteData >>> 3) & 0b11;
         spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
       }
 
@@ -664,6 +659,8 @@ class PPU {
           this.framebuffer[index] = COLORS[vramBackgroundColor];
         }
       } else if (backgroundColor !== 0) {
+        const spritePriority = (spriteData >>> 2) & 0b1;
+
         // Both colors set
         if (spritePriority === 0) {
           this.framebuffer[index] = spriteColor;
@@ -671,7 +668,7 @@ class PPU {
           this.framebuffer[index] = backgroundColor;
         }
 
-        const spriteNumber = (spriteData >> 5);
+        const spriteNumber = (spriteData >>> 5);
 
         // Sprite zero handling
         if (!this.spriteZeroHit &&
@@ -679,7 +676,7 @@ class PPU {
             // If sprite zero is among the sprite units, it's always at sprite number 0
             spriteNumber === 0 &&
             scanlineCycle !== 255 &&
-            ((scanlineCycle > 8) || maskRenderLeftSide)
+            ((scanlineCycle > 8) || this.maskRenderLeftSide)
         ) {
           this.spriteZeroHit = true;
         }
@@ -699,9 +696,7 @@ class PPU {
   };
 
   handlePrerenderScanline = () => {
-    const { maskRenderingEnabled } = this;
-
-    if (maskRenderingEnabled) {
+    if (this.maskRenderingEnabled) {
       this.updateBackgroundRegisters();
     }
 
@@ -714,7 +709,7 @@ class PPU {
     } else if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320) {
       this.oamAddress = 0;
     } else if (this.scanlineCycle >= 280 && this.scanlineCycle <= 304) {
-      if (maskRenderingEnabled) {
+      if (this.maskRenderingEnabled) {
         this.resetVerticalScroll();
       }
     }
