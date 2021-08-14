@@ -33,7 +33,7 @@ const KeyTable = {
   's': INPUT_DOWN,
   'd': INPUT_RIGHT,
   ' ': INPUT_A,
-  'l': INPUT_B,
+  'm': INPUT_B,
   '.': INPUT_SELECT,
   '-': INPUT_START
 };
@@ -152,7 +152,7 @@ function App() {
         const a1 = gamepad.axes[1];
         const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
 
-        
+
         setInputController(emulator, INPUT_RIGHT, a0 > 0 && deg >= 0.125);
         setInputController(emulator, INPUT_LEFT, a0 < 0 && deg >= 0.125);
         setInputController(emulator, INPUT_UP, a1 < 0 && deg <= 0.325);
