@@ -3,6 +3,7 @@ import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
 
 import PPU from './ppu';
 import { nmi } from './instructions/stack';
+import parseMapper from './mappers/parseMapper';
 
 const getResetVectorAddress = state => {
   return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
@@ -19,11 +20,6 @@ export const INPUT_RIGHT    = 0b10000000;
 
 export const initMachine = (rom, enableTraceLogging = false) => {
   let memory = new Uint8Array(1 << 16);
-  memory.set(rom.prgData, 0x8000);
-
-  if (rom.prgData.length <= 0x4000) {
-    memory.set(rom.prgData, 0xC000);
-  }
 
   memory[0x4015] = 0xFF;
   memory[0x4004] = 0xFF;
@@ -41,11 +37,14 @@ export const initMachine = (rom, enableTraceLogging = false) => {
   memory[0x2006] = 0x00;
   memory[0x2007] = 0x00;
 
-  // Reset vector
-  const startingLocation = memory[0xFFFC] + (memory[0xFFFD] << 8);
-
   const cpuStep = 12;
   const cpuHalfStep = cpuStep / 2;
+
+  let ppu = new PPU(rom.chrData);
+  let mapper = parseMapper(rom, memory, ppu);
+
+  // Reset vector
+  const startingLocation = memory[0xFFFC] + (memory[0xFFFD] << 8);
 
   let state = {
     A: 0,
@@ -59,12 +58,13 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     ppuOffset: 1, // But there is also a PPU offset - very weird.
     cpuStep,
     cpuHalfStep,
+    mapperDevice: mapper,
     // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
     // set it to match.
     CYC: -1,
     settings: rom.settings,
     breakpoints: {},
-    ppu: new PPU(rom.chrData),
+    ppu,
     nmiCounter: null,
     traceLogLines: [],
     controller1: new Uint8Array(8),

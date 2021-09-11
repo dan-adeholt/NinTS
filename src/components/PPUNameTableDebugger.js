@@ -1,17 +1,28 @@
 import React, { useEffect, useRef } from 'react';
 import { greyScaleColorForIndexedColor } from '../emulator/ppu';
+import { BIT_7 } from '../emulator/instructions/util';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
 
-const blit = (tile, output, outX, outY) => {
+const blit = (ppu, tileIndex, output, outX, outY) => {
   let lineAddress = outY * NAME_TABLE_WIDTH + outX;
-  let inputAddress = 0;
+
+  let address = tileIndex * 2 * 8;
+
   for (let y = 0; y < 8; y++) {
+    let plane1 = ppu.ppuMemory[address];
+    let plane2 = ppu.ppuMemory[address + 8];
+
     for (let x = 0; x < 8; x++) {
-      output[lineAddress + x] = greyScaleColorForIndexedColor(tile[inputAddress++]);
+      const c1 = (plane1 & BIT_7) >>> 7;
+      const c2 = (plane2 & BIT_7) >>> 7;
+      output[lineAddress + x] = greyScaleColorForIndexedColor((c2 << 1) | c1);
+      plane1 <<= 1;
+      plane2 <<= 1;
     }
 
+    address++;
     lineAddress += NAME_TABLE_WIDTH;
   }
 };
@@ -35,8 +46,7 @@ const generateFrameBuffer = emulator => {
   for (let row = 0; row < 30; row++) {
     for (let col = 0; col < 32; col++) {
       let tileIndex = emulator.ppu.readPPUMem(curAddress);
-      let tile = emulator.ppu.tiles[tileIndex + tileIndexOffset];
-      blit(tile, texture, col * 8, row * 8);
+      blit(emulator.ppu, tileIndex + tileIndexOffset, texture, col * 8, row * 8);
       curAddress++;
     }
   }

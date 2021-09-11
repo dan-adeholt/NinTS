@@ -77,38 +77,6 @@ export const greyScaleColorForIndexedColor = indexedColor => {
       return 0;
   }
 };
-
-const decodeTiles = rom => {
-  let address = 0;
-  let tiles = [];
-
-
-  for (let tile = 0; tile < 512; tile++) {
-    const tileData = new Uint8Array(8 * 8);
-    let tileDataIndex = 0;
-    for (let row = 0; row < 8; row++) {
-      let plane1 = rom[address];
-      let plane2 = rom[address + 8];
-
-      for (let col = 0; col < 8; col++) {
-        const c1 = (plane1 & BIT_7) >>> 7;
-        const c2 = (plane2 & BIT_7) >>> 7;
-
-        tileData[tileDataIndex++] = (c2 << 1) | c1;
-        plane1 <<= 1;
-        plane2 <<= 1;
-      }
-
-      address++;
-    }
-
-    tiles.push(tileData);
-    address += 8;
-  }
-
-  return tiles;
-};
-
 const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 0x3F11;
 
 const getPaletteFromByte = (v, byte) => {
@@ -181,7 +149,6 @@ class PPU {
           0x09, 0x01, 0x34, 0x03, 0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08],
         0x3F00);
 
-    this.tiles = decodeTiles(rom);
     this.ppuMemory = ppuMemory;
   }
 
