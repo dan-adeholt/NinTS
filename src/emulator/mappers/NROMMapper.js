@@ -1,14 +1,22 @@
+import PPUMemorySpace from './PPUMemorySpace';
+import CPUMemorySpace from './CPUMemorySpace';
+
 class NROMMapper {
-  constructor(rom, memory, ppu) {
-    memory.set(rom.prgData, 0x8000);
+  constructor(rom) {
+    this.ppuMemory = new PPUMemorySpace(rom);
+    this.cpuMemory = new CPUMemorySpace(rom);
+
+    this.cpuMemory.mapPrgRom(0x8000, 0x0000, rom.prgData.length);
 
     if (rom.prgData.length <= 0x4000) {
-      memory.set(rom.prgData, 0xC000);
+      this.cpuMemory.mapPrgRom(0xC000, 0x0000, rom.prgData.length);
     }
 
     this.rom = rom;
-    this.memory = memory;
-    this.ppu = ppu;
+  }
+
+  handleROMWrite() {
+
   }
 }
 

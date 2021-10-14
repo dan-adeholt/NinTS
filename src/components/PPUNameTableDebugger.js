@@ -11,8 +11,8 @@ const blit = (ppu, tileIndex, output, outX, outY) => {
   let address = tileIndex * 2 * 8;
 
   for (let y = 0; y < 8; y++) {
-    let plane1 = ppu.ppuMemory[address];
-    let plane2 = ppu.ppuMemory[address + 8];
+    let plane1 = ppu.mapper.ppuMemory.read(address);
+    let plane2 = ppu.mapper.ppuMemory.read(address + 8);
 
     for (let x = 0; x < 8; x++) {
       const c1 = (plane1 & BIT_7) >>> 7;

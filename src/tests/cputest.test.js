@@ -6,7 +6,7 @@ test('Nes test rom executes properly', () =>
     'nestest.log',
     state => {
       state.PC = 0xC000;
-      state.memory[0x4015] = 0x00;
+      state.mapper.cpuMemory.write(0x4015, 0x00);
     },
     false)
 );

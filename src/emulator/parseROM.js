@@ -1,14 +1,18 @@
+import sha1 from 'js-sha1';
+import database from './database/nes20db';
+
 export function ascii(a) {
   return a.charCodeAt(0);
 }
 
-const BIT_0 = 1;
 const BIT_1 = 1 << 1;
 const BIT_2 = 1 << 2;
 const BIT_3 = 1 << 3;
 
 export const parseROM = buffer => {
   let index = 0;
+
+  console.log(buffer);
 
   console.assert(buffer[index] === ascii('N'));
   index++;
@@ -23,29 +27,47 @@ export const parseROM = buffer => {
 
   const chrRomSize = buffer[index++];
   const flags = [
-    buffer[index++], // Flags 6: Mapper, mirroring, battery, trainer
-    buffer[index++], // Flags 7: Mapper, VS/Playchoice, NES 2.0
+    buffer[index++], // Flags 6: Memoryspace, mirroring, battery, trainer
+    buffer[index++], // Flags 7: Memoryspace, VS/Playchoice, NES 2.0
     buffer[index++], // Flags 8: PRG-RAM size (rarely used extension)
     buffer[index++], // Flags 9: TV system (rarely used extension)
     buffer[index++], // Flags 10: TV system, PRG-RAM presence (unofficial, rarely used extension)
   ];
 
-  const settings = {
-    prgRomSize,
-    chrRomSize,
-    mirroringVertical: (flags[0] & BIT_0) === 1,
-    batteryBackedPRGRam: (flags[0] & BIT_1) === 1,
-    hasTrainer: (flags[0] & BIT_2) === 1,
-    useFourScreenVRAM: (flags[0] & BIT_3) === 1,
-    mapper: (flags[0] >> 4) | ((flags[1] >> 4) << 4),
-    prgRamSize: flags[2],
-  };
+  const hasTrainer = (flags[0] & BIT_2) === 1;
 
   index += 5; // Skip padding
 
-  if (settings.hasTrainer) {
+  if (hasTrainer) {
     index += 512;
   }
+
+  let hash = sha1.create();
+  hash.update(buffer.slice(index));
+  const romSHA = hash.hex().toUpperCase();
+
+  console.log(romSHA);
+  const databaseSettings = database[romSHA];
+  console.log('DB settings', databaseSettings);
+
+  const [region, type, mapper, submapper, mirroring, battery, prgRamSize, prgNVRamSize, chrRamSize, chrNVRamSize] = (databaseSettings ?? [0,0,0,0,"H",false,0,0,0,0]);
+
+  const settings = {
+    mirroringVertical: mirroring === 'V',
+    batteryBackedPRGRam: (flags[0] & BIT_1) === 1,
+    hasTrainer,
+    useFourScreenVRAM: (flags[0] & BIT_3) === 1,
+    region,
+    type,
+    mapper,
+    submapper,
+    mirroring,
+    battery,
+    prgRomSize: prgRomSize * 0x4000,
+    chrRomSize: chrRomSize * 0x2000,
+    prgRamSize: prgRamSize ?? prgNVRamSize,
+    chrRamSize: chrRamSize ?? chrNVRamSize,
+  };
 
   const prgData = buffer.slice(index, index + 16384 * prgRomSize);
   index += 16384 * prgRomSize;

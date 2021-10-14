@@ -196,14 +196,19 @@ export const stateToString = (state) => {
 const maxInstructionSize = _.max(_.map(opcodeMetadata, 'instructionSize'));
 
 export const disassembleLine = (state, address) => {
-  const opcode = state.memory[address];
+  const opcode = peekMem(state, address);
   let line = ['0x' + hex16(address)];
 
-  if (opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {
-    const { instructionSize, name, mode } = opcodeMetadata[opcode];
+  if (opcode != null && opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {
+    const { name, mode } = opcodeMetadata[opcode];
+    let instructionSize = getInstructionSize(mode);
+
+    if (address + instructionSize >= state.mapper.cpuMemory.memory.length) {
+      return;
+    }
 
     for (let i = 0; i < instructionSize; i++) {
-      line.push(hex(state.memory[address + i]));
+      line.push(hex(peekMem(state, address + i)));
     }
 
     for (let i = instructionSize; i < maxInstructionSize; i++) {
@@ -218,7 +223,7 @@ export const disassembleLine = (state, address) => {
       line.push(logFormatters[mode](state, address));
     }
   } else {
-    line.push(hex(state.memory[address]));
+    line.push(hex(peekMem(state, address)));
     line.push('INVALID');
   }
   return line;
@@ -228,8 +233,8 @@ export const disassemble = (state) => {
   let address = 0x8000;
   let lines = [];
 
-  while(address < state.memory.length) {
-    const opcode = state.memory[address];
+  while(address < state.mapper.cpuMemory.memory.length) {
+    const opcode = peekMem(state, address);
     let line = disassembleLine(state, address);
     lines.push( { address, line });
 

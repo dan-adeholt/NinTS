@@ -19,32 +19,16 @@ export const INPUT_LEFT     = 0b01000000;
 export const INPUT_RIGHT    = 0b10000000;
 
 export const initMachine = (rom, enableTraceLogging = false) => {
-  let memory = new Uint8Array(1 << 16);
-
-  memory[0x4015] = 0xFF;
-  memory[0x4004] = 0xFF;
-  memory[0x4005] = 0xFF;
-  memory[0x4006] = 0xFF;
-  memory[0x4007] = 0xFF;
-
-  // PPU Registers
-  memory[0x2000] = 0x00;
-  memory[0x2001] = 0x00;
-  memory[0x2002] = 0x00;
-  memory[0x2003] = 0x00;
-  memory[0x2004] = 0x00;
-  memory[0x2005] = 0x00;
-  memory[0x2006] = 0x00;
-  memory[0x2007] = 0x00;
-
   const cpuStep = 12;
   const cpuHalfStep = cpuStep / 2;
 
-  let ppu = new PPU(rom.chrData);
-  let mapper = parseMapper(rom, memory, ppu);
+  let mapper = parseMapper(rom);
+  const ppu = new PPU(rom.settings, mapper);
 
   // Reset vector
-  const startingLocation = memory[0xFFFC] + (memory[0xFFFD] << 8);
+  // const startingLocation = memory[0xFFFC] + (memory[0xFFFD] << 8);
+
+  const startingLocation = mapper.cpuMemory.read(0xFFFC) + (mapper.cpuMemory.read(0xFFFD) << 8);
 
   let state = {
     A: 0,
@@ -58,7 +42,7 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     ppuOffset: 1, // But there is also a PPU offset - very weird.
     cpuStep,
     cpuHalfStep,
-    mapperDevice: mapper,
+    mapper,
     // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
     // set it to match.
     CYC: -1,
@@ -72,7 +56,6 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     controller1Latch: new Uint8Array(8),
     controller2Latch: new Uint8Array(8),
     enableTraceLogging,
-    memory,
     rom
   };
 
@@ -134,7 +117,7 @@ export const readMem = (state, addr, peek = false) => {
   } else if (addr === 0x4016 || addr === 0x4017) {
     return readControllerMem(state, addr, peek);
   } else {
-    return state.memory[addr];
+    return state.mapper.cpuMemory.read(addr);
   }
 }
 
@@ -181,8 +164,10 @@ export const setMem = (state, addr, value) => {
     state.ppu.setPPURegisterMem(addr, value);
   } else if (addr === 0x4016 || addr === 0x4017) {
     setInputMem(state, addr, value);
+  } else if (addr >= 0x8000 && addr < 0xFFFF) {
+    state.mapper.handleROMWrite(addr, value);
   } else {
-    state.memory[addr] = value;
+    state.mapper.cpuMemory.write(addr, value);
   }
 
   return value;

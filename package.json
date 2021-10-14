@@ -10,6 +10,7 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "classnames": "^2.2.6",
+    "js-sha1": "^0.6.0",
     "lodash": "^4.17.20",
     "pngjs": "^6.0.0",
     "pre-commit": "^1.2.2",
