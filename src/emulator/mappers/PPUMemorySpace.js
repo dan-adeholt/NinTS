@@ -11,7 +11,9 @@ class PPUMemorySpace {
       this.chrSource = rom.chrData;
     }
 
-    this.memory.map(this.chrSource, 0x0000, 0x0000, 0x2000);
+    if (this.chrSource.length >= 0x2000) {
+      this.memory.map(this.chrSource, 0x0000, 0x0000, 0x2000);
+    }
   }
 
   read(address) {
