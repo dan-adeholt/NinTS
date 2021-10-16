@@ -3,7 +3,7 @@ import { initMachine, step } from '../emulator/emulator';
 import { hex } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
 
-const fileUrl = 'http://localhost:5000/Trace%20-%20smb.txt';
+const fileUrl = 'http://localhost:5000/Trace%20-%20zelda2.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
 
 const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
@@ -44,7 +44,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
       let stateString = emulator.traceLogLines[lineIndex];
 
       if (stateString !== lines[lineIndex] && !mutedLocations.includes(emulator.PC)) {
-        const prevStart = Math.max(lineIndex - 5, 0);
+        const prevStart = Math.max(lineIndex - 20, 0);
         const prevEnd = Math.max(lineIndex, 0);
         const prevLines = lines.slice(prevStart, prevEnd);
 
