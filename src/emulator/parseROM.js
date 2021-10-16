@@ -12,8 +12,6 @@ const BIT_3 = 1 << 3;
 export const parseROM = buffer => {
   let index = 0;
 
-  console.log(buffer);
-
   console.assert(buffer[index] === ascii('N'));
   index++;
   console.assert(buffer[index] === ascii('E'));
@@ -46,10 +44,7 @@ export const parseROM = buffer => {
   hash.update(buffer.slice(index));
   const romSHA = hash.hex().toUpperCase();
 
-  console.log(romSHA);
   const databaseSettings = database[romSHA];
-  console.log('DB settings', databaseSettings);
-
   const [region, type, mapper, submapper, mirroring, battery, prgRamSize, prgNVRamSize, chrRamSize, chrNVRamSize] = (databaseSettings ?? [0,0,0,0,"H",false,0,0,0,0]);
 
   const settings = {

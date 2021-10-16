@@ -140,7 +140,6 @@ class PPU {
   mapper = null;
 
   constructor(settings, mapper) {
-    console.log(settings);
     // Boot palette values are the same as Mesens in order to be compatible with value peeking
     const initialPalette = [
       0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08, 0x24, 0x00, 0x00, 0x04, 0x2C,
