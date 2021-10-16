@@ -1,5 +1,4 @@
 import { BIT_7 } from '../instructions/util';
-import { hex } from '../stateLogging';
 import PPUMemorySpace from './PPUMemorySpace';
 import CPUMemorySpace from './CPUMemorySpace';
 
@@ -18,9 +17,6 @@ class MMC1Mapper {
     this.cpuMemory = new CPUMemorySpace(rom);
 
     this.registers = [0, 0, 0, 0];
-
-    console.log(rom.settings);
-    console.log(rom.settings.chrRamSize, rom.settings.prgRamSize);
 
     if (rom.settings.chrRamSize === 0) {
       this.variant = MMCVariant.None;
@@ -45,6 +41,7 @@ class MMC1Mapper {
     this.count = 0;
     // TODO: Use prgRamDisable
     this.prgRamDisabled = false;
+    this.update(0, 0x0C); // Ensure PRG Rom bank mode 3 at boot
   }
 
   resetRegister() {
@@ -53,13 +50,11 @@ class MMC1Mapper {
   }
 
   update(target, setting) {
-    console.log('Updating because', target, 'changed with value', setting)
+    // console.log('Updating because', target, 'changed with value', setting)
     this.registers[target] = setting;
     const mirroringMode = this.registers[0] & 0b11;
     const prgSetting = (this.registers[0] & 0b01100) >> 2;
     const chrSwitch8kb = ((this.registers[0] & 0b10000) >> 4) === 0;
-
-    console.log('MMC CHR Bank 0/1:', hex(setting));
 
     let prgBank = this.registers[3] & 0b1111;
     let lowerChrBank = this.registers[1];
@@ -115,6 +110,7 @@ class MMC1Mapper {
     } else if (prgSetting === 3) {
       // Fix last bank at $C000 and switch 16 KB bank at $8000)
       const bankEnd = this.rom.settings.prgRomSize;
+
       this.cpuMemory.mapPrgRom(0x8000, prgBank * 0x4000, (prgBank + 1) * 0x4000);
       this.cpuMemory.mapPrgRom(0xC000, bankEnd - 0x4000, bankEnd);
     }
@@ -131,12 +127,11 @@ class MMC1Mapper {
   }
 
   handleROMWrite(address, value) {
-    // console.log('Handle ROM write', hex(address), hex(value));
+    // console.log('Handle ROM write', hex(address), hex(value), cycle, this.shiftRegister);
     if (value & BIT_7) {
       this.resetRegister();
     } else {
-      this.shiftRegister <<= 1;
-      this.shiftRegister |= value & 0b1;
+      this.shiftRegister |= ((value & 0b1) << this.count);
 
       this.count++;
       if (this.count === 5) {
