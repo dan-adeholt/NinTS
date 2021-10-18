@@ -437,14 +437,12 @@ class PPU {
       }
 
       if (spriteSize === 16) {
-        tileIndex = Math.trunc(tileIndex / 16) * 16 * 2 + (tileIndex % 16);
-        if (pixelRow >= 8) {
-          pixelRow -= 8;
-          tileIndex += 16;
-        }
+        const nametable = tileIndex & 0b1;
+        tileIndex = (nametable << 8) | (tileIndex & 0b11111110);
       } else {
         tileIndex = (this.controlSpritePatternAddress << 8) | tileIndex;
       }
+
 
       let chrIndex = tileIndex * 8 * 2 + pixelRow;
 
@@ -701,10 +699,8 @@ class PPU {
 
     const skipLastCycle = this.maskRenderingEnabled && !this.evenFrame;
 
-    if (this.scanlineCycle === 340 && this.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
-      this.scanlineCycle = 0;
-      this.scanline = 0;
-      this.evenFrame = !this.evenFrame;
+    if (this.scanlineCycle === 339 && this.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
+      this.scanlineCycle = 340;
     } else if (this.scanlineCycle === 341) {
       this.scanline++;
       this.scanlineCycle = 0;
