@@ -6,14 +6,14 @@ import _ from 'lodash';
 test('Save state', () => {
     const data = fs.readFileSync('src/tests/roms/nestest.nes');
     const rom = parseROM(data);
-    const emulator = initMachine(rom, true);
+    const emulator = initMachine(rom);
 
     for (let i = 0; i < 10; i++) {
         stepFrame(emulator);
     }
 
     const json = saveEmulator(emulator);
-    const emulator2 = initMachine(rom, true);
+    const emulator2 = initMachine(rom);
     loadEmulator(emulator2, json);
     const json2 = saveEmulator(emulator2);
     fs.writeFileSync('/tmp/output.json', JSON.stringify(json, null, 2));
