@@ -4,6 +4,7 @@ import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
 import PPU from './ppu';
 import { nmi } from './instructions/stack';
 import parseMapper from './mappers/parseMapper';
+import _ from 'lodash';
 
 const getResetVectorAddress = state => {
   return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
@@ -35,7 +36,6 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     X: 0,
     Y: 0,
     P: 0x4,
-    PF: [false, false, true, false, false, true, false, false],
     PC: startingLocation,
     SP: 0xFD,
     masterClock: cpuStep, // For some reason the master clock is set forward 1 cycle in Mesen. Causes PPU to get delayed.
@@ -53,10 +53,11 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     traceLogLines: [],
     controller1: new Uint8Array(8),
     controller2: new Uint8Array(8),
-    controller1Latch: new Uint8Array(8),
-    controller2Latch: new Uint8Array(8),
+    controller1Latch: 0,
+    controller2Latch: 0,
     enableTraceLogging,
-    rom
+    rom,
+    lastNMI: null
   };
 
   // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
@@ -66,6 +67,58 @@ export const initMachine = (rom, enableTraceLogging = false) => {
 
   return state;
 }
+
+const ignoredKeys = [
+  'rom', 'prgRom', 'cpuMemory', 'ppuMemory', 'framebuffer', 'traceLogLines'
+];
+
+const readObjectState = (state, data) => {
+  _.forOwn(state, (value, key) => {
+    let storedValue = data[key];
+
+    if (storedValue === undefined) {
+      return;
+    }
+
+    if (!_.isArray(value) && _.isObject(value)) {
+      if (value.constructor === Uint8Array) {
+        state[key] = Uint8Array.from(storedValue);
+      } else if (value.constructor === Uint32Array) {
+        state[key] = Uint32Array.from(storedValue);
+      } else {
+        readObjectState(value, storedValue);
+      }
+    } else {
+      state[key] = storedValue;
+    }
+  });
+}
+
+const dumpObjectState = (state) => {
+  let dumpedState = {};
+
+  _.forOwn(state, (value, key) => {
+    if (ignoredKeys.includes(key) || _.isFunction(value)) {
+      return;
+    }
+
+    if (!_.isArray(value) && _.isObject(value)) {
+      if (value.constructor === Uint8Array || value.constructor === Uint32Array) {
+        dumpedState[key] = Array.from(value);
+      } else {
+        dumpedState[key] = dumpObjectState(value);
+      }
+    } else {
+      dumpedState[key] = value;
+    }
+  });
+
+  return dumpedState;
+}
+
+export const loadEmulator = (emulator, data) => readObjectState(emulator, data)
+export const saveEmulator = (emulator) => dumpObjectState(emulator);
+
 
 export const setInputController = (state, button, isDown) => {
   const mask = ~button;
