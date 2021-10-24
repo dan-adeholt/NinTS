@@ -78,7 +78,7 @@ export const greyScaleColorForIndexedColor = indexedColor => {
   }
 };
 
-const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 0x3F11;
+const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF;
 
 const getPaletteFromByte = (v, byte) => {
   const coarseX = (v & 0b0000011111) % 4;
@@ -135,6 +135,7 @@ class PPU {
   tileScanlineIndex = 0;
   tileScanline = new Uint32Array(SCREEN_WIDTH + 8);
   framebuffer = new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT);
+  paletteRAM = new Uint8Array(32)
   slack = 0;
   disabled = false;
   mapper = null;
@@ -144,12 +145,9 @@ class PPU {
     const initialPalette = [
       0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08, 0x24, 0x00, 0x00, 0x04, 0x2C,
       0x09, 0x01, 0x34, 0x03, 0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08];
-
     this.mapper = mapper;
 
-    for (let i = 0; i < initialPalette.length; i++) {
-      mapper.ppuMemory.write(0x3F00 + i, initialPalette[i]);
-    }
+    this.paletteRAM.set(initialPalette);
   }
 
 
@@ -185,29 +183,35 @@ class PPU {
     this.V = this.V % (1 << 16);
   };
 
-  writePPUPaletteMem = (ppuAddress, value) => {
-    if (ppuAddress === 0x3F00 || ppuAddress === 0x3F10) {
-      this.mapper.ppuMemory.write(0x3F00, value);
-      this.mapper.ppuMemory.write(0x3F10, value);
-    } else if (ppuAddress === 0x3F04 || ppuAddress === 0x3F14) {
-      this.mapper.ppuMemory.write(0x3F04, value);
-      this.mapper.ppuMemory.write(0x3F14, value);
-    } else if (ppuAddress === 0x3F08 || ppuAddress === 0x3F18) {
-      this.mapper.ppuMemory.write(0x3F08, value);
-      this.mapper.ppuMemory.write(0x3F18, value);
-    } else if (ppuAddress === 0x3F1c || ppuAddress === 0x3F0c) {
-      this.mapper.ppuMemory.write(0x3F0C, value);
-      this.mapper.ppuMemory.write(0x3F1C, value);
+  writePPUPaletteMem = (paletteAddress, value) => {
+    if (paletteAddress === 0x00 || paletteAddress === 0x10) {
+      this.paletteRAM[0x00] = value;
+      this.paletteRAM[0x10] = value;
+    } else if (paletteAddress === 0x04 || paletteAddress === 0x14) {
+      this.paletteRAM[0x04] = value;
+      this.paletteRAM[0x14] = value;
+    } else if (paletteAddress === 0x08 || paletteAddress === 0x18) {
+      this.paletteRAM[0x08] = value;
+      this.paletteRAM[0x18] = value;
+    } else if (paletteAddress === 0x1c || paletteAddress === 0x0c) {
+      this.paletteRAM[0x0C] = value;
+      this.paletteRAM[0x1C] = value;
     } else {
-      this.mapper.ppuMemory.write(ppuAddress, value);
+      this.paletteRAM[paletteAddress] = value;
     }
   };
 
-  readPPUMem = (ppuAddress) => this.mapper.ppuMemory.read(ppuAddress);
+  readPPUMem = (ppuAddress) => {
+    if (isPPUPaletteAddress(ppuAddress)) {
+      return this.paletteRAM[ppuAddress & 0x1F];
+    } else {
+      return this.mapper.ppuMemory.read(ppuAddress);
+    }
+  }
 
   writePPUMem = (ppuAddress, value) => {
     if (isPPUPaletteAddress(ppuAddress)) {
-      this.writePPUPaletteMem(ppuAddress, value);
+      this.writePPUPaletteMem(ppuAddress & 0x1F, value);
     } else {
       this.mapper.ppuMemory.write(ppuAddress, value);
     }
