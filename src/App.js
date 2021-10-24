@@ -16,6 +16,7 @@ import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/p
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
 import PPUDebugger from './components/PPUDebugger';
+import EmulatorControls from './components/EmulatorControls';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
 const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
@@ -217,6 +218,7 @@ function App() {
     triggerRefresh();
   }, [runMode, triggerRefresh]);
 
+
   return (
     <div className="App">
       <DebuggerSidebar
@@ -260,7 +262,10 @@ function App() {
           <div className="displayContainer">
             <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
           </div>
-          <PPUDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
+          <div className="controlsArea">
+            <EmulatorControls emulator={emulator}/>
+            <PPUDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
+          </div>
         </div>
 
       </div>

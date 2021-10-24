@@ -15,6 +15,10 @@ class NROMMapper {
     this.rom = rom;
   }
 
+  reload() {
+
+  }
+
   handleROMWrite() {
 
   }

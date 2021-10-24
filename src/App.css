@@ -247,14 +247,29 @@ td label {
   border: 1px solid gray;
 }
 
-.ppuDebugger, .ppuNameTableDebugger {
+.ppuDebugger, .ppuNameTableDebugger, .emulatorControls {
   display: flex;
   margin-left: 40px;
   flex-direction: column;
 }
 
+.emulatorControls {
+  flex-direction: row;
+  margin-bottom: 14px;
+  width: auto;
+}
+
 .drawingArea {
   display: flex;
+}
+
+.controlsArea {
+  display: flex;
+  flex-direction: column;
+}
+
+.controlsArea button {
+  margin-right: 5px;
 }
 
 .displayContainer {

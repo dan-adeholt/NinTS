@@ -116,7 +116,11 @@ const dumpObjectState = (state) => {
   return dumpedState;
 }
 
-export const loadEmulator = (emulator, data) => readObjectState(emulator, data)
+export const loadEmulator = (emulator, data) => {
+  readObjectState(emulator, data);
+  emulator.mapper.reload();
+}
+
 export const saveEmulator = (emulator) => dumpObjectState(emulator);
 
 

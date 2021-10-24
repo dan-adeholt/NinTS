@@ -126,11 +126,11 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   return (
     <>
       <div>
-        <button onClick={profilePPU}>Profile PPU</button>&nbsp;
-        <button onClick={profileCPU}>Profile CPU</button>&nbsp;
-        <button onClick={dumpStates} disabled={lines.length === 0}>Compare trace</button>&nbsp;
-        <button onClick={mute}>Mute</button>&nbsp;
-        <button onClick={clearMuted}>Clear muted</button>&nbsp;
+        <button onClick={profilePPU}>Profile PPU</button>
+        <button onClick={profileCPU}>Profile CPU</button>
+        <button onClick={dumpStates} disabled={lines.length === 0}>Compare trace</button>
+        <button onClick={mute}>Mute</button>
+        <button onClick={clearMuted}>Clear muted</button>
         <br/>
         { perfStr }
       </div>

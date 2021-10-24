@@ -49,6 +49,10 @@ class MMC1Mapper {
     this.count = 0;
   }
 
+  reload() {
+    this.update(0, this.registers[0]);
+  }
+
   update(target, setting) {
     // console.log('Updating because', target, 'changed with value', setting)
     this.registers[target] = setting;

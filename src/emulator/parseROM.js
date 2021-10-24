@@ -68,5 +68,5 @@ export const parseROM = buffer => {
   index += 16384 * prgRomSize;
   const chrData = buffer.slice(index, index + 8192 * chrRomSize);
 
-  return { prgData, chrData, settings };
+  return { prgData, chrData, settings, romSHA };
 }
