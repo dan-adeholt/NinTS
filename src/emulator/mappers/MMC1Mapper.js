@@ -1,6 +1,7 @@
 import { BIT_7 } from '../instructions/util';
 import PPUMemorySpace from './PPUMemorySpace';
 import CPUMemorySpace from './CPUMemorySpace';
+import MirroringMode from '../MirroringMode';
 
 const MMCVariant = {
   None: 0,
@@ -9,6 +10,20 @@ const MMCVariant = {
   SUROM: 3,
   SXROM: 4,
   SZROM: 5
+}
+
+const registerToMirroringMode = register => {
+  switch (register) {
+    case 0:
+      return MirroringMode.SingleScreenLower;
+    case 1:
+      return MirroringMode.SingleScreenUpper;
+    case 2:
+      return MirroringMode.Vertical;
+    case 3:
+    default:
+      return MirroringMode.Horizontal;
+  };
 }
 
 class MMC1Mapper {
@@ -51,13 +66,12 @@ class MMC1Mapper {
 
   reload() {
     this.update(0, this.registers[0]);
-    console.log('Reload', this.registers);
   }
 
   update(target, setting) {
     // console.log('Updating because', target, 'changed with value', setting)
     this.registers[target] = setting;
-    const mirroringMode = this.registers[0] & 0b11;
+    const mirroringMode = registerToMirroringMode(this.registers[0] & 0b11);
     const prgSetting = (this.registers[0] & 0b01100) >> 2;
     const chrSwitch8kb = ((this.registers[0] & 0b10000) >> 4) === 0;
 
@@ -120,15 +134,7 @@ class MMC1Mapper {
       this.cpuMemory.mapPrgRom(0xC000, bankEnd - 0x4000, bankEnd);
     }
 
-    if (mirroringMode === 0) {
-      // One-screen, lower bank
-    } else if (mirroringMode === 1) {
-      // One-screen, upper bank
-    } else if (mirroringMode === 2) {
-      // Vertical
-    } else if (mirroringMode === 3) {
-      // Horizontal
-    }
+    this.ppuMemory.setMirroringMode(mirroringMode);
   }
 
   handleROMWrite(address, value) {

@@ -126,11 +126,6 @@ const dumpObjectState = (state, prefix = '') => {
     if (ignoredKeys.includes(prefix + key) || _.isFunction(value)) {
       return;
     }
-    //
-    // console.log(prefix + key);
-    // if ((prefix + key) === 'mapper.cpuMemory.memory.banks') {
-    //   console.log(key, !_.isArray(value), _.isObject(value));
-    // }
 
     if (!_.isArray(value) && _.isObject(value)) {
       if (value.constructor === Uint8Array || value.constructor === Uint32Array) {
