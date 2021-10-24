@@ -51,6 +51,7 @@ class MMC1Mapper {
 
   reload() {
     this.update(0, this.registers[0]);
+    console.log('Reload', this.registers);
   }
 
   update(target, setting) {

@@ -1,11 +1,15 @@
 import React, { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { loadEmulator, saveEmulator } from '../emulator/emulator';
+import _ from 'lodash';
 
 const EmulatorControls = ({ emulator }) => {
   const saveState = useCallback(() => {
     const key = 'save-' + emulator.rom.romSHA;
-    localStorage.setItem(key, JSON.stringify(saveEmulator(emulator)));
+    const dump = saveEmulator(emulator);
+
+    const ppuValues = _.flatMap(emulator.mapper.ppuMemory.memory.banks, x => _.values(x));
+    localStorage.setItem(key, JSON.stringify({ ...dump, ppuValues }));
   }, [emulator]);
 
   const dumpState = useCallback(() => {
@@ -18,8 +22,13 @@ const EmulatorControls = ({ emulator }) => {
 
     if (savegame != null) {
       const parsed = JSON.parse(savegame);
-      console.log(parsed);
       loadEmulator(emulator, parsed);
+
+      for (let i = 0; i < 16384; i++) {
+        if (parsed.ppuValues[i] !== emulator.mapper.ppuMemory.read(i)) {
+          // console.log(i, parsed.ppuValues[i], emulator.mapper.ppuMemory.read(i));
+        }
+      }
     }
   }, [emulator]);
 

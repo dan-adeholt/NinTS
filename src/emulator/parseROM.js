@@ -60,8 +60,8 @@ export const parseROM = buffer => {
     battery,
     prgRomSize: prgRomSize * 0x4000,
     chrRomSize: chrRomSize * 0x2000,
-    prgRamSize: prgRamSize ?? prgNVRamSize,
-    chrRamSize: chrRamSize ?? chrNVRamSize,
+    prgRamSize: prgRamSize || prgNVRamSize,
+    chrRamSize: chrRamSize || chrNVRamSize,
   };
 
   const prgData = buffer.slice(index, index + 16384 * prgRomSize);

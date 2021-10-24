@@ -69,7 +69,16 @@ export const initMachine = (rom, enableTraceLogging = false) => {
 }
 
 const ignoredKeys = [
-  'rom', 'prgRom', 'cpuMemory', 'ppuMemory', 'framebuffer', 'traceLogLines'
+  'mapper.ppuMemory.memory',
+  'mapper.ppuMemory.chrSource',
+  'mapper.cpuMemory.memory',
+  'mapper.cpuMemory.prgRom',
+  'ppu.mapper',
+  'ppu.framebuffer',
+  'traceLogLines',
+  'breakpoints',
+  'enableTraceLogging',
+  'rom'
 ];
 
 const readObjectState = (state, data) => {
@@ -82,9 +91,9 @@ const readObjectState = (state, data) => {
 
     if (!_.isArray(value) && _.isObject(value)) {
       if (value.constructor === Uint8Array) {
-        state[key] = Uint8Array.from(storedValue);
+        state[key].set(Uint8Array.from(storedValue));
       } else if (value.constructor === Uint32Array) {
-        state[key] = Uint32Array.from(storedValue);
+        state[key].set(Uint32Array.from(storedValue));
       } else {
         readObjectState(value, storedValue);
       }
@@ -94,19 +103,24 @@ const readObjectState = (state, data) => {
   });
 }
 
-const dumpObjectState = (state) => {
+const dumpObjectState = (state, prefix = '') => {
   let dumpedState = {};
 
   _.forOwn(state, (value, key) => {
-    if (ignoredKeys.includes(key) || _.isFunction(value)) {
+    if (ignoredKeys.includes(prefix + key) || _.isFunction(value)) {
       return;
     }
+    //
+    // console.log(prefix + key);
+    // if ((prefix + key) === 'mapper.cpuMemory.memory.banks') {
+    //   console.log(key, !_.isArray(value), _.isObject(value));
+    // }
 
     if (!_.isArray(value) && _.isObject(value)) {
       if (value.constructor === Uint8Array || value.constructor === Uint32Array) {
         dumpedState[key] = Array.from(value);
       } else {
-        dumpedState[key] = dumpObjectState(value);
+        dumpedState[key] = dumpObjectState(value, prefix + key + '.');
       }
     } else {
       dumpedState[key] = value;
@@ -117,12 +131,12 @@ const dumpObjectState = (state) => {
 }
 
 export const loadEmulator = (emulator, data) => {
-  readObjectState(emulator, data);
+  console.log(data);
+  readObjectState(emulator, data, '');
   emulator.mapper.reload();
 }
 
 export const saveEmulator = (emulator) => dumpObjectState(emulator);
-
 
 export const setInputController = (state, button, isDown) => {
   const mask = ~button;

@@ -3,8 +3,11 @@ import MemorySpace from './MemorySpace';
 class CPUMemorySpace {
   constructor(rom) {
     this.memory = new MemorySpace(65535);
+    this.baseRam = new Uint8Array(2048);
     this.prgRam = new Uint8Array(rom.settings.prgRamSize);
     this.prgRom = rom.prgData;
+
+    this.memory.map(this.baseRam, 0x0000, 0x0000, this.baseRam.length);
 
     if (rom.settings.prgRamSize === 0x2000) {
       this.memory.map(this.prgRam, 0x6000, 0x0000, Math.min(0x2000, rom.settings.prgRamSize));

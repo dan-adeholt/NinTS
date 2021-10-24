@@ -19,7 +19,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
           setLines(text.split('\r\n'));
         })
           .catch(e => {
-            console.error(e);
+            // console.error(e);
           })
     }
   }, []);
