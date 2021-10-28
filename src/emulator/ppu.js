@@ -59,7 +59,7 @@ export const setIsSteppingScanline = (_isSteppingScanline) => isSteppingScanline
 //   const NT = (pointer & 0b000110000000000) >> 10;
 //   const CY = (pointer & 0b000001111100000) >> 5;
 //   const CX = (pointer & 0b000000000011111);
-//   return '[FY: ' + FY + ', NT: ' + NT + ', CY: ' + CY + ', CX: ' + CX + ']';
+//   return '[FineY: ' + FY + ', NTable: ' + NT + ', CoarseY: ' + CY + ', CoarseX: ' + CX + ']';
 // }
 
 export const greyScaleColorForIndexedColor = indexedColor => {
@@ -346,7 +346,7 @@ class PPU {
           const ABCDE  = value & 0b11111000;
           const FGH    = value & 0b00000111;
 
-          this.T = this.T & 0b000000000011111;
+          this.T = this.T & 0b000110000011111;
           this.T = this.T | (ABCDE << 2);
           this.T = this.T | (FGH << 12);
 
@@ -731,7 +731,6 @@ class PPU {
       if (this.scanline < SCREEN_HEIGHT) {
         this.handleVisibleScanline();
       } else if (this.scanline === VBLANK_SCANLINE) {
-        // console.log('Hit vblank, renderinEnabled', renderingEnabled, spritesEnabled, backgroundEnabled);
         this.handleVblankScanline();
       } else if (this.scanline === PRE_RENDER_SCANLINE) {
         this.handlePrerenderScanline();
