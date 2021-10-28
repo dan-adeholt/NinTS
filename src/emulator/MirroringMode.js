@@ -6,4 +6,15 @@ const MirroringMode = Object.freeze({
   FourScreen: 4
 });
 
+export const mirroringModeToString = (mode) => {
+  switch (mode) {
+    case MirroringMode.Horizontal: return 'Horizontal';
+    case MirroringMode.Vertical: return 'Vertical';
+    case MirroringMode.SingleScreenLower: return 'SingleScreenLower';
+    case MirroringMode.SingleScreenUpper: return 'SingleScreenUpper';
+    case MirroringMode.FourScreen: return 'FourScreen';
+    default: return 'INVALID';
+  }
+}
+
 export default MirroringMode;

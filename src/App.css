@@ -280,10 +280,21 @@ td label {
 }
 
 
-.ppuContainer canvas, .displayContainer canvas, .ppuNameTableContainer canvas {
+.ppuContainer canvas, .displayContainer canvas {
   box-sizing: border-box;
 
   transform: scale(3);
+  transform-origin: 0% 0%;
+  /* Firefox */
+  image-rendering: crisp-edges;
+  /* Chromium + Safari */
+  image-rendering: pixelated;
+}
+
+.ppuNameTableContainer canvas {
+  box-sizing: border-box;
+
+  transform: scale(1.5);
   transform-origin: 0% 0%;
   /* Firefox */
   image-rendering: crisp-edges;

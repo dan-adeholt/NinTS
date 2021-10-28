@@ -17,6 +17,8 @@ class PPUMemorySpace {
       this.memory.map(this.chrSource, 0x0000, 0x0000, 0x2000);
     }
 
+    this.mirroringMode = MirroringMode.Vertical;
+
     if (rom.settings.mirroringVertical) {
       this.setMirroringMode(MirroringMode.Vertical);
     } else {
@@ -37,6 +39,7 @@ class PPUMemorySpace {
   }
 
   setMirroringMode(mirroringMode) {
+    this.mirroringMode = mirroringMode;
     switch(mirroringMode) {
       case MirroringMode.SingleScreenUpper:
         this.memory.map(this.namespaceRam, 0x2000, 0x0000, 0x0400);

@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { greyScaleColorForIndexedColor } from '../emulator/ppu';
 import { BIT_7 } from '../emulator/instructions/util';
+import { mirroringModeToString } from '../emulator/MirroringMode';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
 
-const blit = (ppu, tileIndex, output, outX, outY) => {
-  let lineAddress = outY * NAME_TABLE_WIDTH + outX;
+const blit = (ppu, tileIndex, output, outX, outY, lineWidth) => {
+  let lineAddress = outY * lineWidth + outX;
 
   let address = tileIndex * 2 * 8;
 
@@ -23,33 +24,40 @@ const blit = (ppu, tileIndex, output, outX, outY) => {
     }
 
     address++;
-    lineAddress += NAME_TABLE_WIDTH;
+    lineAddress += lineWidth;
   }
 };
 
-const NAMETABLE_START = 0x2000;
-
 const generateFrameBuffer = emulator => {
-  const texture = new Uint32Array(NAME_TABLE_WIDTH * NAME_TABLE_HEIGHT);
+  const texture = new Uint32Array(NAME_TABLE_WIDTH * 2 * NAME_TABLE_HEIGHT * 2);
 
-  for (let i = 0; i < NAME_TABLE_WIDTH * NAME_TABLE_HEIGHT; i++) {
-    texture[i] = 0xFFFFFFFF;
+  for (let i = 0; i < texture.length; i++) {
+    texture[i] = 0xFF000000;
   }
 
   if (emulator === null) {
     return texture;
   }
 
-  let curAddress = NAMETABLE_START;
   let tileIndexOffset = emulator.ppu.controlBgPatternAddress === 1 ? 256 : 0;
 
-  for (let row = 0; row < 30; row++) {
-    for (let col = 0; col < 32; col++) {
-      let tileIndex = emulator.ppu.readPPUMem(curAddress);
-      blit(emulator.ppu, tileIndex + tileIndexOffset, texture, col * 8, row * 8);
-      curAddress++;
+  const offsets = [[0x2000, 0, 0], [0x2400, 256, 0], [0x2800, 0, 240], [0x2C00, 256, 240]];
+  let curAddress;
+
+  for (let offset of offsets) {
+    const [addressStart, offsetX, offsetY] = offset;
+    curAddress = addressStart;
+
+    for (let row = 0; row < 30; row++) {
+      for (let col = 0; col < 32; col++) {
+        let tileIndex = emulator.ppu.readPPUMem(curAddress);
+        blit(emulator.ppu, tileIndex + tileIndexOffset, texture, col * 8 + offsetX, row * 8 + offsetY, NAME_TABLE_WIDTH * 2);
+        curAddress++;
+      }
     }
   }
+
+
 
   return texture;
 };
@@ -60,7 +68,7 @@ const PPUNameTableDebugger = ({ emulator, refresh }) => {
   useEffect(() => {
     if (ppuCanvasRef.current != null && emulator != null) {
       const context = ppuCanvasRef.current.getContext("2d");
-      const imageData = context.createImageData(NAME_TABLE_WIDTH, NAME_TABLE_HEIGHT);
+      const imageData = context.createImageData(NAME_TABLE_WIDTH * 2, NAME_TABLE_HEIGHT * 2);
       const framebuffer = new Uint32Array(imageData.data.buffer);
 
       framebuffer.set(generateFrameBuffer(emulator), 0);
@@ -68,10 +76,21 @@ const PPUNameTableDebugger = ({ emulator, refresh }) => {
     }
   }, [ppuCanvasRef, emulator, refresh]);
 
+  let scrollPos = '';
+  if (emulator != null) {
+    const coarseXMask = 0b11111;
+    const coarseYMask = 0b1111100000;
+    const ntMask = 0b110000000000;
+    scrollPos = 'X:' + (emulator.ppu.T & coarseXMask) + ', Y:' + ((emulator.ppu.T & coarseYMask) >> 5) + ', NT:' + ((emulator.ppu.T & ntMask) >> 10);
+  }
+
   return (
-    <div className="ppuNameTableContainer">
-      <canvas width={NAME_TABLE_WIDTH} height={NAME_TABLE_HEIGHT} ref={ppuCanvasRef}/>
-    </div>
+    <>
+      { mirroringModeToString(emulator?.mapper?.ppuMemory?.mirroringMode) } - Scroll pos: { scrollPos }
+      <div className="ppuNameTableContainer">
+        <canvas width={NAME_TABLE_WIDTH * 2} height={NAME_TABLE_HEIGHT * 2} ref={ppuCanvasRef}/>
+      </div>
+    </>
   );
 };
 
