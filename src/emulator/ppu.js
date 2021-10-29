@@ -443,10 +443,14 @@ class PPU {
       if (spriteSize === 16) {
         const nametable = tileIndex & 0b1;
         tileIndex = (nametable << 8) | (tileIndex & 0b11111110);
+
+        if (pixelRow >= 8) {
+          pixelRow -= 8;
+          tileIndex++;
+        }
       } else {
         tileIndex = (this.controlSpritePatternAddress << 8) | tileIndex;
       }
-
 
       let chrIndex = tileIndex * 8 * 2 + pixelRow;
 
