@@ -1,0 +1,125 @@
+body {
+  background: #1e1e1e;
+  color: white;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.content {
+  flex-grow: 1;
+}
+
+.app {
+  display: flex;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+#root {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+* {
+  scrollbar-color: rgba(0, 0, 0, 0.18) #e5e5e5;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(240, 240, 240, 0.5);
+  border: 1px solid #ababab;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(240, 240, 240, 0.3);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(240, 240, 240, 0.2);
+}
+
+::-webkit-scrollbar-track:active,
+::-webkit-scrollbar-track:hover,
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border: 0;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+button {
+  flex-grow: 1;
+  height: 35px;
+  border: 0;
+  cursor: pointer;
+}
+
+button:focus {
+  outline: none;
+}
+
+button:hover {
+  background: #cacaca;
+}
+
+td {
+  padding: 7px;
+  min-width: 50px;
+}
+
+td label {
+  color: #569BD5;
+  clear:both;
+  display:block;
+  font-size: 0.8em;
+}
+
+.ppuContainer {
+  width: 770px;
+  height: 386px;
+  box-sizing: border-box;
+  border: 1px solid gray;
+}
+
+.drawingArea {
+  display: flex;
+}
+
+.controlsArea {
+  display: flex;
+  flex-direction: column;
+}
+
+.controlsArea button {
+  margin-right: 5px;
+}
+
+.displayContainer {
+  width: 770px;
+  height: 722px;
+  box-sizing: border-box;
+  border: 1px solid gray;
+}
+
+.displayContainer canvas {
+  box-sizing: border-box;
+
+  transform: scale(3);
+  transform-origin: 0% 0%;
+  /* Firefox */
+  image-rendering: crisp-edges;
+  /* Chromium + Safari */
+  image-rendering: pixelated;
+}

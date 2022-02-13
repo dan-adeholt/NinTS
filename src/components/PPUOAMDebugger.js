@@ -7,6 +7,7 @@ import {
   SPRITE_ATTRIBS_PALETTE
 } from '../emulator/ppu';
 import { hex } from '../emulator/stateLogging';
+import styles from './PPUDebugging.module.css';
 
 const PPUOAMDebugger = ({ refresh, emulator}) => {
   const lines = useMemo(() => {
@@ -34,7 +35,7 @@ const PPUOAMDebugger = ({ refresh, emulator}) => {
 
   return (
     <>
-      <div className="ppuOamDebugger">
+      <div className={styles.ppuOamDebugger}>
 
         { lines.map((line, idx) => (
           <div>

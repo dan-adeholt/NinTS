@@ -5,6 +5,7 @@ import {
   loadEmulatorFromLocalStorage,
   saveEmulatorToLocalStorage, setLocalStorageAutoloadEnabled
 } from '../emulator/emulator';
+import styles from './PPUDebugging.module.css';
 
 const EmulatorControls = ({ emulator }) => {
   const saveState = useCallback(() => saveEmulatorToLocalStorage(emulator), [emulator]);
@@ -18,7 +19,7 @@ const EmulatorControls = ({ emulator }) => {
   }, [autoloadEnabled]);
 
   return (
-    <div className="emulatorControls">
+    <div className={styles.emulatorControls}>
       <div>
         <button onClick={saveState}>Save state</button>
         <button onClick={loadState}>Load state</button>

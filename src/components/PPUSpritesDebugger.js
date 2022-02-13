@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { BIT_7 } from '../emulator/instructions/util';
+import styles from './PPUDebugging.module.css';
 
 const PATTERN_TABLE_WIDTH = 256;
 const PATTERN_TABLE_HEIGHT = 128;
@@ -79,7 +80,7 @@ const PPUSpritesDebugger = ({ emulator, refresh }) => {
 
   return (
     <div>
-      <div className="ppuContainer">
+      <div className={styles.ppuContainer}>
         <canvas width={256} height={128} ref={ppuCanvasRef}/>
       </div>
     </div>

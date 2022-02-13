@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import _ from 'lodash';
 import logger from '../emulator/logger';
+import styles from './PPUDebugging.module.css';
+
 const PPUScanlineDebugger = ({ refresh }) => {
   const lines = useMemo(() => {
     _.noop(refresh);
@@ -17,7 +19,7 @@ const PPUScanlineDebugger = ({ refresh }) => {
 
   return (
     <>
-      <div className="hexViewer">
+      <div className={styles.hexViewer}>
         { lines }
       </div>
     </>

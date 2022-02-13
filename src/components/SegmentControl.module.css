@@ -1,0 +1,37 @@
+
+.segmentControl {
+    display: flex;
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
+
+.segmentControl.expand {
+    width: 100%;
+}
+
+.segmentControlItem {
+    padding: 6px 16px;
+    border: 1px solid gray;
+    border-right: 0;
+    cursor: pointer;
+}
+
+.segmentControlItem.expand {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.selectedSegmentControlItem {
+    background: #333;
+}
+
+.segmentControlItem:first-child {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+.segmentControlItem:last-child {
+    border-right: 1px solid gray;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}

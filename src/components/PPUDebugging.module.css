@@ -1,0 +1,67 @@
+.expected {
+    color: green;
+}
+
+.found {
+    color: red;
+}
+
+.monospace, .hexViewer {
+    white-space: pre;
+    font-family: Menlo, Monaco, Consolas, 'Courier New', monospace !important;
+}
+
+
+.ppuOamDebugger {
+    height: 256px;
+    overflow-y: auto;
+    padding: 4px;
+    margin-top: 11px;
+    border: 1px solid gray;
+}
+
+.hexViewer {
+    max-height: 600px;
+    overflow-y: auto;
+    width: 720px;
+}
+
+.ppuNameTableContainer {
+    width: 770px;
+    height: 722px;
+    box-sizing: border-box;
+    border: 1px solid gray;
+}
+
+.ppuNameTableContainer canvas {
+    box-sizing: border-box;
+
+    transform: scale(1.5);
+    transform-origin: 0% 0%;
+    /* Firefox */
+    image-rendering: crisp-edges;
+    /* Chromium + Safari */
+    image-rendering: pixelated;
+}
+
+.ppuDebugger, .emulatorControls {
+    display: flex;
+    margin-left: 40px;
+    flex-direction: column;
+}
+.emulatorControls {
+    flex-direction: row;
+    margin-bottom: 14px;
+    width: auto;
+}
+
+.ppuContainer canvas {
+    box-sizing: border-box;
+
+    transform: scale(3);
+    transform-origin: 0% 0%;
+    /* Firefox */
+    image-rendering: crisp-edges;
+    /* Chromium + Safari */
+    image-rendering: pixelated;
+}

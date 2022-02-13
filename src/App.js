@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import './App.css';
+import styles from './App.module.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
 import {
@@ -220,7 +220,7 @@ function App() {
 
 
   return (
-    <div className="App">
+    <div className={styles.app}>
       <DebuggerSidebar
         emulator={emulator}
         runMode={runMode}
@@ -230,11 +230,11 @@ function App() {
         addKeyListener={addKeyListener}
         removeKeyListener={removeKeyListener}
       />
-      <div className="content">
+      <div className={styles.content}>
         <h1>{ title }</h1>
         <input type="file" onChange={romFileChanged} />
         { emulator && (
-          <div className="stateTable">
+          <div>
             <table>
               <tbody>
               <tr>
@@ -258,11 +258,11 @@ function App() {
           </div>
         ) }
 
-        <div className="drawingArea">
-          <div className="displayContainer">
+        <div className={styles.drawingArea}>
+          <div className={styles.displayContainer}>
             <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
           </div>
-          <div className="controlsArea">
+          <div className={styles.controlsArea}>
             <EmulatorControls emulator={emulator}/>
             <PPUDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
           </div>

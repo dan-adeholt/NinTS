@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { greyScaleColorForIndexedColor } from '../emulator/ppu';
 import { BIT_7 } from '../emulator/instructions/util';
 import { mirroringModeToString } from '../emulator/MirroringMode';
+import styles from './PPUDebugging.module.css';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
@@ -87,7 +88,7 @@ const PPUNameTableDebugger = ({ emulator, refresh }) => {
   return (
     <>
       { mirroringModeToString(emulator?.mapper?.ppuMemory?.mirroringMode) } - Scroll pos: { scrollPos }
-      <div className="ppuNameTableContainer">
+      <div className={styles.ppuNameTableContainer}>
         <canvas width={NAME_TABLE_WIDTH * 2} height={NAME_TABLE_HEIGHT * 2} ref={ppuCanvasRef}/>
       </div>
     </>

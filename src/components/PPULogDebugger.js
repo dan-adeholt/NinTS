@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { initMachine, step } from '../emulator/emulator';
 import { hex } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
+import styles from './PPUDebugging.module.css';
 
 const fileUrl = 'http://localhost:5000/Trace%20-%20zelda2.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
@@ -135,10 +136,10 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
         { perfStr }
       </div>
       { error && (
-        <div className="monospace">
+        <div className={styles.monospace}>
           { error.prevLines.map(prevLine => prevLine + '\n')}
-          <span className="expected">{ error.expected } </span><br/>
-          <span className="found">{ error.found}</span>
+          <span className={styles.expected}>{ error.expected } </span><br/>
+          <span className={styles.found}>{ error.found}</span>
           <br/>
           { error.debug.map(debugInfo => debugInfo.name + ' = ' + hex(debugInfo.value) + '\n') }
         </div>

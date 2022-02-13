@@ -1,0 +1,96 @@
+.instructionBar {
+    width: 460px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    font-family: Menlo, Monaco, Consolas, 'Courier New', monospace !important;
+    margin-right: 20px;
+}
+
+.debugArea {
+    display: flex;
+}
+
+.row {
+    display: flex;
+    padding: 8px 0 0 8px;
+    height: 35px;
+    border-top: 1px solid black;
+    box-sizing: border-box;
+}
+
+.currentRow + .row {
+    border-top: 1px solid #569BD5;
+}
+
+.currentRow {
+    background: #3e3e3e;
+    border-top: 1px solid #569BD5;
+}
+
+.addressComponent {
+    color: #569BD5;
+}
+
+.opcodeComponent {
+    color: #CE9178;
+}
+
+.breakpoint {
+    width: 35px;
+    height: 35px;
+    margin-left: -8px;
+    margin-top: -8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.breakpoint > div {
+    margin-top: 2px;
+    width: 15px;
+    height: 15px;
+    border-radius: 7px;
+    flex-grow: 0;
+}
+
+.breakpoint:hover > div {
+    background: #ac0902;
+    opacity: 0.5;
+}
+
+
+.breakpoint.active > div {
+    opacity: 1.0;
+    background: #ac0902;
+}
+
+.listContainer, .breakpointContainer {
+    flex-grow: 1;
+    flex-shrink: 0;
+    min-width: 370px;
+    padding: 14px;
+}
+
+
+.addBreakpoint {
+    margin-top: 10px;
+}
+.breakpointContainer > div {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.breakpointContainer input {
+    margin-right: 10px;
+}
+
+.breakpointContainer button {
+    height: 25px;
+    flex-grow: 0;
+    margin-left: 10px;
+}
+

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { hex, hex16 } from '../emulator/stateLogging';
 import _ from 'lodash';
+import styles from './PPUDebugging.module.css';
 
 const PPUVRAMDebugger = ({ emulator, refresh }) => {
   const lines = useMemo(() => {
@@ -21,7 +22,7 @@ const PPUVRAMDebugger = ({ emulator, refresh }) => {
   }, [emulator, refresh])
 
   return (
-    <div className="hexViewer">
+    <div className={styles.hexViewer}>
       { lines }
     </div>
   );

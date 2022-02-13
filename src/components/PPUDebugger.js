@@ -7,6 +7,7 @@ import PPUSpritesDebugger from './PPUSpritesDebugger';
 import PPUVRAMDebugger from './PPUVRAMDebugger';
 import PPUScanlineDebugger from './PPUScanlineDebugger';
 import PPULogDebugger from './PPULogDebugger';
+import styles from './PPUDebugging.module.css';
 
 const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
   const options = useMemo(() => {
@@ -37,7 +38,7 @@ const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
   const [index, setIndex] = useState(0);
 
   return (
-    <div className="ppuDebugger">
+    <div className={styles.ppuDebugger}>
       <PPULogDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
       <br/><br/>
       <SegmentControl options={options} onClick={setIndex} currentIndex={index}/>

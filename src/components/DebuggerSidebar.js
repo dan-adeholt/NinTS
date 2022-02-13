@@ -11,6 +11,7 @@ import { step } from '../emulator/emulator';
 import { RunModeType } from '../App';
 import { setIsSteppingScanline } from '../emulator/ppu';
 import SegmentControl from './SegmentControl';
+import styles from './DebuggerSidebar.module.css';
 
 export const BREAKPOINTS_KEY = 'Breakpoints';
 
@@ -18,9 +19,9 @@ const allOpcodeNames = _.uniq(_.map(opcodeMetadata, 'name'));
 
 const getComponentStyle = (component) => {
   if (component.startsWith('0x')) {
-    return 'addressComponent';
+    return styles.addressComponent;
   } else if (allOpcodeNames.includes(component)) {
-    return 'opcodeComponent';
+    return styles.opcodeComponent;
   }
   return '';
 }
@@ -30,12 +31,12 @@ const AddressRow = React.memo(({ data, index, style }) => {
   // Disassemble line again to make sure memory values etc are updated
   const line = disassembleLine(data.emulator, item.address);
 
-  return <div style={ style } className={classNames("row", !data.running && item.address === data.emulator?.PC && "currentRow")}>
-    <div className={classNames("breakpoint", data.breakpoints[item.address] === true && "active")} onClick={() => data.toggleBreakpoint(item.address)}>
+  return <div style={ style } className={classNames(styles.row, !data.running && item.address === data.emulator?.PC && styles.currentRow)}>
+    <div className={classNames(styles.breakpoint, data.breakpoints[item.address] === true && styles.active)} onClick={() => data.toggleBreakpoint(item.address)}>
       <div/>
     </div>
     <div>
-      { line.map((component, idx) => (
+      { line && line.map((component, idx) => (
         <span key={idx} className={getComponentStyle(component)}>{ component } </span>
       ))
       }
@@ -194,7 +195,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   const options = useMemo(()=> ([
       {
         view: (
-          <div className="listContainer">
+          <div className={styles.listContainer}>
             <AutoSizer>
               { ({ width, height }) => (
                 <List
@@ -215,7 +216,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
         title: 'Instructions'
       },
     {
-      view: (<div className="breakpointContainer">
+      view: (<div className={styles.breakpointContainer}>
         { _.map(breakpoints, (breakpointState, breakpointAddress) => (
           <div key={breakpointAddress}>
             <input type="checkbox" onChange={() => toggleBreakpoint(breakpointAddress)} checked={breakpointState}/>
@@ -225,7 +226,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
           ))
         }
 
-        <div className="addBreakpoint">
+        <div className={styles.addBreakpoint}>
           <input type={"text"} value={newBreakpointAddress} onChange={e => {
             setNewBreakpointAddress(e.target.value)
           }}/>
@@ -237,11 +238,11 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
     ]), [lines, data, breakpoints, newBreakpointAddress, addBreakpoint, removeBreakpoint, toggleBreakpoint]);
 
   return (
-    <div className="instructionBar">
+    <div className={styles.instructionBar}>
       <SegmentControl onClick={setCurrentIndex} currentIndex={currentIndex} options={options} expand/>
 
 
-      <div className="debugArea">
+      <div className={styles.debugArea}>
         <button onClick={updateDebugger}><FontAwesomeIcon icon={faAlignCenter} size="lg"/></button>
         <button onClick={stopEmulator}><FontAwesomeIcon icon={faPause} size="lg"/></button>
         <button onClick={stepEmulator}><FontAwesomeIcon icon={faStepForward} size="lg"/></button>
