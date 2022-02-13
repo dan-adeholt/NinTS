@@ -1,19 +1,19 @@
 import React, { useMemo } from 'react';
 import _ from 'lodash';
-const PPUScanlineDebugger = ({ emulator, refresh }) => {
+import logger from '../emulator/logger';
+const PPUScanlineDebugger = ({ refresh }) => {
   const lines = useMemo(() => {
     _.noop(refresh);
-    if (emulator == null) {
-      return [];
-    }
+    const lines = logger.getLines();
+
     let ret = '';
 
-    for (let i = 0; i < emulator.ppu.frameDebug.length; i++) {
-      ret += emulator.ppu.frameDebug[i] + '\n';
+    for (let i = 0; i < lines.length; i++) {
+      ret += lines[i] + '\n';
     }
 
     return ret;
-  }, [emulator, refresh])
+  }, [refresh])
 
   return (
     <>

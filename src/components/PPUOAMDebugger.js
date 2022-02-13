@@ -34,7 +34,6 @@ const PPUOAMDebugger = ({ refresh, emulator}) => {
 
   return (
     <>
-      <h3>Sprites</h3>
       <div className="ppuOamDebugger">
 
         { lines.map((line, idx) => (

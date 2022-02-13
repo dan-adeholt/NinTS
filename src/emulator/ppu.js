@@ -1,6 +1,7 @@
 import { COLORS } from './constants';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
+import logger from './logger';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
@@ -462,7 +463,6 @@ class PPU {
         let shiftRegister1 = this.readPPUMem(chrIndex);
         let shiftRegister2 = this.readPPUMem(chrIndex + 8);
 
-
         for (let xp = x; xp < x + 8; xp++) {
           let c1;
           let c2;
@@ -686,6 +686,8 @@ class PPU {
     if (this.scanlineCycle === 0) {
       this.nmiOccurred = false;
     }
+
+    logger.clear();
 
     if (this.scanlineCycle === 0) {
       this.spriteZeroHit = false;
