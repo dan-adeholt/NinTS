@@ -142,7 +142,6 @@ const dumpObjectState = (state, prefix = '') => {
 }
 
 export const loadEmulator = (emulator, data) => {
-  console.log(data);
   readObjectState(emulator, data, '');
   emulator.mapper.reload();
 }
