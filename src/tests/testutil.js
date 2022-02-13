@@ -1,7 +1,7 @@
 import { parseROM } from '../emulator/parseROM';
 import { initMachine, readMem, reset, step, stepFrame } from '../emulator/emulator';
 import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging';
-import { PNG } from 'pngjs/browser';
+import { PNG } from 'pngjs';
 import _ from 'lodash';
 import fs from 'fs';
 
@@ -154,6 +154,7 @@ export const testPPURomWithImage = (location) => {
   const data = fs.readFileSync(romFile);
   const imgFile = romRootPath + location + '.png';
   const imgData = fs.readFileSync(imgFile);
+
   const png8 = PNG.sync.read(imgData);
   const png = new Uint32Array(png8.data.buffer);
 
