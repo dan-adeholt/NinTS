@@ -1,10 +1,17 @@
 import { hex, hex16, stateToString } from './stateLogging';
-import { opcodeTable, opcodeMetadata, OAM_DMA } from './cpu';
+import { OAM_DMA, opcodeMetadata, opcodeTable } from './cpu';
 
 import PPU from './ppu';
 import { nmi } from './instructions/stack';
 import parseMapper from './mappers/parseMapper';
 import _ from 'lodash';
+import APU from './apu';
+
+const NTSC_CPU_CYCLES_PER_SECOND = 1789773;
+const SAMPLE_RATE = 48000;
+export const AUDIO_BUFFER_SIZE = 512;
+
+const CPU_CYCLES_PER_SAMPLE = NTSC_CPU_CYCLES_PER_SECOND / SAMPLE_RATE;
 
 const getResetVectorAddress = state => {
   return readMem(state, 0xFFFC) + (readMem(state, 0xFFFD) << 8);
@@ -33,6 +40,8 @@ export const initMachine = (rom, enableTraceLogging = false) => {
 
   const startingLocation = mapper.cpuMemory.read(0xFFFC) + (mapper.cpuMemory.read(0xFFFD) << 8);
 
+  const apu = new APU();
+
   let state = {
     A: 0,
     X: 0,
@@ -50,6 +59,7 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     CYC: -1,
     settings: rom.settings,
     breakpoints: {},
+    apu,
     ppu,
     nmiCounter: null,
     traceLogLines: [],
@@ -59,7 +69,12 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     controller2Latch: 0,
     enableTraceLogging,
     rom,
-    lastNMI: null
+    lastNMI: null,
+    apuSampleBucket: 0,
+    audioSampleBufferIndex: 0,
+    audioSampleBuffer: new Array(AUDIO_BUFFER_SIZE * 8),
+    numAudioSamplesRead: 0,
+    numAudioSampleBuffersPending: 0
   };
 
   // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
@@ -212,6 +227,8 @@ export const readMem = (state, addr, peek = false) => {
     return ret;
   } else if (addr === 0x4016 || addr === 0x4017) {
     return readControllerMem(state, addr, peek);
+  } else if (addr >= 0x4000 && addr <= 0x4016) {
+    return state.apu.readAPURegisterMem(addr);
   } else {
     return state.mapper.cpuMemory.read(addr);
   }
@@ -260,6 +277,8 @@ export const setMem = (state, addr, value) => {
     state.ppu.setPPURegisterMem(addr, value);
   } else if (addr === 0x4016 || addr === 0x4017) {
     setInputMem(state, addr, value);
+  } else if (addr >= 0x4000 && addr <= 0x4016) {
+    state.apu.setAPURegisterMem(addr, value);
   } else if (addr >= 0x8000 && addr < 0xFFFF) {
     state.mapper.handleROMWrite(addr, value);
   } else {
@@ -277,10 +296,28 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
   let hitBreakpoint = false;
   let vblankCount = state.ppu.vblankCount;
 
+
   let prevScanline = state.ppu.scanline;
   while (!hitBreakpoint && vblankCount === state.ppu.vblankCount) {
+    let numCycles = state.CYC;
     if (!step(state)) {
       break;
+    }
+
+    let elapsedCycles = state.CYC - numCycles ;
+
+    state.apuSampleBucket += elapsedCycles;
+
+    while (state.apuSampleBucket > CPU_CYCLES_PER_SAMPLE) {
+      state.audioSampleBuffer[state.audioSampleBufferIndex] = state.apu.readSampleValue();
+      state.audioSampleBufferIndex = (state.audioSampleBufferIndex + 1) % state.audioSampleBuffer.length;
+      state.apuSampleBucket -= CPU_CYCLES_PER_SAMPLE;
+
+      state.numAudioSamplesRead++;
+      if (state.numAudioSamplesRead > AUDIO_BUFFER_SIZE) {
+        state.numAudioSamplesRead -= AUDIO_BUFFER_SIZE;
+        state.numAudioSampleBuffersPending++;
+      }
     }
 
     hitBreakpoint = state.PC in state.breakpoints;
@@ -294,6 +331,7 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
 
 const _updatePPUAndHandleNMI = (state) => {
   state.ppu.updatePPU(state.masterClock - state.ppuOffset);
+  state.apu.update(state.masterClock - state.ppuOffset);
 
   // From NESDEV:
   // The NMI input is connected to an edge detector. This edge detector polls the status of the NMI line during φ2 of each
@@ -326,6 +364,7 @@ export const startReadTick = (state) => {
   state.masterClock += state.cpuHalfStep - 1;
   state.prevNmiOccurred = state.ppu.nmiOccurred;
   state.ppu.updatePPU(state.masterClock - state.ppuOffset);
+  state.apu.update(state.masterClock - state.ppuOffset);
 }
 
 export const endReadTick = (state) => {
@@ -338,6 +377,7 @@ export const startWriteTick = (state) => {
   state.masterClock += state.cpuHalfStep + 1;
   state.prevNmiOccurred = state.ppu.nmiOccurred;
   state.ppu.updatePPU(state.masterClock - state.ppuOffset);
+  state.apu.update(state.masterClock - state.ppuOffset);
 }
 
 export const endWriteTick = (state) => {

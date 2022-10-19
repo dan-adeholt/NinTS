@@ -41,6 +41,9 @@ const KeyTable = {
 
 const frameLength = 1000.0 / 60.0;
 
+let AUDIO_CURSOR = 0;
+const AUDIO_BUFFER_SIZE = 512;
+
 function App() {
   const [runMode, setRunMode] = useState(RunModeType.STOPPED);
   const [title, setTitle] = useState("No file selected");
@@ -49,10 +52,6 @@ function App() {
 
   const canvasRef = useRef();
   const [display, setDisplay] = useState({ imageData: null, framebuffer: null, context: null });
-
-  const handleGameInput = useCallback(e => {
-
-  }, []);
 
   const [keyListeners, setKeyListeners] = useState([]);
 
@@ -67,13 +66,6 @@ function App() {
     setKeyListeners(oldListeners => _.without(oldListeners, listener));
   }, []);
 
-  useEffect(() => {
-    addKeyListener(handleGameInput);
-
-    return () => {
-      removeKeyListener(handleGameInput);
-    }
-  }, [handleGameInput, addKeyListener, removeKeyListener]);
 
   const handleKeyEvent = useCallback(e => {
     if (e.target.type === 'text') {
@@ -94,6 +86,45 @@ function App() {
     console.log(e);
   }, []);
 
+  const stopAudioContext = useCallback(() => {
+    console.log('Stop audio context');
+  }, []);
+
+  const audioCallback = useCallback(event => {
+    const destination = event.outputBuffer;
+    const leftChannel = destination.getChannelData(0);
+    const rightChannel = destination.getChannelData(1);
+
+    if (emulator == null) {
+      return;
+    }
+
+    if (emulator.numAudioSampleBuffersPending === 0) {
+      console.log('No samples available bailing');
+      return;
+    }
+
+    for(let i = 0; i < AUDIO_BUFFER_SIZE; i++){
+      let sample = emulator.audioSampleBuffer[AUDIO_CURSOR];
+      leftChannel[i] = sample;
+      rightChannel[i] = sample;
+
+      AUDIO_CURSOR = (AUDIO_CURSOR + 1) % emulator.audioSampleBuffer.length;
+    }
+
+    emulator.numAudioSampleBuffersPending--;
+  }, [emulator]);
+
+  const initAudioContext = useCallback(() => {
+    console.log('Init audio context');
+    // Setup audio.
+    const audio_ctx = new window.AudioContext();
+    console.log('Sample rate:', audio_ctx.sampleRate);
+    const script_processor = audio_ctx.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
+    script_processor.onaudioprocess = audioCallback;
+    script_processor.connect(audio_ctx.destination);
+  }, [audioCallback]);
+
   useEffect(() => {
     document.addEventListener('keydown', handleKeyEvent);
     document.addEventListener('keyup', handleKeyEvent);
@@ -104,7 +135,7 @@ function App() {
       document.removeEventListener('keyup', handleKeyEvent);
       window.removeEventListener('gamepadconnected', handleGamepad);
     }
-  }, [handleKeyEvent, handleGamepad])
+  }, [handleKeyEvent, handleGamepad, audioCallback])
 
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
@@ -214,15 +245,20 @@ function App() {
   const [refresh, setRefresh] = useState(false);
   const triggerRefresh = useCallback(() => setRefresh(s => !s), []);
 
+
+
+
   useEffect(() => {
     triggerRefresh();
   }, [runMode, triggerRefresh]);
 
-
   return (
     <div className={styles.app}>
+
       <DebuggerSidebar
         emulator={emulator}
+        initAudioContext={initAudioContext}
+        stopAudioContext={stopAudioContext}
         runMode={runMode}
         setRunMode={setRunMode}
         onRefresh={triggerRefresh}
@@ -231,6 +267,7 @@ function App() {
         removeKeyListener={removeKeyListener}
       />
       <div className={styles.content}>
+
         <h1>{ title }</h1>
         <input type="file" onChange={romFileChanged} />
         { emulator && (

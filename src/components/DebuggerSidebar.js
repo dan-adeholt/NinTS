@@ -44,7 +44,7 @@ const AddressRow = React.memo(({ data, index, style }) => {
   </div>
 });
 
-const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, addKeyListener, removeKeyListener }) => {
+const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, addKeyListener, removeKeyListener, initAudioContext, stopAudioContext }) => {
   const [lines, setLines] = useState([]);
   const [breakpoints, setBreakpoints] = useState(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
   const [currentStep, setCurrentStep] = useState(0);
@@ -99,7 +99,9 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   const runEmulator = useCallback(() => {
     setRunMode(RunModeType.RUNNING);
     setCurrentStep(s => s + 1);
-  }, [setRunMode, setCurrentStep]);
+
+    initAudioContext();
+  }, [setRunMode, setCurrentStep, initAudioContext]);
 
   const runEmulatorFrame = useCallback(() => {
     setRunMode(RunModeType.RUNNING_SINGLE_FRAME);
@@ -119,7 +121,9 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
     _.defer(() => {
       updateDebugger();
     })
-  }, [updateDebugger, setRunMode, setCurrentStep]);
+
+    stopAudioContext();
+  }, [updateDebugger, setRunMode, setCurrentStep, stopAudioContext]);
 
   // Sync breakpoints with emulator
   useEffect(() => {
