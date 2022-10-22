@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { initMachine, step } from '../emulator/emulator';
 import { hex } from '../emulator/stateLogging';
 import { prefixLine } from '../tests/testutil';
 import styles from './PPUDebugging.module.css';
@@ -37,12 +36,12 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
 
     if (!dumpingState.current.initialized) {
       dumpingState.current.initialized = true;
-      Object.assign(emulator, initMachine(emulator.rom, true));
+      Object.assign(emulator, emulator.initMachine(emulator.rom, true));
     }
 
     while (isMatching && lineIndex < lines.length) {
       if (lineIndex >= emulator.traceLogLines.length) {
-        step(emulator);
+        emulator.step();
       }
 
       let stateString = emulator.traceLogLines[lineIndex];
@@ -100,7 +99,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
     const startCyc = emulator.CYC;
 
     for (let i = 0; i < 10_500_000; i++) {
-     step(emulator);
+     emulator.step();
     }
 
     emulator.ppu.disabled = false;

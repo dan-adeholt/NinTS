@@ -1,5 +1,5 @@
 import { parseROM } from '../emulator/parseROM';
-import { initMachine, readMem, reset, step, stepFrame } from '../emulator/emulator';
+import Emulator from '../emulator/emulator';
 import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging';
 import { PNG } from 'pngjs';
 import _ from 'lodash';
@@ -16,7 +16,8 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
   const log = parseLog(fs.readFileSync(romRootPath + logPath));
 
   const rom = parseROM(data);
-  const state = initMachine(rom, true);
+  const state = new Emulator();
+  state.initMachine(rom, true);
 
   if (adjustState != null) {
     adjustState(state);
@@ -32,7 +33,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
     }
 
     if (i >= state.traceLogLines.length) {
-      if (!step(state)) {
+      if (!state.step()) {
         break;
       }
     }
@@ -68,7 +69,8 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
 export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruction = -1) => {
   const data = fs.readFileSync(romRootPath + location);
   const rom = parseROM(data);
-  const state = initMachine(rom);
+  const state = new Emulator();
+  state.initMachine(rom);
 
   let stateValid = true;
   let hasBeenRunning = false;
@@ -87,25 +89,25 @@ export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruc
       break;
     }
 
-    const emulatorStatus = step(state);
+    const emulatorStatus = state.step();
     if (!emulatorStatus) {
       // Too slow to invoke for each case
       expect(emulatorStatus).toEqual(true);
     }
 
-    const status = readMem(state, 0x6000);
+    const status = state.readMem(0x6000);
 
     if (hasBeenRunning) {
       if (status === 0x80) {
         // Test is running
       } else if(status === 0x81) {
-        reset(state);
+        state.reset();
       } else {
         if (status !== 0x00) {
           let testText = '';
 
-          for (let i = 0x6004; readMem(state, i) !== 0; i++) {
-            testText += String.fromCharCode(readMem(state, i));
+          for (let i = 0x6004; state.readMem(i) !== 0; i++) {
+            testText += String.fromCharCode(state.readMem(i));
           }
 
           console.error('[' + i + '] Failed with status: ', hex(status) + ' - ' + testText);
@@ -129,10 +131,11 @@ export const testPPURom = (location, testCase) => {
 
   const data = fs.readFileSync(romFile);
   const rom = parseROM(data);
-  let state = initMachine(rom);
+  let state = new Emulator();
+  state.initMachine(rom);
 
   for (let i = 0; i < 4; i++) {
-    stepFrame(state);
+    state.stepFrame();
   }
 
   testCase(state);
@@ -159,10 +162,11 @@ export const testPPURomWithImage = (location) => {
   const png = new Uint32Array(png8.data.buffer);
 
   const rom = parseROM(data);
-  let state = initMachine(rom);
+  let state = new Emulator();
+  state.initMachine(rom);
 
   for (let i = 0; i < 5; i++) {
-    stepFrame(state);
+    state.stepFrame();
   }
 
   const visibleBuffer = convertBufferToVisibleArea(state.ppu.framebuffer);

@@ -1,7 +1,6 @@
 import { onSamePageBoundary, readByte, readWord, writeByte } from '../memory';
 import { performADC, performAND, performEOR, performORA, performSBC } from './arithmetic';
 import { asl, dec, lsr, performLSR, performRMWA, rol, ror } from './readmodifywrite';
-import { dummyReadTick } from '../emulator';
 import { BIT_7_MASK, isNegative, P_REG_CARRY, setCarry, setOverflowValue, setZeroNegative } from './util';
 import { performCompare } from './compare';
 
@@ -16,7 +15,7 @@ const s_a = (state, offset, register) => {
     hi = (hi + 1) & 0xFF;
     writeByte(state, address, register & hi);
   } else {
-    dummyReadTick(state);
+    state.dummyReadTick();
   }
 
   state.PC += 2;
@@ -61,7 +60,7 @@ export const arr = (state, address) => {
 // ISB - Add one to value at memory, then subtract that value from accumulator
 export const isb = (state, address) => {
   let value = (readByte(state, address) + 1) & 0xFF;
-  dummyReadTick(state);
+  state.dummyReadTick();
   writeByte(state, address, value);
   performSBC(state, value);
 }

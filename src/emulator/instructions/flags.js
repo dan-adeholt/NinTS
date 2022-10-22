@@ -8,12 +8,11 @@ import {
   P_MASK_INTERRUPT,
   P_MASK_OVERFLOW, P_REG_CARRY, P_REG_DECIMAL, P_REG_INTERRUPT
 } from './util';
-import { endReadTick, startReadTick } from '../emulator';
 
 const setFlags = (state, p) => {
-  startReadTick(state);
+  state.startReadTick();
   state.P = p;
-  endReadTick(state);
+  state.endReadTick();
 }
 
 export const clc = state => setFlags(state, state.P & P_MASK_CARRY);

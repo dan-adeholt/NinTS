@@ -1,17 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
-import {
-  localStorageAutoloadEnabled,
-  loadEmulatorFromLocalStorage,
-  saveEmulatorToLocalStorage, setLocalStorageAutoloadEnabled
-} from '../emulator/emulator';
 import styles from './PPUDebugging.module.css';
+import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from '../emulator/emulator';
 
 const EmulatorControls = ({ emulator }) => {
-  const saveState = useCallback(() => saveEmulatorToLocalStorage(emulator), [emulator]);
-  const loadState = useCallback(() => loadEmulatorFromLocalStorage(emulator), [emulator]);
+  const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);
+  const loadState = useCallback(() => emulator.loadEmulatorFromLocalStorage(), [emulator]);
 
-  const [autoloadEnabled, setAutoloadEnabled] = useState(localStorageAutoloadEnabled);
+  const [autoloadEnabled, setAutoloadEnabled] = useState(localStorageAutoloadEnabled());
 
   const changeAutoloadEnabled = useCallback(() => {
     setAutoloadEnabled(!autoloadEnabled);

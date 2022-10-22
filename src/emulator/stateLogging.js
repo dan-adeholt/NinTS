@@ -22,7 +22,6 @@ import {
   P_REG_ZERO,
 } from './instructions/util';
 import { onSamePageBoundary, PAGE_MASK } from './memory';
-import { readMem } from './emulator';
 import _ from 'lodash';
 
 export const peekMem = (state, address) => {
@@ -31,12 +30,12 @@ export const peekMem = (state, address) => {
     // TODO: Perhaps actually return these values from readMem?
     return address >> 8;
   } else {
-    return readMem(state, address, true);
+    return state.readMem(address, true);
   }
 }
 
 export const absoluteAddress = (state, pc) => {
-  return readMem(state, pc + 1) + (readMem(state, pc + 2) << 8);
+  return state.readMem(pc + 1) + (state.readMem(pc + 2) << 8);
 }
 
 const HEX_PREFIX = '$';
@@ -163,7 +162,7 @@ const appendStateRegisters = (state, str) => {
 
 export const stateToString = (state) => {
   let str = hex16(state.PC) + ' ';
-  const opcode = readMem(state, state.PC);
+  const opcode = state.readMem(state.PC);
   let hexPrefix = '$';
   str += hex(opcode, hexPrefix);
   str += ' ';
@@ -174,7 +173,7 @@ export const stateToString = (state) => {
     const instructionSize = InstructionLengthTranslation[mode];
 
     for (let i = 0; i < instructionSize - 1; i++) {
-      str += hex(readMem(state, state.PC + 1 + i), hexPrefix) + ' ';
+      str += hex(state.readMem(state.PC + 1 + i), hexPrefix) + ' ';
     }
 
     str = str.padEnd(17, ' ');

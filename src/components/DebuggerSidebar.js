@@ -7,7 +7,6 @@ import { disassemble, disassembleLine, hex } from '../emulator/stateLogging';
 import classNames from 'classnames';
 import _ from 'lodash';
 import { opcodeMetadata } from '../emulator/cpu';
-import { step } from '../emulator/emulator';
 import { RunModeType } from '../App';
 import { setIsSteppingScanline } from '../emulator/ppu';
 import SegmentControl from './SegmentControl';
@@ -53,7 +52,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   const [newBreakpointAddress, setNewBreakpointAddress] = useState('');
 
   const stepEmulator = useCallback(() => {
-    step(emulator);
+    emulator.step();
     setCurrentStep(s => s + 1);
     onRefresh();
   }, [emulator, onRefresh]);

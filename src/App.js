@@ -2,16 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './App.module.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
-import {
+import Emulator, {
   AUDIO_BUFFER_SIZE,
-  initMachine,
   INPUT_A,
   INPUT_B,
   INPUT_DOWN,
   INPUT_LEFT,
   INPUT_RIGHT, INPUT_SELECT, INPUT_START,
-  INPUT_UP, SAMPLE_RATE, setInputController,
-  stepFrame
+  INPUT_UP, SAMPLE_RATE
 } from './emulator/emulator';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
@@ -74,7 +72,7 @@ function App() {
     }
 
     if (e.key in KeyTable) {
-      setInputController(emulator, KeyTable[e.key], e.type === 'keydown');
+      emulator.setInputController(KeyTable[e.key], e.type === 'keydown');
       e.preventDefault();
     }
 
@@ -135,7 +133,8 @@ function App() {
 
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
-    const newEmulator = initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+    const newEmulator = new Emulator();
+    newEmulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
     setEmulator(newEmulator);
   }, [audioBuffer]);
 
@@ -181,17 +180,17 @@ function App() {
         const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
 
 
-        setInputController(emulator, INPUT_RIGHT, a0 > 0 && deg >= 0.125);
-        setInputController(emulator, INPUT_LEFT, a0 < 0 && deg >= 0.125);
-        setInputController(emulator, INPUT_UP, a1 < 0 && deg <= 0.325);
-        setInputController(emulator, INPUT_DOWN, a1 > 0 && deg <= 0.325);
-        setInputController(emulator, INPUT_START, gamepad.buttons[8].pressed);
-        setInputController(emulator, INPUT_SELECT, gamepad.buttons[9].pressed);
-        setInputController(emulator, INPUT_A, gamepad.buttons[1].pressed);
-        setInputController(emulator, INPUT_B, gamepad.buttons[0].pressed);
+        emulator.setInputController(INPUT_RIGHT, a0 > 0 && deg >= 0.125);
+        emulator.setInputController(INPUT_LEFT, a0 < 0 && deg >= 0.125);
+        emulator.setInputController(INPUT_UP, a1 < 0 && deg <= 0.325);
+        emulator.setInputController(INPUT_DOWN, a1 > 0 && deg <= 0.325);
+        emulator.setInputController(INPUT_START, gamepad.buttons[8].pressed);
+        emulator.setInputController(INPUT_SELECT, gamepad.buttons[9].pressed);
+        emulator.setInputController(INPUT_A, gamepad.buttons[1].pressed);
+        emulator.setInputController(INPUT_B, gamepad.buttons[0].pressed);
       }
 
-      if (stepFrame(emulator, runMode === RunModeType.RUNNING_SINGLE_SCANLINE) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
+      if (emulator.stepFrame(runMode === RunModeType.RUNNING_SINGLE_SCANLINE) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
         // Hit breakpoint
         setRunMode(RunModeType.STOPPED);
         setIsSteppingScanline(false);

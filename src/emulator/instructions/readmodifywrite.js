@@ -3,19 +3,18 @@
  */
 import { BIT_7, BIT_7_MASK, P_REG_CARRY, setCarry, setZeroNegative } from './util';
 import { readByte, writeByte } from '../memory';
-import { endReadTick, startReadTick } from '../emulator';
 
 export const performRMWA = (state, value) => {
-  startReadTick(state);
+  state.startReadTick();
   setZeroNegative(state, value);
   state.A = value;
-  endReadTick(state);
+  state.endReadTick();
 }
 
 const performRMW = (state, address, value) => {
-  startReadTick(state);
+  state.startReadTick();
   setZeroNegative(state, value);
-  endReadTick(state);
+  state.endReadTick();
   return writeByte(state, address, value);
 }
 
