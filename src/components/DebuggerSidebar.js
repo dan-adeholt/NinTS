@@ -99,7 +99,6 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   const runEmulator = useCallback(() => {
     setRunMode(RunModeType.RUNNING);
     setCurrentStep(s => s + 1);
-
     initAudioContext();
   }, [setRunMode, setCurrentStep, initAudioContext]);
 

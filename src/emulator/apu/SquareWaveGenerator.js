@@ -1,3 +1,5 @@
+import { lengthLookup } from './apuConstants';
+
 const sequences = [
   [0, 1, 0, 0, 0, 0, 0, 0],
   [0, 1, 1, 0, 0, 0, 0, 0],
@@ -5,13 +7,10 @@ const sequences = [
   [1, 0, 0, 1, 1, 1, 1, 1]
 ];
 
-
-const lengthLookup = [
-  0x0A, 0xFE, 0x14, 0x02, 0x28, 0x04, 0x50, 0x06, 0xA0, 0x08, 0x3C, 0x0A, 0x0E, 0x0C, 0x1A, 0x0E, 0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16, 0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E
-];
-
 export default class SquareWaveGenerator {
-  constructor() {
+  constructor(index) {
+    this.isEnabled = false;
+    this.index = index;
     this.sequence = sequences[0];
     this.haltCounterOrEnvelopeLoop = false;
     this.constantVolume = false;
@@ -28,6 +27,14 @@ export default class SquareWaveGenerator {
     this.startFlag = false;
     this.envelopeDividerPeriod = 0;
     this.decayLevelCounter = 15;
+
+    this.sweepEnabled  = false;
+    this.sweepPeriod = 0;
+    this.sweepNegate = false;
+    this.sweepShift = 0;
+    this.sweepMutesChannel = false;
+    this.sweepDivider = 0;
+    this.sweepReloadFlag = false;
   }
 
   updateEnvelope() {
@@ -48,15 +55,41 @@ export default class SquareWaveGenerator {
         }
       }
     }
-
   }
 
   updateLengthCounterAndSweepUnit() {
     if (!this.haltCounterOrEnvelopeLoop) {
       this.lengthCounter--;
+
       if (this.lengthCounter < 0) {
         this.lengthCounter = 0;
       }
+    }
+
+    let targetPeriod = this.timerSetting;
+    if (this.sweepDivider === 0 && this.sweepEnabled) {
+      let targetPeriodOffset = (this.timerSetting >> this.sweepShift);
+      if (this.sweepNegate) {
+        targetPeriodOffset = -targetPeriodOffset;
+        if (this.index === 0) {
+          targetPeriodOffset--; // Pulse 1 (index 0) adds the ones' complement (−c − 1). Making 20 negative produces a change amount of −21.
+        }
+      }
+
+      targetPeriod = this.timerSetting + targetPeriodOffset;
+    }
+
+
+    this.sweepMutesChannel = (targetPeriod > 0x7FF) || (this.timerSetting < 8);
+
+    if (!this.sweepMutesChannel) {
+      this.timerSetting = targetPeriod;
+    }
+
+    if (this.sweepReloadFlag || this.sweepDivider === 0) {
+      this.sweepDivider = this.sweepPeriod;
+    } else {
+      this.sweepDivider--;
     }
   }
 
@@ -65,7 +98,7 @@ export default class SquareWaveGenerator {
       this.numBailed1++;
     }
 
-    if ((!this.haltCounterOrEnvelopeLoop && this.lengthCounter === 0) || this.timerSetting < 8) {
+    if (!this.isEnabled || (!this.haltCounterOrEnvelopeLoop && this.lengthCounter === 0) || this.sweepMutesChannel) {
       this.curOutputValue = 0;
     }
     else if (--this.timerValue <= -1) {
@@ -102,13 +135,20 @@ export default class SquareWaveGenerator {
         this.haltCounterOrEnvelopeLoop = lengthCounterHalt === 1;
         this.constantVolume = constantVolume === 1;
         this.volumeOrEnvelopePeriod = volumeEnvelope;
-        // if (print) console.log(unit, 'SEQ', this.sequence, 'HC:', this.haltCounter, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
+        // if (this.volumeOrEnvelopePeriod != 0) {
+        //   if (--debug) console.log('Sq lc', this.index, this.lengthCounter, this.volumeOrEnvelopePeriod);
+        // }
+        // if (--debug) console.log(this.index, 'SEQ', this.sequence, 'HC:', this.haltCounterOrEnvelopeLoop, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
         break;
       case 1: // Sweep setup
-        // const sweepEnabled  =     (value & 0b10000000) >> 7;
-        // const sweepPeriod =       (value & 0b01110000) >> 4;
-        // const sweepNegate =       (value & 0b00001000) >> 3;
-        // const sweepShift =        (value & 0b00000111);
+        this.sweepEnabled  =     ((value & 0b10000000) >> 7) === 1;
+        this.sweepPeriod =       (value & 0b01110000) >> 4;
+        this.sweepNegate =       ((value & 0b00001000) >> 3) === 1;
+        this.sweepShift =        (value & 0b00000111);
+        this.sweepReloadFlag = true;
+        if (this.sweepEnabled) {
+
+        }
         break;
       case 2: // Timer low 8 bits
         this.timerLow = value;
@@ -118,9 +158,11 @@ export default class SquareWaveGenerator {
       case 3: // Length counter load and timer high 3 bits
         this.timerHigh =         (value & 0b00000111);
         this.timerSetting = (this.timerHigh << 8) | this.timerLow;
-        this.lengthCounter = lengthLookup[(value & 0b11111000) >> 3];
+        const timerIndex = (value & 0b11111000) >> 3;
+        this.lengthCounter = lengthLookup[timerIndex];
         this.timerValue = this.timerSetting;
         this.startFlag = true;
+        // console.log('Set square', this.index, timerIndex, this.lengthCounter);
         // if (print) console.log(unit, 'TH, TS:', this.timerSetting, 'LC:', this.lengthCounter, '|', this.numSamplesGenerated, this.numBailed1);
         // console.log('TH', this.timerHigh, 'TV', this.timerValue);
         // console.log('LC', this.lengthCounter);
@@ -128,6 +170,13 @@ export default class SquareWaveGenerator {
       default:
         break;
     }
+  }
 
+  setEnabled(isEnabled) {
+    this.isEnabled = isEnabled;
+    if (!this.isEnabled) {
+      this.timerValue = 0;
+      this.curOutputValue = 0;
+    }
   }
 }

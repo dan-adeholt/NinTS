@@ -1,15 +1,16 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './App.module.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
 import {
+  AUDIO_BUFFER_SIZE,
   initMachine,
   INPUT_A,
   INPUT_B,
   INPUT_DOWN,
   INPUT_LEFT,
   INPUT_RIGHT, INPUT_SELECT, INPUT_START,
-  INPUT_UP, setInputController,
+  INPUT_UP, SAMPLE_RATE, setInputController,
   stepFrame
 } from './emulator/emulator';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
@@ -17,6 +18,7 @@ import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
 import PPUDebugger from './components/PPUDebugger';
 import EmulatorControls from './components/EmulatorControls';
+import AudioBuffer from './AudioBuffer';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
 const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
@@ -41,12 +43,11 @@ const KeyTable = {
 
 const frameLength = 1000.0 / 60.0;
 
-let AUDIO_CURSOR = 0;
-const AUDIO_BUFFER_SIZE = 512;
-
 function App() {
   const [runMode, setRunMode] = useState(RunModeType.STOPPED);
   const [title, setTitle] = useState("No file selected");
+  const audioBuffer = useMemo(() => new AudioBuffer(), []);
+
   const startTime = useRef(performance.now());
   const [emulator, setEmulator] = useState(null);
 
@@ -86,44 +87,38 @@ function App() {
     console.log(e);
   }, []);
 
+  const audioRef = useRef(null);
+
   const stopAudioContext = useCallback(() => {
-    console.log('Stop audio context');
+    if (audioRef.current) {
+      console.log('Stop audio context');
+      audioRef.current.script_processor.disconnect(audioRef.current.audio_ctx.destination);
+      audioRef.current = null;
+    }
   }, []);
 
-  const audioCallback = useCallback(event => {
-    const destination = event.outputBuffer;
-    const leftChannel = destination.getChannelData(0);
-    const rightChannel = destination.getChannelData(1);
-
-    if (emulator == null) {
-      return;
-    }
-
-    if (emulator.numAudioSampleBuffersPending === 0) {
-      console.log('No samples available bailing');
-      return;
-    }
-
-    for(let i = 0; i < AUDIO_BUFFER_SIZE; i++){
-      let sample = emulator.audioSampleBuffer[AUDIO_CURSOR];
-      leftChannel[i] = sample;
-      rightChannel[i] = sample;
-
-      AUDIO_CURSOR = (AUDIO_CURSOR + 1) % emulator.audioSampleBuffer.length;
-    }
-
-    emulator.numAudioSampleBuffersPending--;
-  }, [emulator]);
 
   const initAudioContext = useCallback(() => {
+    stopAudioContext();
     console.log('Init audio context');
     // Setup audio.
-    const audio_ctx = new window.AudioContext();
+    const audio_ctx = new window.AudioContext({ sampleRate: SAMPLE_RATE });
+
+    audio_ctx.onstatechange = e => {
+      console.log(e);
+    }
+
     console.log('Sample rate:', audio_ctx.sampleRate);
     const script_processor = audio_ctx.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
-    script_processor.onaudioprocess = audioCallback;
+    script_processor.onaudioprocess = event => audioBuffer.writeToDestination(event.outputBuffer);
     script_processor.connect(audio_ctx.destination);
-  }, [audioCallback]);
+
+    audioRef.current = {
+      script_processor,
+      audio_ctx
+    };
+  }, [stopAudioContext, audioBuffer]);
+
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyEvent);
@@ -135,13 +130,14 @@ function App() {
       document.removeEventListener('keyup', handleKeyEvent);
       window.removeEventListener('gamepadconnected', handleGamepad);
     }
-  }, [handleKeyEvent, handleGamepad, audioCallback])
+
+    }, [handleKeyEvent, handleGamepad])
 
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
-    const newEmulator = initMachine(rom);
+    const newEmulator = initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
     setEmulator(newEmulator);
-  }, []);
+  }, [audioBuffer]);
 
   const handleFileRead = useCallback(event => {
     const buf = new Uint8Array(event.target.result);
@@ -244,9 +240,6 @@ function App() {
 
   const [refresh, setRefresh] = useState(false);
   const triggerRefresh = useCallback(() => setRefresh(s => !s), []);
-
-
-
 
   useEffect(() => {
     triggerRefresh();

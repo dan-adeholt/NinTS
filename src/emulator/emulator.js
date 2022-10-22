@@ -8,8 +8,8 @@ import _ from 'lodash';
 import APU from './apu';
 
 const NTSC_CPU_CYCLES_PER_SECOND = 1789773;
-const SAMPLE_RATE = 48000;
-export const AUDIO_BUFFER_SIZE = 512;
+export const SAMPLE_RATE = 48000;
+export const AUDIO_BUFFER_SIZE = 4096;
 
 const CPU_CYCLES_PER_SAMPLE = NTSC_CPU_CYCLES_PER_SECOND / SAMPLE_RATE;
 
@@ -28,7 +28,7 @@ export const INPUT_RIGHT    = 0b10000000;
 
 export const LOCAL_STORAGE_KEY_AUTOLOAD = 'setting-autoload';
 
-export const initMachine = (rom, enableTraceLogging = false) => {
+export const initMachine = (rom, enableTraceLogging = false, audioSampleCallback) => {
   const cpuStep = 12;
   const cpuHalfStep = cpuStep / 2;
 
@@ -71,10 +71,7 @@ export const initMachine = (rom, enableTraceLogging = false) => {
     rom,
     lastNMI: null,
     apuSampleBucket: 0,
-    audioSampleBufferIndex: 0,
-    audioSampleBuffer: new Array(AUDIO_BUFFER_SIZE * 8),
-    numAudioSamplesRead: 0,
-    numAudioSampleBuffersPending: 0
+    audioSampleCallback
   };
 
   // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
@@ -277,7 +274,7 @@ export const setMem = (state, addr, value) => {
     state.ppu.setPPURegisterMem(addr, value);
   } else if (addr === 0x4016 || addr === 0x4017) {
     setInputMem(state, addr, value);
-  } else if (addr >= 0x4000 && addr <= 0x4016) {
+  } else if (addr >= 0x4000 && addr <= 0x4017) {
     state.apu.setAPURegisterMem(addr, value);
   } else if (addr >= 0x8000 && addr < 0xFFFF) {
     state.mapper.handleROMWrite(addr, value);
@@ -309,15 +306,8 @@ export const stepFrame = (state, breakAfterScanlineChange) => {
     state.apuSampleBucket += elapsedCycles;
 
     while (state.apuSampleBucket > CPU_CYCLES_PER_SAMPLE) {
-      state.audioSampleBuffer[state.audioSampleBufferIndex] = state.apu.readSampleValue();
-      state.audioSampleBufferIndex = (state.audioSampleBufferIndex + 1) % state.audioSampleBuffer.length;
+      state.audioSampleCallback?.(state.apu.readSampleValue());
       state.apuSampleBucket -= CPU_CYCLES_PER_SAMPLE;
-
-      state.numAudioSamplesRead++;
-      if (state.numAudioSamplesRead > AUDIO_BUFFER_SIZE) {
-        state.numAudioSamplesRead -= AUDIO_BUFFER_SIZE;
-        state.numAudioSampleBuffersPending++;
-      }
     }
 
     hitBreakpoint = state.PC in state.breakpoints;
