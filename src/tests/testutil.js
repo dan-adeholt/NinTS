@@ -1,5 +1,5 @@
 import { parseROM } from '../emulator/parseROM';
-import Emulator from '../emulator/emulator';
+import EmulatorState from '../emulator/EmulatorState';
 import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging';
 import { PNG } from 'pngjs';
 import _ from 'lodash';
@@ -16,7 +16,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
   const log = parseLog(fs.readFileSync(romRootPath + logPath));
 
   const rom = parseROM(data);
-  const state = new Emulator();
+  const state = new EmulatorState();
   state.initMachine(rom, true);
 
   if (adjustState != null) {
@@ -69,7 +69,7 @@ export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
 export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruction = -1) => {
   const data = fs.readFileSync(romRootPath + location);
   const rom = parseROM(data);
-  const state = new Emulator();
+  const state = new EmulatorState();
   state.initMachine(rom);
 
   let stateValid = true;
@@ -131,7 +131,7 @@ export const testPPURom = (location, testCase) => {
 
   const data = fs.readFileSync(romFile);
   const rom = parseROM(data);
-  let state = new Emulator();
+  let state = new EmulatorState();
   state.initMachine(rom);
 
   for (let i = 0; i < 4; i++) {
@@ -162,7 +162,7 @@ export const testPPURomWithImage = (location) => {
   const png = new Uint32Array(png8.data.buffer);
 
   const rom = parseROM(data);
-  let state = new Emulator();
+  let state = new EmulatorState();
   state.initMachine(rom);
 
   for (let i = 0; i < 5; i++) {

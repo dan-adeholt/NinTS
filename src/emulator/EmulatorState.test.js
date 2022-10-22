@@ -1,12 +1,12 @@
-import fs from "fs";
-import { parseROM } from "./parseROM";
-import Emulator  from "./emulator";
+import fs from 'fs';
+import { parseROM } from './parseROM';
+import EmulatorState  from './EmulatorState';
 import _ from 'lodash';
 
 test('Save state', () => {
     const data = fs.readFileSync('src/tests/roms/nestest.nes');
     const rom = parseROM(data);
-    const emulator = new Emulator();
+    const emulator = new EmulatorState();
     emulator.initMachine(rom);
 
     for (let i = 0; i < 10; i++) {
@@ -14,7 +14,7 @@ test('Save state', () => {
     }
 
     const json = emulator.saveEmulator();
-    const emulator2 = new Emulator();
+    const emulator2 = new EmulatorState();
     emulator2.initMachine(rom);
     emulator2.loadEmulator(json);
     const json2 = emulator2.saveEmulator();

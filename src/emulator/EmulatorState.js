@@ -88,7 +88,7 @@ const dumpObjectState = (state, prefix = '') => {
   return dumpedState;
 }
 
-class Emulator {
+class EmulatorState {
   A = 0;
   X = 0;
   Y = 0;
@@ -465,5 +465,5 @@ export const setLocalStorageAutoloadEnabled = (enabled) => {
 }
 
 
-export default Emulator;
+export default EmulatorState;
 

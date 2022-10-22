@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './App.module.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
-import Emulator, {
+import EmulatorState, {
   AUDIO_BUFFER_SIZE,
   INPUT_A,
   INPUT_B,
@@ -10,7 +10,7 @@ import Emulator, {
   INPUT_LEFT,
   INPUT_RIGHT, INPUT_SELECT, INPUT_START,
   INPUT_UP, SAMPLE_RATE
-} from './emulator/emulator';
+} from './emulator/EmulatorState';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
@@ -133,7 +133,7 @@ function App() {
 
   const loadRom = useCallback(romBuffer => {
     const rom = parseROM(romBuffer);
-    const newEmulator = new Emulator();
+    const newEmulator = new EmulatorState();
     newEmulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
     setEmulator(newEmulator);
   }, [audioBuffer]);

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from './PPUDebugging.module.css';
-import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from '../emulator/emulator';
+import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from '../emulator/EmulatorState';
 
 const EmulatorControls = ({ emulator }) => {
   const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);

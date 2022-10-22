@@ -1,4 +1,4 @@
-import { AUDIO_BUFFER_SIZE } from './emulator/emulator';
+import { AUDIO_BUFFER_SIZE } from './emulator/EmulatorState';
 
 class AudioBuffer {
   writePosition = 0;
