@@ -10,7 +10,7 @@ test('01 - Background', () => testPPURom(
     for (let colorIndex = 0; colorIndex < COLORS.length; colorIndex++) {
       const expectedColor = COLORS[colorIndex];
       expect(_.every(emulator.ppu.framebuffer, renderedColor => renderedColor === expectedColor)).toEqual(true);
-      emulator.stepFrame();
+      emulator.stepFrame(false);
     }
   })
 );

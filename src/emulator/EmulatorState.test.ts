@@ -8,15 +8,15 @@ test('Save state', () => {
     const data = fs.readFileSync('src/tests/roms/nestest.nes');
     const rom = parseROM(data);
     const emulator = new EmulatorState();
-    emulator.initMachine(rom);
+    emulator.initMachine(rom, false, null);
 
     for (let i = 0; i < 10; i++) {
-        emulator.stepFrame();
+        emulator.stepFrame(false);
     }
 
     const json = emulator.saveEmulator();
     const emulator2 = new EmulatorState();
-    emulator2.initMachine(rom);
+    emulator2.initMachine(rom, false, null);
     emulator2.loadEmulator(json);
     const json2 = emulator2.saveEmulator();
     fs.writeFileSync('/tmp/output.json', JSON.stringify(json, null, 2));
