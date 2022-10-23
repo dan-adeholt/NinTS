@@ -58,7 +58,7 @@ class TriangleWaveGenerator {
     }
   }
 
-  setRegisterMem(address, value) {
+  setRegisterMem(address: number, value: number) {
     if (address === 0x4008) {
       this.linearCounterHaltFlag = ((value & 0b10000000) >> 7) === 1;
       this.lengthCounterHalt = this.linearCounterHaltFlag;
@@ -75,7 +75,7 @@ class TriangleWaveGenerator {
     }
   }
 
-  setEnabled(isEnabled) {
+  setEnabled(isEnabled: boolean) {
     this.isEnabled = isEnabled;
     if (!isEnabled) {
       this.curOutputValue = 0;

@@ -25,7 +25,7 @@ import { onSamePageBoundary, PAGE_MASK } from './memory';
 import _ from 'lodash';
 import EmulatorState from "./EmulatorState";
 
-export const peekMem = (state, address) => {
+export const peekMem = (state : EmulatorState, address: number) => {
   if (address !== 0x4015 && address !== 0x4016 && address !== 0x4017 && address > 0x4000 && address < 0x4020) {
     // Mesen does this to fake open bus behavior - instead of just returning 0 on these reads.
     // TODO: Perhaps actually return these values from readMem?
@@ -35,48 +35,48 @@ export const peekMem = (state, address) => {
   }
 }
 
-export const absoluteAddress = (state, pc) => {
+export const absoluteAddress = (state : EmulatorState, pc: number) => {
   return state.readMem(pc + 1) + (state.readMem(pc + 2) << 8);
 }
 
 const HEX_PREFIX = '$';
 
-const logFormatters = {
-  [ModeAccumulator]: () => "A",
-  [ModeImmediate]: (state, pc) => "#$" + hex(peekMem(state, pc + 1)),
-  [ModeAbsolute]: (state, pc) => {
+const logFormatters: Record<number, (state: EmulatorState, pc: number) => string> = {
+  [ModeAccumulator]: (): string => "A",
+  [ModeImmediate]: (state: EmulatorState, pc: number): string => "#$" + hex(peekMem(state, pc + 1)),
+  [ModeAbsolute]: (state: EmulatorState, pc: number): string => {
     const address = absoluteAddress(state, pc);
     const byte = peekMem(state, address);
     return "$" + hex16(address) + " = " + hex(byte, HEX_PREFIX);
   },
-  [ModeAbsoluteX]: (state, pc) => {
+  [ModeAbsoluteX]: (state: EmulatorState, pc: number): string => {
     const base = absoluteAddress(state, pc);
     const address = (base + state.X) & 0xFFFF;
     const byte = peekMem(state, address);
     return "$" + hex16(base) + ",X @ " + hex16(address, HEX_PREFIX) + ' = ' + hex(byte, HEX_PREFIX);
   },
-  [ModeAbsoluteY]: (state, pc) => {
+  [ModeAbsoluteY]: (state: EmulatorState, pc: number): string => {
     const base = absoluteAddress(state, pc);
     const address = (base + state.Y) & 0xFFFF;
     const byte = peekMem(state, address);
     return "$" + hex16(base) + ",Y @ " + hex16(address, HEX_PREFIX) + ' = ' + hex(byte, HEX_PREFIX);
   },
-  [ModeZeroPage]: (state, pc) => {
+  [ModeZeroPage]: (state: EmulatorState, pc: number): string => {
     const offset = peekMem(state, pc + 1);
     return "$" + hex(offset) + " = " + hex(peekMem(state, offset), HEX_PREFIX);
   },
-  [ModeZeroPageX]: (state, pc) => {
+  [ModeZeroPageX]: (state: EmulatorState, pc: number): string => {
     const base = peekMem(state, pc + 1);
     const address = (base + state.X) % 256;
     return "$" + hex(base) + ",X @ " + hex(address, HEX_PREFIX) + " = " + hex(peekMem(state, address), HEX_PREFIX);
   },
-  [ModeZeroPageY]: (state, pc) => {
+  [ModeZeroPageY]: (state: EmulatorState, pc: number): string => {
     const base = peekMem(state, pc + 1);
     const address = (base + state.Y) % 256;
     return "$" + hex(base) + ",Y @ " + hex(address, HEX_PREFIX) + " = " + hex(peekMem(state, address), HEX_PREFIX);
   },
   [ModeImplied]: () => "",
-  [ModeIndirect]: (state, pc) => {
+  [ModeIndirect]: (state: EmulatorState, pc: number): string => {
     const address = absoluteAddress(state, pc);
 
     const lo = address;
@@ -91,7 +91,7 @@ const logFormatters = {
     const byte = peekMem(state, target);
     return "($" + hex16(address) + ") @ " + hex16(target, HEX_PREFIX) + " = " + hex(byte, HEX_PREFIX);
   },
-  [ModeIndirectX]: (state, pc) => {
+  [ModeIndirectX]: (state: EmulatorState, pc: number): string => {
     const offset = peekMem(state, pc + 1);
     const addressLocation = (state.X + offset) % 256;
 
@@ -99,7 +99,7 @@ const logFormatters = {
     const value = peekMem(state, address);
     return "($" + hex(offset) + ",X) @ " + hex16(address, HEX_PREFIX) + " = " + hex(value, HEX_PREFIX);
   },
-  [ModeIndirectY]: (state, pc) => {
+  [ModeIndirectY]: (state: EmulatorState, pc: number): string => {
     const zeroPageAddress = peekMem(state, pc + 1);
     const base = peekMem(state, zeroPageAddress) + (peekMem(state, (zeroPageAddress + 1) % 256) << 8);
     const address = (base + state.Y) & 0xFFFF;
@@ -108,7 +108,7 @@ const logFormatters = {
 
     return "($" + hex(zeroPageAddress) + "),Y @ $" + hex16(address) + " = " + hex(value, HEX_PREFIX);
   },
-  [ModeRelative]: (state, pc) => {
+  [ModeRelative]: (state: EmulatorState, pc: number): string => {
     let offset = peekMem(state, pc + 1);
     if (offset > 0x7F) {
       offset -= 256;
@@ -118,12 +118,12 @@ const logFormatters = {
   }
 };
 
-export const bin8 = num => num.toString(2).padStart(8, '0');
-export const hex = (num, prefix = '') => prefix + num.toString(16).toUpperCase().padStart(2, '0');
-export const hex16 = (num, prefix = '') => prefix + num.toString(16).toUpperCase().padStart(4, '0');
+export const bin8 = (num: number) => num.toString(2).padStart(8, '0');
+export const hex = (num: number, prefix = '') => prefix + num.toString(16).toUpperCase().padStart(2, '0');
+export const hex16 = (num: number, prefix = '') => prefix + num.toString(16).toUpperCase().padStart(4, '0');
 
-export const procFlagsToString = (P) => {
-  const toBinary = (flag) => (P & flag) ? '1' : '0';
+export const procFlagsToString = (P: number) => {
+  const toBinary = (flag: number) => (P & flag) ? '1' : '0';
 
   return hex(P) + ' - ' +
   'NEG:' + toBinary(P_REG_NEGATIVE) + ' ' +
@@ -136,7 +136,7 @@ export const procFlagsToString = (P) => {
     ' CARR:' + toBinary(P_REG_CARRY);
 }
 
-const InstructionLengthTranslation = {
+const InstructionLengthTranslation: Record<number, number> = {
   [ModeAbsolute]: 3,
   [ModeAbsoluteX]: 3,
   [ModeAbsoluteY]: 3,
@@ -152,7 +152,7 @@ const InstructionLengthTranslation = {
   [ModeZeroPageY]: 2
 };
 
-const appendStateRegisters = (state, str) => {
+const appendStateRegisters = (state : EmulatorState, str: string) => {
   str += 'A:' + hex(state.A) + ' ';
   str += 'X:' + hex(state.X) + ' ';
   str += 'Y:' + hex(state.Y) + ' ';
@@ -161,7 +161,7 @@ const appendStateRegisters = (state, str) => {
   return str;
 }
 
-export const stateToString = (state) => {
+export const stateToString = (state : EmulatorState) => {
   let str = hex16(state.PC) + ' ';
   const opcode = state.readMem(state.PC);
   const hexPrefix = '$';
@@ -195,7 +195,7 @@ export const stateToString = (state) => {
 
 const maxInstructionSize = _.max(_.map(opcodeMetadata, 'instructionSize'));
 
-export const disassembleLine = (state, address): string[] => {
+export const disassembleLine = (state : EmulatorState, address: number): string[] => {
   const opcode = peekMem(state, address);
   const line = ['0x' + hex16(address)];
 

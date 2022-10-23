@@ -16,7 +16,7 @@ import { disassemble, disassembleLine, hex, DisassembledLine } from '../emulator
 import classNames from 'classnames';
 import _ from 'lodash';
 import { opcodeMetadata } from '../emulator/cpu';
-import { RunModeType } from '../App';
+import { KeyListener, RunModeType } from '../App';
 import { setIsSteppingScanline } from '../emulator/ppu';
 import SegmentControl from './SegmentControl';
 import styles from './DebuggerSidebar.module.css';
@@ -26,7 +26,7 @@ export const BREAKPOINTS_KEY = 'Breakpoints';
 
 const allOpcodeNames = _.uniq(_.map(opcodeMetadata, 'name'));
 
-const getComponentStyle = (component) => {
+const getComponentStyle = (component : string) => {
   if (component.startsWith('0x')) {
     return styles.addressComponent;
   } else if (allOpcodeNames.includes(component)) {
@@ -38,8 +38,8 @@ const getComponentStyle = (component) => {
 type AddressRowData = {
   lines: DisassembledLine[],
   emulator: EmulatorState,
-  breakpoints: Record<string, boolean>
-  toggleBreakpoint: (string) => void,
+  breakpoints: Record<number, boolean>
+  toggleBreakpoint: (breakpoint: string) => void,
   running: boolean
 };
 
@@ -57,7 +57,7 @@ const AddressRowRaw = ({ data, index, style } : AddressRowProps) => {
   return <div style={style}
               className={classNames(styles.row, !data.running && item.address === data.emulator?.PC && styles.currentRow)}>
     <div className={classNames(styles.breakpoint, data.breakpoints[item.address] && styles.active)}
-         onClick={() => data.toggleBreakpoint(item.address)}>
+         onClick={() => data.toggleBreakpoint(item.address.toString(10))}>
       <div/>
     </div>
     <div>
@@ -79,8 +79,8 @@ type DebuggerSidebarProps = {
   runMode: RunModeType
   onRefresh: () => void
   refresh: boolean
-  addKeyListener: (KeyboardEventHandler) => void
-  removeKeyListener: (KeyboardEventHandler) => void
+  addKeyListener: (handler: KeyListener) => void
+  removeKeyListener: (handler: KeyListener) => void
   initAudioContext: () => void
   stopAudioContext: () => void
 }
@@ -107,7 +107,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
     }
   }, [emulator, listRef, lines, refresh]);
 
-  const removeBreakpoint = useCallback(address => {
+  const removeBreakpoint = useCallback((address: string) => {
     setBreakpoints(oldBreakpoints => {
       const newBreakpoints = { ...oldBreakpoints };
       delete newBreakpoints[address];
@@ -116,7 +116,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
     })
   }, []);
 
-  const toggleBreakpoint = useCallback(address => {
+  const toggleBreakpoint = useCallback((address: string) => {
     setBreakpoints(oldBreakpoints => {
       const newBreakpoints = { ...oldBreakpoints };
 
@@ -134,7 +134,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   const addBreakpoint = useCallback(() => {
     const address = _.parseInt(newBreakpointAddress.replace('$', '0x'), 16);
     setNewBreakpointAddress('');
-    toggleBreakpoint(address);
+    toggleBreakpoint('' + address);
   }, [newBreakpointAddress, toggleBreakpoint]);
 
   const runEmulator = useCallback(() => {
@@ -193,8 +193,8 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
 
   const running = runMode !== RunModeType.STOPPED;
 
-  const handleKeyEvent = useCallback(e => {
-    if (e.target.type === 'text' || e.type !== 'keydown') {
+  const handleKeyEvent = useCallback((e : KeyboardEvent) => {
+    if ((e.target as HTMLInputElement)?.type === 'text' || e.type !== 'keydown') {
       return;
     }
 

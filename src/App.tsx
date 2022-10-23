@@ -1,4 +1,4 @@
-import React, {KeyboardEventHandler, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './App.module.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
@@ -28,7 +28,7 @@ export enum RunModeType {
     RUNNING_SINGLE_SCANLINE = 'RunningSingleScanline'
 }
 
-const KeyTable = {
+const KeyTable: Record<string, number> = {
     'w': INPUT_UP,
     'a': INPUT_LEFT,
     's': INPUT_DOWN,
@@ -52,6 +52,8 @@ type Display = {
     framebuffer: Uint32Array
 }
 
+export type KeyListener = (event: KeyboardEvent) => void
+
 function App() {
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     const [title, setTitle] = useState("No file selected");
@@ -64,22 +66,22 @@ function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [display, setDisplay] = useState<Display | null>(null);
 
-    const [keyListeners, setKeyListeners] = useState<KeyboardEventHandler<HTMLElement>[]>([]);
+    const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
 
-    const addKeyListener = useCallback(listener => {
+    const addKeyListener = useCallback((listener : KeyListener) => {
         setKeyListeners(oldListeners => {
             oldListeners.push(listener);
             return oldListeners;
         })
     }, []);
 
-    const removeKeyListener = useCallback(listener => {
+    const removeKeyListener = useCallback((listener : KeyListener) => {
         setKeyListeners(oldListeners => _.without(oldListeners, listener));
     }, []);
 
 
-    const handleKeyEvent = useCallback(e => {
-        if (e.target.type === 'text') {
+    const handleKeyEvent = useCallback((e : KeyboardEvent) => {
+        if ((e.target as HTMLInputElement)?.type === 'text') {
             return;
         }
 
@@ -93,7 +95,7 @@ function App() {
         }
     }, [keyListeners, emulator]);
 
-    const handleGamepad = useCallback(e => {
+    const handleGamepad = useCallback((e : GamepadEvent) => {
         console.log(e);
     }, []);
 
@@ -143,15 +145,17 @@ function App() {
 
     }, [handleKeyEvent, handleGamepad])
 
-    const loadRom = useCallback(romBuffer => {
+    const loadRom = useCallback((romBuffer : Uint8Array) => {
         const rom = parseROM(romBuffer);
         emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
     }, [audioBuffer, emulator]);
 
-    const handleFileRead = useCallback(event => {
-        const buf = new Uint8Array(event.target.result);
-        localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, JSON.stringify(Array.from(buf)));
-        loadRom(buf);
+    const handleFileRead = useCallback((event : ProgressEvent<FileReader>) => {
+        if (event.target != null) {
+            const buf = new Uint8Array(event.target.result as ArrayBuffer);
+            localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, JSON.stringify(Array.from(buf)));
+            loadRom(buf);
+        }
     }, [loadRom]);
 
     useEffect(() => {
@@ -164,18 +168,22 @@ function App() {
         }
     }, [loadRom]);
 
-    const romFileChanged = useCallback(e => {
-        setTitle(e.target.files[0].name);
-        localStorage.setItem(LOCAL_STORAGE_KEY_LAST_TITLE, e.target.files[0].name);
-        const fileReader = new FileReader();
-        fileReader.onloadend = handleFileRead;
-        fileReader.readAsArrayBuffer(e.target.files[0]);
-        localStorage.removeItem(BREAKPOINTS_KEY);
+    const romFileChanged = useCallback((e : React.ChangeEvent<HTMLInputElement>) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+
+        if (file != null) {
+            setTitle(file.name);
+            localStorage.setItem(LOCAL_STORAGE_KEY_LAST_TITLE, file.name);
+            const fileReader = new FileReader();
+            fileReader.onloadend = handleFileRead;
+            fileReader.readAsArrayBuffer(file);
+            localStorage.removeItem(BREAKPOINTS_KEY);
+        }
     }, [handleFileRead]);
 
     const animationFrameRef = useRef<number | null>(null);
 
-    const updateFrame = useCallback(timestamp => {
+    const updateFrame = useCallback((timestamp: number) => {
         let stopped = false;
 
         while ((timestamp - startTime.current) >= frameLength) {
@@ -236,7 +244,7 @@ function App() {
 
     const running = runMode !== RunModeType.STOPPED;
 
-    const registerCell = (label, register, formatter = hex) => (
+    const registerCell = (label: React.ReactNode, register: number, formatter = hex) => (
         <td>
             <label>{ label }</label>
             { running ? '-' : formatter(register) }

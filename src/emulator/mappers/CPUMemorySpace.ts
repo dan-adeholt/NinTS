@@ -1,4 +1,5 @@
 import MemorySpace from './MemorySpace';
+import { Rom } from '../parseROM';
 
 class CPUMemorySpace {
   memory = new MemorySpace(65535);
@@ -6,7 +7,7 @@ class CPUMemorySpace {
   prgRam: Uint8Array
   prgRom: Uint8Array
 
-  constructor(rom) {
+  constructor(rom : Rom) {
     this.prgRam = new Uint8Array(rom.settings.prgRamSize);
     this.prgRom = rom.prgData;
 
@@ -33,19 +34,19 @@ class CPUMemorySpace {
     this.write(0x2007, 0x00);
   }
 
-  read(address) {
+  read(address: number) {
     return this.memory.read(address)
   }
 
-  write(address, value) {
+  write(address: number, value: number) {
     this.memory.write(address, value)
   }
 
-  mapPrgRom(targetStart, sourceStart, sourceEnd) {
+  mapPrgRom(targetStart: number, sourceStart: number, sourceEnd: number) {
     this.memory.map(this.prgRom, targetStart, sourceStart, sourceEnd);
   }
 
-  mapPrgRam(sourceStart, sourceEnd) {
+  mapPrgRam(sourceStart: number, sourceEnd: number) {
     this.memory.map(this.prgRam, 0x6000, sourceStart, sourceEnd);
   }
 }

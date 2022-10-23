@@ -12,6 +12,7 @@ import * as load from './instructions/load';
 import * as nop from './instructions/nop';
 import * as illegal from './instructions/illegal';
 import * as memory from './memory';
+import EmulatorState from './EmulatorState';
 
 export const OAM_DMA = 0x4014;
 
@@ -29,7 +30,7 @@ export const ModeZeroPage = 11;
 export const ModeZeroPageX = 12;
 export const ModeZeroPageY = 13;
 
-export const getInstructionSize = (mode) => {
+export const getInstructionSize = (mode : number) => {
     switch (mode) {
         case ModeIndirect:
         case ModeAbsolute:
@@ -53,7 +54,13 @@ export const getInstructionSize = (mode) => {
     }
 };
 
-const opcodes = [
+
+type OpcodeWithRead = (state: EmulatorState, value : number) => (void | number)
+type OpcodeWithoutRead = (state: EmulatorState) => (void | number)
+type ReadFunction = (state: EmulatorState) => number
+type OpcodeEntry = [number, string, number, OpcodeWithRead | OpcodeWithoutRead, ReadFunction | null]
+
+const opcodes: OpcodeEntry[] = [
     [0x69, "ADC",  ModeImmediate,   arithmetic.adc, memory.readImmediate],
     [0x65, "ADC",  ModeZeroPage,    arithmetic.adc, memory.readZeroPage],
     [0x75, "ADC",  ModeZeroPageX,   arithmetic.adc, memory.readZeroPageX],
@@ -107,13 +114,13 @@ const opcodes = [
     [0x10, "BPL",  ModeRelative,    branch.bpl, memory.readImmediate],
     [0x30, "BMI",  ModeRelative,    branch.bmi, memory.readImmediate],
 
-    [0x18, "CLC",  ModeImplied,     flags.clc],
-    [0xD8, "CLD",  ModeImplied,     flags.cld],
-    [0x58, "CLI",  ModeImplied,     flags.cli],
-    [0xB8, "CLV",  ModeImplied,     flags.clv],
-    [0x38, "SEC",  ModeImplied,     flags.sec],
-    [0x78, "SEI",  ModeImplied,     flags.sei],
-    [0xF8, "SED",  ModeImplied,     flags.sed],
+    [0x18, "CLC",  ModeImplied,     flags.clc, null],
+    [0xD8, "CLD",  ModeImplied,     flags.cld, null],
+    [0x58, "CLI",  ModeImplied,     flags.cli, null],
+    [0xB8, "CLV",  ModeImplied,     flags.clv, null],
+    [0x38, "SEC",  ModeImplied,     flags.sec, null],
+    [0x78, "SEI",  ModeImplied,     flags.sei, null],
+    [0xF8, "SED",  ModeImplied,     flags.sed, null],
 
     [0xC9, "CMP",  ModeImmediate,   compare.cmp, memory.readImmediate],
     [0xC5, "CMP",  ModeZeroPage,    compare.cmp, memory.readZeroPage],
@@ -132,7 +139,7 @@ const opcodes = [
 
     [0x4C, "JMP",  ModeAbsolute,    jump.jmp, memory.readAbsolute],
     [0x6C, "JMP",  ModeIndirect,    jump.jmp, memory.readIndirect],
-    [0x20, "JSR",  ModeAbsolute,    jump.jsr],
+    [0x20, "JSR",  ModeAbsolute,    jump.jsr, null],
 
     [0xA7, "LAX*", ModeZeroPage,    load.lax, memory.readZeroPage],
     [0xB7, "LAX*", ModeZeroPageY,   load.lax, memory.readZeroPageY],
@@ -159,13 +166,13 @@ const opcodes = [
     [0xAC, "LDY",  ModeAbsolute,    load.ldy, memory.readAbsolute],
     [0xBC, "LDY",  ModeAbsoluteX,   load.ldy, memory.readAbsoluteXShortenCycle],
 
-    [0xEA, "NOP",  ModeImplied,     nop.nop],
-    [0x1A, "NOP*", ModeImplied,     nop.nop],
-    [0x3A, "NOP*", ModeImplied,     nop.nop],
-    [0x5A, "NOP*", ModeImplied,     nop.nop],
-    [0x7A, "NOP*", ModeImplied,     nop.nop],
-    [0xDA, "NOP*", ModeImplied,     nop.nop],
-    [0xFA, "NOP*", ModeImplied,     nop.nop],
+    [0xEA, "NOP",  ModeImplied,     nop.nop, null],
+    [0x1A, "NOP*", ModeImplied,     nop.nop, null],
+    [0x3A, "NOP*", ModeImplied,     nop.nop, null],
+    [0x5A, "NOP*", ModeImplied,     nop.nop, null],
+    [0x7A, "NOP*", ModeImplied,     nop.nop, null],
+    [0xDA, "NOP*", ModeImplied,     nop.nop, null],
+    [0xFA, "NOP*", ModeImplied,     nop.nop, null],
     [0x80, "NOP*", ModeImmediate,   nop.unofficialNop, memory.readImmediate],
     [0x82, "NOP*", ModeImmediate,   nop.unofficialNop, memory.readImmediate],
     [0x89, "NOP*", ModeImmediate,   nop.unofficialNop, memory.readImmediate],
@@ -188,18 +195,18 @@ const opcodes = [
     [0xDC, "NOP*",  ModeAbsoluteX,  nop.unofficialNop, memory.readAbsoluteXShortenCycle],
     [0xFC, "NOP*",  ModeAbsoluteX,  nop.unofficialNop, memory.readAbsoluteXShortenCycle],
 
-    [0xC8, "INY",  ModeImplied,     register.iny],
-    [0x88, "DEY",  ModeImplied,     register.dey],
-    [0xA8, "TAY",  ModeImplied,     register.tay],
-    [0xE8, "INX",  ModeImplied,     register.inx],
-    [0xCA, "DEX",  ModeImplied,     register.dex],
-    [0xAA, "TAX",  ModeImplied,     register.tax],
-    [0xBA, "TSX",  ModeImplied,     register.tsx],
-    [0x8A, "TXA",  ModeImplied,     register.txa],
-    [0x98, "TYA",  ModeImplied,     register.tya],
-    [0x9A, "TXS",  ModeImplied,     register.txs],
+    [0xC8, "INY",  ModeImplied,     register.iny, null],
+    [0x88, "DEY",  ModeImplied,     register.dey, null],
+    [0xA8, "TAY",  ModeImplied,     register.tay, null],
+    [0xE8, "INX",  ModeImplied,     register.inx, null],
+    [0xCA, "DEX",  ModeImplied,     register.dex, null],
+    [0xAA, "TAX",  ModeImplied,     register.tax, null],
+    [0xBA, "TSX",  ModeImplied,     register.tsx, null],
+    [0x8A, "TXA",  ModeImplied,     register.txa, null],
+    [0x98, "TYA",  ModeImplied,     register.tya, null],
+    [0x9A, "TXS",  ModeImplied,     register.txs, null],
 
-    [0x0A, "ASL",  ModeAccumulator, readmodifywrite.aslA],
+    [0x0A, "ASL",  ModeAccumulator, readmodifywrite.aslA, null],
     [0x06, "ASL",  ModeZeroPage,    readmodifywrite.asl, memory.readZeroPage],
     [0x16, "ASL",  ModeZeroPageX,   readmodifywrite.asl, memory.readZeroPageX],
     [0x0E, "ASL",  ModeAbsolute,    readmodifywrite.asl, memory.readAbsolute],
@@ -208,7 +215,7 @@ const opcodes = [
     [0xF6, "INC",  ModeZeroPageX,   readmodifywrite.inc, memory.readZeroPageX],
     [0xEE, "INC",  ModeAbsolute,    readmodifywrite.inc, memory.readAbsolute],
     [0xFE, "INC",  ModeAbsoluteX,   readmodifywrite.inc, memory.readAbsoluteX],
-    [0x4A, "LSR",  ModeAccumulator, readmodifywrite.lsrA],
+    [0x4A, "LSR",  ModeAccumulator, readmodifywrite.lsrA, null],
     [0x46, "LSR",  ModeZeroPage,    readmodifywrite.lsr, memory.readZeroPage],
     [0x56, "LSR",  ModeZeroPageX,   readmodifywrite.lsr, memory.readZeroPageX],
     [0x4E, "LSR",  ModeAbsolute,    readmodifywrite.lsr, memory.readAbsolute],
@@ -217,12 +224,12 @@ const opcodes = [
     [0xD6, "DEC",  ModeZeroPageX,   readmodifywrite.dec, memory.readZeroPageX],
     [0xCE, "DEC",  ModeAbsolute,    readmodifywrite.dec, memory.readAbsolute],
     [0xDE, "DEC",  ModeAbsoluteX,   readmodifywrite.dec, memory.readAbsoluteX],
-    [0x2A, "ROL",  ModeAccumulator, readmodifywrite.rolA],
+    [0x2A, "ROL",  ModeAccumulator, readmodifywrite.rolA, null],
     [0x26, "ROL",  ModeZeroPage,    readmodifywrite.rol, memory.readZeroPage],
     [0x36, "ROL",  ModeZeroPageX,   readmodifywrite.rol, memory.readZeroPageX],
     [0x2E, "ROL",  ModeAbsolute,    readmodifywrite.rol, memory.readAbsolute],
     [0x3E, "ROL",  ModeAbsoluteX,   readmodifywrite.rol, memory.readAbsoluteX],
-    [0x6A, "ROR",  ModeAccumulator, readmodifywrite.rorA],
+    [0x6A, "ROR",  ModeAccumulator, readmodifywrite.rorA, null],
     [0x66, "ROR",  ModeZeroPage,    readmodifywrite.ror, memory.readZeroPage],
     [0x76, "ROR",  ModeZeroPageX,   readmodifywrite.ror, memory.readZeroPageX],
     [0x6E, "ROR",  ModeAbsolute,    readmodifywrite.ror, memory.readAbsolute],
@@ -242,13 +249,13 @@ const opcodes = [
     [0x94, "STY",  ModeZeroPageX,   store.sty, memory.readZeroPageX],
     [0x8C, "STY",  ModeAbsolute,    store.sty, memory.readAbsolute],
 
-    [0x08, "PHP",  ModeImplied,     stack.php],
-    [0x48, "PHA",  ModeImplied,     stack.pha],
-    [0x28, "PLP",  ModeImplied,     stack.plp],
-    [0x68, "PLA",  ModeImplied,     stack.pla],
-    [0x00, "BRK",  ModeImplied,     stack.brk],
-    [0x40, "RTI",  ModeImplied,     stack.rti],
-    [0x60, "RTS",  ModeImplied,     stack.rts],
+    [0x08, "PHP",  ModeImplied,     stack.php, null],
+    [0x48, "PHA",  ModeImplied,     stack.pha, null],
+    [0x28, "PLP",  ModeImplied,     stack.plp, null],
+    [0x68, "PLA",  ModeImplied,     stack.pla, null],
+    [0x00, "BRK",  ModeImplied,     stack.brk, null],
+    [0x40, "RTI",  ModeImplied,     stack.rti, null],
+    [0x60, "RTS",  ModeImplied,     stack.rts, null],
 
     [0x0B, "AAC*", ModeImmediate,   illegal.aac, memory.readImmediate],
     [0x2B, "AAC*", ModeImmediate,   illegal.aac, memory.readImmediate],
@@ -302,17 +309,24 @@ const opcodes = [
     [0x5B, "SRE*", ModeAbsoluteY,   illegal.sre, memory.readAbsoluteY],
     [0x43, "SRE*", ModeIndirectX,   illegal.sre, memory.readIndirectX],
     [0x53, "SRE*", ModeIndirectY,   illegal.sre, memory.readIndirectY],
-    [0x9E, "SXA*", ModeAbsoluteY,   illegal.sxa],
-    [0x9C, "SYA*", ModeAbsoluteX,   illegal.sya],
+    [0x9E, "SXA*", ModeAbsoluteY,   illegal.sxa, null],
+    [0x9C, "SYA*", ModeAbsoluteX,   illegal.sya, null],
 ];
 
-export const opcodeMetadata = {};
+type OpcodeMetadataEntry = {
+    name: string
+    mode: number
+}
+
+export const opcodeMetadata: (Record<number, OpcodeMetadataEntry>) = {};
 export const opcodeTable = new Array(256);
 
-_.forEach(opcodes, ([opcode, name, mode, implementation, readFunction]) => {
+_.forEach(opcodes, (entry) => {
+    const [opcode, name, mode, implementation, readFunction] = entry;
+
     opcodeMetadata[opcode] = { name, mode };
     if (readFunction != null) {
-        opcodeTable[opcode] = e => implementation(e, readFunction(e));
+        opcodeTable[opcode] = (state : EmulatorState) => implementation(state, readFunction(state));
     } else {
         opcodeTable[opcode] = implementation;
     }

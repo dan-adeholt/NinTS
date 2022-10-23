@@ -2,6 +2,8 @@ import { BIT_7 } from '../instructions/util';
 import MirroringMode from '../MirroringMode';
 import Mapper from "./Mapper";
 import { Rom } from '../parseROM';
+import CPUMemorySpace from './CPUMemorySpace';
+import PPUMemorySpace from './PPUMemorySpace';
 
 enum MMCVariant {
   None = 0,
@@ -12,7 +14,7 @@ enum MMCVariant {
   SZROM = 5
 }
 
-const registerToMirroringMode = register => {
+const registerToMirroringMode = (register: number) => {
   switch (register) {
     case 0:
       return MirroringMode.SingleScreenLower;
@@ -34,7 +36,7 @@ class MMC1Mapper extends Mapper {
   count = 0;
   prgRamDisabled = false;
 
-  constructor(rom, cpuMemory, ppuMemory) {
+  constructor(rom: Rom, cpuMemory: CPUMemorySpace, ppuMemory: PPUMemorySpace) {
     super(cpuMemory, ppuMemory);
 
     if (rom.settings.chrRamSize === 0) {
@@ -70,7 +72,7 @@ class MMC1Mapper extends Mapper {
     this.update(0, this.registers[0]);
   }
 
-  update(target, setting) {
+  update(target: number, setting: number) {
     // console.log('Updating because', target, 'changed with value', setting)
     this.registers[target] = setting;
     const mirroringMode = registerToMirroringMode(this.registers[0] & 0b11);
@@ -139,7 +141,7 @@ class MMC1Mapper extends Mapper {
     this.ppuMemory.setMirroringMode(mirroringMode);
   }
 
-  handleROMWrite(address, value) {
+  handleROMWrite(address: number, value: number) {
     // console.log('Handle ROM write', hex(address), hex(value), cycle, this.shiftRegister);
     if (value & BIT_7) {
       this.resetRegister();

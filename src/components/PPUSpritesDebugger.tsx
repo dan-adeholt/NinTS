@@ -3,11 +3,12 @@ import PropTypes from 'prop-types';
 import { BIT_7 } from '../emulator/instructions/util';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
+import PPU from '../emulator/ppu';
 
 const PATTERN_TABLE_WIDTH = 256;
 const PATTERN_TABLE_HEIGHT = 128;
 
-const pixelRow = (output, x, y, lower, upper, ppu) => {
+const pixelRow = (output: number[] | Uint32Array , x: number, y: number, lower: number, upper: number, ppu: PPU) => {
   let lineAddress = y * PATTERN_TABLE_WIDTH + x;
 
   for (let i = 0; i < 8; i++) {
@@ -22,13 +23,13 @@ const pixelRow = (output, x, y, lower, upper, ppu) => {
   }
 }
 
-const blitSprite = (output, x, y, spriteAddress, spriteSize, ppu) => {
+const blitSprite = (output: Uint32Array, x: number, y: number, spriteAddress: number, spriteSize: number, ppu: PPU) => {
   for (let offsetY = 0; offsetY < 8; offsetY++) {
     pixelRow(output, x, y + offsetY, ppu.readPPUMem(spriteAddress + offsetY), ppu.readPPUMem(spriteAddress + offsetY + 8), ppu);
   }
 }
 
-const generateFrameBuffer = ppu => {
+const generateFrameBuffer = (ppu: PPU) => {
   const texture = new Uint32Array(PATTERN_TABLE_WIDTH * PATTERN_TABLE_HEIGHT);
 
   for (let i = 0; i < PATTERN_TABLE_WIDTH * PATTERN_TABLE_HEIGHT; i++) {

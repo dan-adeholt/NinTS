@@ -7,7 +7,7 @@ class MemorySpace {
   banks: Uint8Array[] = []
   length = 0;
 
-  constructor(size) {
+  constructor(size : number) {
     const numBanks = size / BANK_SIZE;
     this.length = size;
 
@@ -16,7 +16,7 @@ class MemorySpace {
     }
   }
 
-  map(source, targetAddress, start, end) {
+  map(source: Uint8Array, targetAddress: number, start: number, end: number) {
     const size = end - start;
     console.assert(size % BANK_SIZE === 0);
     console.assert(targetAddress % BANK_SIZE === 0);
@@ -31,8 +31,7 @@ class MemorySpace {
     }
   }
 
-  read(address) {
-
+  read(address: number) {
     const subIndex = address & BANK_INDEX_MASK;
     const bankIndex = (address & BANK_MASK) >> BANK_INDEX_SIZE;
 
@@ -45,7 +44,7 @@ class MemorySpace {
     return ret;
   }
 
-  write(address, value) {
+  write(address: number, value: number) {
     const subIndex = address & BANK_INDEX_MASK;
     const bankIndex = (address & BANK_MASK) >> BANK_INDEX_SIZE;
 

@@ -5,7 +5,7 @@ class Mapper {
     cpuMemory: CPUMemorySpace
     ppuMemory: PPUMemorySpace
 
-    constructor(cpuMemory, ppuMemory) {
+    constructor(cpuMemory: CPUMemorySpace, ppuMemory: PPUMemorySpace) {
         this.cpuMemory = cpuMemory;
         this.ppuMemory = ppuMemory;
     }
@@ -16,7 +16,7 @@ class Mapper {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function,@typescript-eslint/no-unused-vars
-    handleROMWrite(address, value) {
+    handleROMWrite(address: number, value: number) {
 
     }
 }

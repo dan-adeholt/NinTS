@@ -34,7 +34,7 @@ export default class SquareWaveGenerator {
   sweepDivider = 0;
   sweepReloadFlag = false;
 
-  constructor(index) {
+  constructor(index: number) {
     this.index = index;
   }
 
@@ -119,7 +119,7 @@ export default class SquareWaveGenerator {
     }
   }
 
-  setRegisterMem(address, value) {
+  setRegisterMem(address: number, value: number) {
     const relAddress = (address - 0x4000) % 0x4;
 
     // const unit = address > 0x4004 ? '2' : '1';
@@ -173,7 +173,7 @@ export default class SquareWaveGenerator {
     }
   }
 
-  setEnabled(isEnabled) {
+  setEnabled(isEnabled: boolean) {
     this.isEnabled = isEnabled;
     if (!this.isEnabled) {
       this.timerValue = 0;

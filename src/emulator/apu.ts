@@ -17,7 +17,7 @@ class APU {
   frameBucket = 0;
   numTicks = 0;
 
-  setAPURegisterMem(address, value) {
+  setAPURegisterMem(address: number, value: number) {
     // const time = this.masterClock / 21477272;
     // console.log(time.toFixed(2), hex(address, '$'), '=>', bin8(value));
 
@@ -37,7 +37,7 @@ class APU {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  readAPURegisterMem(address) {
+  readAPURegisterMem(address: number) {
     return 0;
   }
 
@@ -49,7 +49,7 @@ class APU {
     return pulseOut + tndOut;
   }
 
-  update(targetMasterClock) {
+  update(targetMasterClock: number) {
     while ((this.masterClock + this.cpuDivider) < targetMasterClock) {
       // Do one iteration for each cpu cycle, but update sequencers for square waves every 2 cycles
       this.evenTick = !this.evenTick;

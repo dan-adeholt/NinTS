@@ -7,7 +7,7 @@ class AudioBuffer {
   playBufferFull = false;
   lastSample = 0;
 
-  receiveSample(sample) {
+  receiveSample(sample: number) {
     if (this.writePosition === AUDIO_BUFFER_SIZE) {
       if (!this.playBufferFull) {
         this.swapAudioBuffers();
@@ -26,7 +26,7 @@ class AudioBuffer {
     this.writePosition = 0;
   }
 
-  writeToDestination(destination) {
+  writeToDestination(destination: globalThis.AudioBuffer) {
     if (!this.playBufferFull) { // Got buffer underflow, force buffer swap with constant value for remaining slots
       this.writeBuffer.fill(this.lastSample, this.writePosition);
       this.swapAudioBuffers();

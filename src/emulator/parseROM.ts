@@ -1,15 +1,15 @@
 import sha1 from 'js-sha1';
 import database from './database/nes20db';
 
-export function ascii(a) {
-  return a.charCodeAt(0);
+export function ascii(str: string) {
+  return str.charCodeAt(0);
 }
 
 const BIT_1 = 1 << 1;
 const BIT_2 = 1 << 2;
 const BIT_3 = 1 << 3;
 
-export const parseROM = buffer => {
+export const parseROM = (buffer: Uint8Array) => {
   let index = 0;
 
   console.assert(buffer[index] === ascii('N'));

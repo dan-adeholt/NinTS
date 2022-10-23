@@ -3,6 +3,7 @@ import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
 import logger from './logger';
 import Mapper from './mappers/Mapper';
+import { RomSettings } from './parseROM';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
@@ -54,7 +55,7 @@ export const SCREEN_HEIGHT = 240;
 
 let isSteppingScanline = false;
 
-export const setIsSteppingScanline = (_isSteppingScanline) => isSteppingScanline = _isSteppingScanline;
+export const setIsSteppingScanline = (_isSteppingScanline: boolean) => isSteppingScanline = _isSteppingScanline;
 
 // const dumpScrollPointer = pointer => {
 //   const FY = (pointer & 0b111000000000000) >> 12;
@@ -64,7 +65,7 @@ export const setIsSteppingScanline = (_isSteppingScanline) => isSteppingScanline
 //   return '[FineY: ' + FY + ', NTable: ' + NT + ', CoarseY: ' + CY + ', CoarseX: ' + CX + ']';
 // }
 
-export const greyScaleColorForIndexedColor = indexedColor => {
+export const greyScaleColorForIndexedColor = (indexedColor: number) => {
   switch (indexedColor) {
     case 0x0:
       return 0x00000000;
@@ -80,9 +81,9 @@ export const greyScaleColorForIndexedColor = indexedColor => {
   }
 };
 
-const isPPUPaletteAddress = ppuAddress => ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF;
+const isPPUPaletteAddress = (ppuAddress: number) => ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF;
 
-const getPaletteFromByte = (v, byte) => {
+const getPaletteFromByte = (v: number, byte: number) => {
   const coarseX = (v & 0b0000011111) % 4;
   const coarseY = ((v & 0b1111100000) >>> 5) % 4;
 
@@ -142,7 +143,7 @@ class PPU {
   disabled = false;
   mapper: Mapper;
 
-  constructor(settings, mapper) {
+  constructor(settings: RomSettings, mapper: Mapper) {
     // Boot palette values are the same as Mesens in order to be compatible with value peeking
     const initialPalette = [
       0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08, 0x24, 0x00, 0x00, 0x04, 0x2C,
@@ -153,7 +154,7 @@ class PPU {
   }
 
 
-  paletteIndexedColor(indexedColor, paletteIndex, baseOffset) {
+  paletteIndexedColor(indexedColor: number, paletteIndex: number, baseOffset: number) {
     let paletteAddress = baseOffset + paletteIndex * 4;
 
     const p1Color = COLORS[this.readPPUMem(paletteAddress++)];
@@ -171,7 +172,7 @@ class PPU {
     return 0;
   }
 
-  paletteIndexedSpriteColor(indexedColor, paletteIndex) {
+  paletteIndexedSpriteColor(indexedColor: number, paletteIndex: number) {
     return this.paletteIndexedColor(indexedColor, paletteIndex, VRAM_SPRITE_PALETTE_1_ADDRESS);
   }
 
@@ -185,7 +186,7 @@ class PPU {
     this.V = this.V % (1 << 16);
   };
 
-  writePPUPaletteMem = (paletteAddress, value) => {
+  writePPUPaletteMem = (paletteAddress: number, value: number) => {
     if (paletteAddress === 0x00 || paletteAddress === 0x10) {
       this.paletteRAM[0x00] = value;
       this.paletteRAM[0x10] = value;
@@ -203,7 +204,7 @@ class PPU {
     }
   };
 
-  readPPUMem = (ppuAddress) => {
+  readPPUMem = (ppuAddress: number) => {
     if (isPPUPaletteAddress(ppuAddress)) {
       return this.paletteRAM[ppuAddress & 0x1F];
     } else {
@@ -211,7 +212,7 @@ class PPU {
     }
   }
 
-  writePPUMem = (ppuAddress, value) => {
+  writePPUMem = (ppuAddress: number, value: number) => {
     if (isPPUPaletteAddress(ppuAddress)) {
       this.writePPUPaletteMem(ppuAddress & 0x1F, value);
     } else {
@@ -219,8 +220,8 @@ class PPU {
     }
   };
 
-  readPPURegisterMem = (address, peek = false) => {
-    let ret;
+  readPPURegisterMem = (address: number, peek = false): number => {
+    let ret = -1;
 
     if (address === PPUSTATUS) {
       ret = 0;
@@ -296,7 +297,7 @@ class PPU {
     return ret;
   };
 
-  pushOAMValue = (value) => {
+  pushOAMValue = (value: number) => {
     this.oamMemory[this.oamAddress] = value;
     this.oamAddress = (this.oamAddress + 1) & 0xFF;
   };
@@ -305,7 +306,7 @@ class PPU {
     return this.controlSpriteSize === 1 ? 16 : 8;
   };
 
-  setPPURegisterMem = (address, value) => {
+  setPPURegisterMem = (address: number, value: number) => {
     this.busLatch = value;
 
     switch (address) {
@@ -728,7 +729,7 @@ class PPU {
     }
   };
 
-  updatePPU = (targetMasterClock) => {
+  updatePPU = (targetMasterClock: number) => {
     if (this.disabled) {
       return;
     }

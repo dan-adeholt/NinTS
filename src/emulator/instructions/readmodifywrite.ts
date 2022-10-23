@@ -3,54 +3,55 @@
  */
 import { BIT_7, BIT_7_MASK, P_REG_CARRY, setCarry, setZeroNegative } from './util';
 import { readByte, writeByte } from '../memory';
+import EmulatorState from '../EmulatorState';
 
-export const performRMWA = (state, value) => {
+export const performRMWA = (state : EmulatorState, value : number) => {
   state.startReadTick();
   setZeroNegative(state, value);
   state.A = value;
   state.endReadTick();
 }
 
-const performRMW = (state, address, value) => {
+const performRMW = (state : EmulatorState, address: number, value: number) => {
   state.startReadTick();
   setZeroNegative(state, value);
   state.endReadTick();
   return writeByte(state, address, value);
 }
 
-const performASL = (state, value) => {
+const performASL = (state : EmulatorState, value : number) => {
   setCarry(state, value & BIT_7); // Copy last bit to carry flag
   return (value << 1) & 0xFF;
 }
 
-export const performLSR = (state, value) => {
+export const performLSR = (state : EmulatorState, value : number) => {
   setCarry(state, value & 0x1);
   return value >> 1;
 }
 
-const performROL = (state, value) => {
+const performROL = (state : EmulatorState, value : number) => {
   const oldCarry = state.P & P_REG_CARRY;
   setCarry(state, (value & BIT_7) >> 7);
   return ((value << 1) & 0xFF) | oldCarry;
 }
 
-const performROR = (state, value) => {
+const performROR = (state : EmulatorState, value : number) => {
   const oldCarry = state.P & P_REG_CARRY;
   setCarry(state, value & 0x1);
   return ((value >> 1) & BIT_7_MASK) | (oldCarry << 7);
 }
 
-const performINC = (state, value) => (value + 1) & 0xFF;
-const performDEC = (state, value) => (value - 1) & 0xFF;
+const performINC = (state : EmulatorState, value : number) => (value + 1) & 0xFF;
+const performDEC = (state : EmulatorState, value : number) => (value - 1) & 0xFF;
 
-export const aslA = (state) => performRMWA(state, performASL(state, state.A))
-export const lsrA = (state) => performRMWA(state, performLSR(state, state.A))
-export const rolA = (state) => performRMWA(state, performROL(state, state.A))
-export const rorA = (state) => performRMWA(state, performROR(state, state.A))
+export const aslA = (state : EmulatorState) => performRMWA(state, performASL(state, state.A))
+export const lsrA = (state : EmulatorState) => performRMWA(state, performLSR(state, state.A))
+export const rolA = (state : EmulatorState) => performRMWA(state, performROL(state, state.A))
+export const rorA = (state : EmulatorState) => performRMWA(state, performROR(state, state.A))
 
-export const asl = (state, address) => performRMW(state, address, performASL(state, readByte(state, address)));
-export const lsr = (state, address) => performRMW(state, address, performLSR(state, readByte(state, address)));
-export const rol = (state, address) => performRMW(state, address, performROL(state, readByte(state, address)));
-export const ror = (state, address) => performRMW(state, address, performROR(state, readByte(state, address)));
-export const inc = (state, address) => performRMW(state, address, performINC(state, readByte(state, address)));
-export const dec = (state, address) => performRMW(state, address, performDEC(state, readByte(state, address)));
+export const asl = (state : EmulatorState, address: number) => performRMW(state, address, performASL(state, readByte(state, address)));
+export const lsr = (state : EmulatorState, address: number) => performRMW(state, address, performLSR(state, readByte(state, address)));
+export const rol = (state : EmulatorState, address: number) => performRMW(state, address, performROL(state, readByte(state, address)));
+export const ror = (state : EmulatorState, address: number) => performRMW(state, address, performROR(state, readByte(state, address)));
+export const inc = (state : EmulatorState, address: number) => performRMW(state, address, performINC(state, readByte(state, address)));
+export const dec = (state : EmulatorState, address: number) => performRMW(state, address, performDEC(state, readByte(state, address)));

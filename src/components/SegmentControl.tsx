@@ -10,7 +10,7 @@ type SegmentControlOption = {
 type SegmentControlProps = {
   currentIndex: number,
   options: SegmentControlOption[],
-  onClick: (number) => void,
+  onClick: (segment: number) => void,
   expand?: boolean
 };
 

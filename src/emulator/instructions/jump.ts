@@ -2,10 +2,11 @@
  * Jump instructions
  */
 import { pushStackWord, readByte } from '../memory';
+import EmulatorState from '../EmulatorState';
 
-export const jmp = (state, address) => state.PC = address
+export const jmp = (state : EmulatorState, address: number) => state.PC = address
 
-export const jsr = state => {
+export const jsr = (state : EmulatorState) => {
   const low = readByte(state, state.PC);
   state.dummyReadTick();
 

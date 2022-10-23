@@ -1,3 +1,5 @@
+import EmulatorState from '../EmulatorState';
+
 export const BIT_7 = 0b10000000;
 export const BIT_15 = 0b1000000000000000;
 export const BIT_0 = 0b00000001;
@@ -23,7 +25,9 @@ export const P_MASK_DECIMAL = ~P_REG_DECIMAL;
 export const P_MASK_OVERFLOW = ~P_REG_OVERFLOW;
 export const P_MASK_NEGATIVE = ~P_REG_NEGATIVE;
 
-const setFlag = (state, flag, mask, on) => {
+export type Setter = (state : EmulatorState, value: number) => (number)
+
+const setFlag = (state : EmulatorState, flag: number, mask: number, on: (boolean | number)) => {
   if (on) {
     state.P = state.P | flag;
   } else {
@@ -31,12 +35,12 @@ const setFlag = (state, flag, mask, on) => {
   }
 }
 
-export const isNegative = value => value > 0x7F
-export const setCarry = (state, on) => setFlag(state, P_REG_CARRY, P_MASK_CARRY, on);
-export const setZero = (state, value) => setFlag(state, P_REG_ZERO, P_MASK_ZERO, value === 0);
-export const setNegative = (state, value) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value > 0x7F);
+export const isNegative = (value: number) => value > 0x7F
+export const setCarry = (state : EmulatorState, on: (boolean | number)) => setFlag(state, P_REG_CARRY, P_MASK_CARRY, on);
+export const setZero = (state : EmulatorState, value : number) => setFlag(state, P_REG_ZERO, P_MASK_ZERO, value === 0);
+export const setNegative = (state : EmulatorState, value : number) => setFlag(state, P_REG_NEGATIVE, P_MASK_NEGATIVE, value > 0x7F);
 
-export const setZeroNegative = (state, value) => {
+export const setZeroNegative = (state : EmulatorState, value : number) => {
   setZero(state, value);
   setNegative(state, value);
   return value;
@@ -44,12 +48,12 @@ export const setZeroNegative = (state, value) => {
 
 // Overflow is set if Positive + Positive = Negative or Negative + Negative = Positive
 // Check this by comparing the high bits of the result.
-export const setOverflow = (state, accumulator, value, result) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, (accumulator ^ result) & (value ^ result) & 0x80);
-export const setOverflowValue = (state, on) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, on);
-export const setInterrupt = (state, on) => setFlag(state, P_REG_INTERRUPT, P_MASK_INTERRUPT, on);
+export const setOverflow = (state : EmulatorState, accumulator: number, value: number, result: number) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, (accumulator ^ result) & (value ^ result) & 0x80);
+export const setOverflowValue = (state : EmulatorState, on: (boolean | number)) => setFlag(state, P_REG_OVERFLOW, P_MASK_OVERFLOW, on);
+export const setInterrupt = (state : EmulatorState, on: boolean) => setFlag(state, P_REG_INTERRUPT, P_MASK_INTERRUPT, on);
 
-export const setY = (state, value) => state.Y = value
-export const setX = (state, value) => state.X = value
-export const setA = (state, value) => state.A = value
-export const setAX = (state, value) => state.A = state.X = value
+export const setY = (state : EmulatorState, value : number) => state.Y = value
+export const setX = (state : EmulatorState, value : number) => state.X = value
+export const setA = (state : EmulatorState, value : number) => state.A = value
+export const setAX = (state : EmulatorState, value : number) => state.A = state.X = value
 

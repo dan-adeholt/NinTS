@@ -1,5 +1,6 @@
 import MemorySpace from './MemorySpace';
 import MirroringMode from '../MirroringMode';
+import { Rom } from '../parseROM';
 
 class PPUMemorySpace {
   memory = new MemorySpace(16384);
@@ -8,7 +9,7 @@ class PPUMemorySpace {
   mirroringMode = MirroringMode.Vertical;
   chrSource: Uint8Array
 
-  constructor(rom) {
+  constructor(rom: Rom) {
     this.chrRam = new Uint8Array(rom.settings.chrRamSize);
     if (rom.settings.chrRamSize > 0) {
       this.chrSource = this.chrRam;
@@ -29,19 +30,19 @@ class PPUMemorySpace {
     }
   }
 
-  read(address) {
+  read(address: number) {
     return this.memory.read(address)
   }
 
-  write(address, value) {
+  write(address: number, value: number) {
     this.memory.write(address, value);
   }
 
-  mapChr(targetStart, sourceStart, sourceEnd) {
+  mapChr(targetStart: number, sourceStart: number, sourceEnd: number) {
     this.memory.map(this.chrSource, targetStart, sourceStart, sourceEnd);
   }
 
-  setMirroringMode(mirroringMode) {
+  setMirroringMode(mirroringMode: MirroringMode) {
     this.mirroringMode = mirroringMode;
     switch(mirroringMode) {
       case MirroringMode.SingleScreenUpper:

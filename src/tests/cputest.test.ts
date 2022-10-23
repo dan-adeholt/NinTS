@@ -1,11 +1,12 @@
 import { testInstructionTestRom, runTestWithLogFile } from './testutil';
 import { test } from 'vitest'
+import EmulatorState from '../emulator/EmulatorState';
 
 test('Nes test rom executes properly', () =>
   runTestWithLogFile(
     'nestest.nes',
     'nestest.log',
-    state => {
+    (state : EmulatorState) => {
       state.PC = 0xC000;
       state.mapper.cpuMemory.write(0x4015, 0x00);
     })

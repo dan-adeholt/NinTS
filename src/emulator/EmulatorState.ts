@@ -7,7 +7,7 @@ import parseMapper from './mappers/parseMapper';
 import _ from 'lodash';
 import APU from './apu';
 import NROMMapper from "./mappers/NROMMapper";
-import {EmptyRom, Rom} from "./parseROM";
+import { EmptyRom, Rom, RomSettings } from "./parseROM";
 import PPUMemorySpace from "./mappers/PPUMemorySpace";
 import CPUMemorySpace from "./mappers/CPUMemorySpace";
 import Mapper from "./mappers/Mapper";
@@ -45,7 +45,8 @@ const ignoredKeys = [
   'rom'
 ];
 
-const readObjectState = (state, data) => {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const readObjectState = (state : any, data: any) => {
   _.forOwn(state, (value, key) => {
     const storedValue = data[key];
 
@@ -67,8 +68,8 @@ const readObjectState = (state, data) => {
   });
 }
 
-const dumpObjectState = (state, prefix = '') => {
-  const dumpedState = {};
+const dumpObjectState = (state : any, prefix = '') => {
+  const dumpedState: any = {};
 
   _.forOwn(state, (value, key) => {
     if (ignoredKeys.includes(prefix + key) || _.isFunction(value)) {
@@ -89,6 +90,8 @@ const dumpObjectState = (state, prefix = '') => {
   return dumpedState;
 }
 
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 class EmulatorState {
   A = 0;
   X = 0;
@@ -104,7 +107,7 @@ class EmulatorState {
   // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
   // set it to match.
   CYC = -1;
-  settings = null;
+  settings: RomSettings;
   breakpoints = {};
   apu: APU;
   ppu: PPU;
@@ -120,7 +123,7 @@ class EmulatorState {
   lastNMI = 0;
   lastNMIOccured = false;
   apuSampleBucket = 0;
-  audioSampleCallback: ((number) => void) | null
+  audioSampleCallback: ((sample: number) => void) | null
   ppuMemory: PPUMemorySpace
   cpuMemory: CPUMemorySpace
   prevNmiOccurred = false;
@@ -130,13 +133,14 @@ class EmulatorState {
     this.ppuMemory = new PPUMemorySpace(EmptyRom);
     this.cpuMemory = new CPUMemorySpace(EmptyRom);
     this.mapper = new NROMMapper(rom, this.cpuMemory, this.ppuMemory);
-    this.ppu = new PPU({}, this.mapper);
+    this.ppu = new PPU(EmptyRom.settings, this.mapper);
     this.apu = new APU();
     this.audioSampleCallback = null;
     this.rom = EmptyRom;
+    this.settings = EmptyRom.settings;
   }
 
-  initMachine(rom, enableTraceLogging = false, audioSampleCallback : ((number) => void) | null) {
+  initMachine(rom : Rom, enableTraceLogging = false, audioSampleCallback : ((sample: number) => void) | null) {
     this.ppuMemory = new PPUMemorySpace(rom);
     this.cpuMemory = new CPUMemorySpace(rom);
     this.mapper = parseMapper(rom, this.cpuMemory, this.ppuMemory);
@@ -186,7 +190,8 @@ class EmulatorState {
     return this;
   }
 
-  loadEmulator(data) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  loadEmulator(data : any) {
     readObjectState(this, data);
     this.mapper.reload();
   }
@@ -214,7 +219,7 @@ class EmulatorState {
     }
   }
 
-  setInputController(button, isDown) {
+  setInputController(button: number, isDown: boolean) {
     const mask = ~button;
 
     this.controller1 &= mask;
@@ -224,7 +229,7 @@ class EmulatorState {
     }
   }
 
-  readControllerMem(addr, peek) {
+  readControllerMem(addr: number, peek: boolean) {
     let openBus = 0x40;
 
     // TODO: Mesen peeks 0 value but returns open bus bits
@@ -250,7 +255,7 @@ class EmulatorState {
     return openBus | value;
   }
 
-  readMem (addr, peek = false) {
+  readMem (addr: number, peek = false): number {
     // TODO: Add mirroring here
     if (addr >= 0x2000 && addr <= 0x3FFF) {
       const modAddr = 0x2000 + (addr & 0b111);
@@ -270,7 +275,7 @@ class EmulatorState {
     }
   }
 
-  setInputMem(addr, value) {
+  setInputMem(addr: number, value: number) {
     if (value === 1) {
       if (addr === 0x4016) {
         this.controller1Latch = this.controller1;
@@ -280,7 +285,7 @@ class EmulatorState {
     }
   }
 
-  writeDMA(address, value) {
+  writeDMA(address: number, value: number) {
     // The actual write really takes place AFTER the write tick has been completed.
     // Thus whether or not the cycle is odd is determined based on the following tick.
     // That's why we add 1 here. TODO: Do actual DMA transfer after tick instead
@@ -295,35 +300,35 @@ class EmulatorState {
     const baseAddress = value << 8;
 
     for (let i = 0; i < 256; i++) {
-      const addr = baseAddress + i;
+      const address = baseAddress + i;
       this.startReadTick();
-      const value = this.readMem(addr);
+      const value = this.readMem(address);
       this.endReadTick();
       this.dummyReadTick();
       this.ppu.pushOAMValue(value);
     }
   }
 
-  setMem(addr, value) {
+  setMem(address: number, value: number) {
     // TODO: Add mirroring here
-    if (addr === OAM_DMA) {
-      this.writeDMA(addr, value);
-    } else if (addr >= 0x2000 && addr <= 0x2007) {
-      this.ppu.setPPURegisterMem(addr, value);
-    } else if (addr === 0x4016 || addr === 0x4017) {
-      this.setInputMem(addr, value);
-    } else if (addr >= 0x4000 && addr <= 0x4017) {
-      this.apu.setAPURegisterMem(addr, value);
-    } else if (addr >= 0x8000 && addr < 0xFFFF) {
-      this.mapper.handleROMWrite(addr, value);
+    if (address === OAM_DMA) {
+      this.writeDMA(address, value);
+    } else if (address >= 0x2000 && address <= 0x2007) {
+      this.ppu.setPPURegisterMem(address, value);
+    } else if (address === 0x4016 || address === 0x4017) {
+      this.setInputMem(address, value);
+    } else if (address >= 0x4000 && address <= 0x4017) {
+      this.apu.setAPURegisterMem(address, value);
+    } else if (address >= 0x8000 && address < 0xFFFF) {
+      this.mapper.handleROMWrite(address, value);
     } else {
-      this.mapper.cpuMemory.write(addr, value);
+      this.mapper.cpuMemory.write(address, value);
     }
 
     return value;
   }
 
-  getResetVectorAddress() {
+  getResetVectorAddress(): number {
     return this.readMem(0xFFFC) + (this.readMem(0xFFFD) << 8);
   }
 
@@ -331,7 +336,7 @@ class EmulatorState {
     this.PC = this.getResetVectorAddress();
   }
 
-  stepFrame(breakAfterScanlineChange) {
+  stepFrame(breakAfterScanlineChange: boolean) {
     let hitBreakpoint = false;
     const vblankCount = this.ppu.vblankCount;
 
@@ -491,7 +496,7 @@ export const localStorageAutoloadEnabled = () => {
   return autoload != null && JSON.parse(autoload) === true;
 }
 
-export const setLocalStorageAutoloadEnabled = (enabled) => {
+export const setLocalStorageAutoloadEnabled = (enabled: boolean) => {
   localStorage.setItem(LOCAL_STORAGE_KEY_AUTOLOAD, JSON.stringify(enabled));
 }
 

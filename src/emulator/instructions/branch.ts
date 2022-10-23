@@ -21,11 +21,11 @@ const branch = (state: EmulatorState, address: number, shouldBranch: number | bo
   }
 }
 
-export const bcc = (state, address) => branch(state, address, !(state.P & P_REG_CARRY));
-export const beq = (state, address) => branch(state, address, state.P & P_REG_ZERO);
-export const bne = (state, address) => branch(state, address, !(state.P & P_REG_ZERO));
-export const bcs = (state, address) => branch(state, address, state.P & P_REG_CARRY);
-export const bvc = (state, address) => branch(state, address, !(state.P & P_REG_OVERFLOW));
-export const bvs = (state, address) => branch(state, address, state.P & P_REG_OVERFLOW);
-export const bpl = (state, address) => branch(state, address, !(state.P & P_REG_NEGATIVE));
-export const bmi = (state, address) => branch(state, address, state.P & P_REG_NEGATIVE);
+export const bcc = (state : EmulatorState, address: number) => branch(state, address, !(state.P & P_REG_CARRY));
+export const beq = (state : EmulatorState, address: number) => branch(state, address, state.P & P_REG_ZERO);
+export const bne = (state : EmulatorState, address: number) => branch(state, address, !(state.P & P_REG_ZERO));
+export const bcs = (state : EmulatorState, address: number) => branch(state, address, state.P & P_REG_CARRY);
+export const bvc = (state : EmulatorState, address: number) => branch(state, address, !(state.P & P_REG_OVERFLOW));
+export const bvs = (state : EmulatorState, address: number) => branch(state, address, state.P & P_REG_OVERFLOW);
+export const bpl = (state : EmulatorState, address: number) => branch(state, address, !(state.P & P_REG_NEGATIVE));
+export const bmi = (state : EmulatorState, address: number) => branch(state, address, state.P & P_REG_NEGATIVE);

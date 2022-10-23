@@ -3,7 +3,7 @@ import { hex } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
 
-const prefixLine = (idx, str) => '[' + idx + '] ' + str
+const prefixLine = (idx: number, str: string) => '[' + idx + '] ' + str
 const fileUrl: string | null = 'http://localhost:5000/Trace%20-%20zelda2.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
 
@@ -27,7 +27,7 @@ type PPULogDebuggerProps = {
 const PPULogDebugger = ({ emulator, triggerRefresh } : PPULogDebuggerProps) => {
   const [lines, setLines] = useState<string[]>([]);
   const [error, setError] = useState<ErrorType | null>(null);
-  const [mutedLocations, setMutedLocations] = useState(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? '[]') ?? []);
+  const [mutedLocations, setMutedLocations] = useState<number[]>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? '[]') ?? []);
 
   useEffect(() => {
     if (fileUrl !== '') {

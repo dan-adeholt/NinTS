@@ -1,7 +1,7 @@
 class DMCGenerator {
   counter = 0;
 
-  setRegisterMem(address, value) {
+  setRegisterMem(address: number, value: number) {
     if (address === 0x4011) {
       this.counter = value & 0b01111111;
     }

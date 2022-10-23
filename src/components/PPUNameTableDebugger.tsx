@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { greyScaleColorForIndexedColor } from '../emulator/ppu';
+import PPU, { greyScaleColorForIndexedColor } from '../emulator/ppu';
 import { BIT_7 } from '../emulator/instructions/util';
 import { mirroringModeToString } from '../emulator/MirroringMode';
 import styles from './PPUDebugging.module.css';
@@ -8,7 +8,7 @@ import EmulatorState from '../emulator/EmulatorState';
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
 
-const blit = (ppu, tileIndex, output, outX, outY, lineWidth) => {
+const blit = (ppu: PPU, tileIndex: number, output: Uint32Array, outX: number, outY: number, lineWidth: number) => {
   let lineAddress = outY * lineWidth + outX;
 
   let address = tileIndex * 2 * 8;

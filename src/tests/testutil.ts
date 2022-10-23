@@ -6,13 +6,13 @@ import _ from 'lodash';
 import fs from 'fs';
 import { expect } from 'vitest'
 
-const parseLog = (data) => data.toString().split(/[\r\n]+/);
-export const prefixLine = (idx, str) => '[' + idx + '] ' + str
+const parseLog = (data: Buffer) => data.toString().split(/[\r\n]+/);
+export const prefixLine = (idx: number | string, str: string) => '[' + idx + '] ' + str
 
 const procRegex = / P:([0-9A-F][0-9A-F])/;
 const romRootPath = 'src/tests/roms/';
 
-export const runTestWithLogFile = (path, logPath, adjustState) => {
+export const runTestWithLogFile = (path: string, logPath: string, adjustState: ((state: EmulatorState) => void) | null) => {
   const data = fs.readFileSync(romRootPath + path);
   const log = parseLog(fs.readFileSync(romRootPath + logPath));
 
@@ -38,7 +38,6 @@ export const runTestWithLogFile = (path, logPath, adjustState) => {
         break;
       }
     }
-
 
     const entryLine = prefixLine(i, entry);
     const stateString = prefixLine(i, state.traceLogLines[i]);
@@ -67,7 +66,7 @@ export const runTestWithLogFile = (path, logPath, adjustState) => {
   }
 }
 
-export const testInstructionTestRom = (location, logOutputPath: (string | null) = null, haltAfterInstruction = -1) => {
+export const testInstructionTestRom = (location: string, logOutputPath: (string | null) = null, haltAfterInstruction = -1) => {
   const data = fs.readFileSync(romRootPath + location);
   const rom = parseROM(data);
   const state = new EmulatorState();
@@ -127,7 +126,7 @@ export const testInstructionTestRom = (location, logOutputPath: (string | null) 
   }
 }
 
-export const testPPURom = (location, testCase) => {
+export const testPPURom = (location: string, testCase: (state: EmulatorState) => void) => {
   const romFile = romRootPath + location + '.nes';
 
   const data = fs.readFileSync(romFile);
@@ -143,17 +142,17 @@ export const testPPURom = (location, testCase) => {
 };
 
 // Remove top and bottom 8 pixels, i.e. go from 240 screen height to 224. FCEUX unfortunately dumps 224px screens.
-const convertBufferToVisibleArea = buffer => buffer.slice(8 * 256, buffer.length - 8 * 256)
+const convertBufferToVisibleArea = (buffer: Uint32Array) => buffer.slice(8 * 256, buffer.length - 8 * 256)
 
-export const dumpFramebuffer = (visibleBuffer32) => {
+export const dumpFramebuffer = (visibleBuffer32: Uint32Array) => {
   const width = 256;
   const height = visibleBuffer32.length / width;
   const outPNG = new PNG({ width, height });
-  outPNG.data = new Uint8Array(visibleBuffer32.buffer);
+  outPNG.data = Buffer.from(new Uint8Array(visibleBuffer32.buffer));
   fs.writeFileSync('/tmp/out.png', PNG.sync.write(outPNG, {}));
 }
 
-export const testPPURomWithImage = (location) => {
+export const testPPURomWithImage = (location: string) => {
   const romFile = romRootPath + location + '.nes';
   const data = fs.readFileSync(romFile);
   const imgFile = romRootPath + location + '.png';
