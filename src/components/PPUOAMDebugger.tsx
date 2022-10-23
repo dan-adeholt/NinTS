@@ -8,15 +8,31 @@ import {
 } from '../emulator/ppu';
 import { hex } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
+import EmulatorState from '../emulator/EmulatorState';
 
-const PPUOAMDebugger = ({ refresh, emulator}) => {
-  const lines = useMemo(() => {
+type OAMLine = {
+  x: number
+  y: number
+  tile: string
+  flipHorizontal: number
+  flipVertical: number
+  priority: number
+  palette: number
+}
+
+type PPUOAMDebuggerProps = {
+  refresh: boolean
+  emulator: EmulatorState
+}
+
+const PPUOAMDebugger = ({ refresh, emulator } : PPUOAMDebuggerProps) => {
+  const lines = useMemo<OAMLine[]>(() => {
     _.noop(refresh);
     if (emulator === null) {
       return [];
     }
 
-    let ret = [];
+    const ret: OAMLine[] = [];
 
     for (let i = 0; i < 256; i+=4) {
       ret.push({
@@ -38,7 +54,7 @@ const PPUOAMDebugger = ({ refresh, emulator}) => {
       <div className={styles.ppuOamDebugger}>
 
         { lines.map((line, idx) => (
-          <div>
+          <div key={idx}>
             { idx + ' - ' + line.x + ',' + line.y + ' - ' + line.tile + ' - FlipH  ' + line.flipHorizontal + ', FlipV' + line.flipVertical + ', Prio: ' + line.priority + ', Palette: ' + line.palette }
           </div>
         ))

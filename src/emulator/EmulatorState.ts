@@ -6,16 +6,17 @@ import { nmi } from './instructions/stack';
 import parseMapper from './mappers/parseMapper';
 import _ from 'lodash';
 import APU from './apu';
+import NROMMapper from "./mappers/NROMMapper";
+import {EmptyRom, Rom} from "./parseROM";
+import PPUMemorySpace from "./mappers/PPUMemorySpace";
+import CPUMemorySpace from "./mappers/CPUMemorySpace";
+import Mapper from "./mappers/Mapper";
 
 const NTSC_CPU_CYCLES_PER_SECOND = 1789773;
 export const SAMPLE_RATE = 48000;
 export const AUDIO_BUFFER_SIZE = 4096;
 
 const CPU_CYCLES_PER_SAMPLE = NTSC_CPU_CYCLES_PER_SECOND / SAMPLE_RATE;
-
-const getResetVectorAddress = state => {
-  return state.readMem(0xFFFC) + (state.readMem(0xFFFD) << 8);
-}
 
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
@@ -46,7 +47,7 @@ const ignoredKeys = [
 
 const readObjectState = (state, data) => {
   _.forOwn(state, (value, key) => {
-    let storedValue = data[key];
+    const storedValue = data[key];
 
     if (storedValue === undefined) {
       return;
@@ -67,7 +68,7 @@ const readObjectState = (state, data) => {
 }
 
 const dumpObjectState = (state, prefix = '') => {
-  let dumpedState = {};
+  const dumpedState = {};
 
   _.forOwn(state, (value, key) => {
     if (ignoredKeys.includes(prefix + key) || _.isFunction(value)) {
@@ -99,29 +100,48 @@ class EmulatorState {
   ppuOffset = 1; // But there is also a PPU offset - very weird.
   cpuStep = cpuStep;
   cpuHalfStep = cpuHalfStep;
-  mapper = null;
+  mapper: Mapper
   // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
   // set it to match.
   CYC = -1;
   settings = null;
   breakpoints = {};
-  apu = null;
-  ppu = null;
-  nmiCounter = null;
-  traceLogLines = [];
-  controller1 = new Uint8Array(8);
-  controller2 =  new Uint8Array(8);
+  apu: APU;
+  ppu: PPU;
+  nmiCounter = 0;
+  nmiCounterActive = false;
+  traceLogLines: string[] = [];
+  controller1 = 0;
+  controller2 = 0;
   controller1Latch = 0;
   controller2Latch =  0;
   enableTraceLogging = false;
-  rom = null;
-  lastNMI = null;
+  rom: Rom
+  lastNMI = 0;
+  lastNMIOccured = false;
   apuSampleBucket = 0;
-  audioSampleCallback = null;
+  audioSampleCallback: ((number) => void) | null
+  ppuMemory: PPUMemorySpace
+  cpuMemory: CPUMemorySpace
+  prevNmiOccurred = false;
 
-  initMachine(rom, enableTraceLogging = false, audioSampleCallback) {
-    this.mapper = parseMapper(rom);
+  constructor() {
+    const rom = EmptyRom;
+    this.ppuMemory = new PPUMemorySpace(EmptyRom);
+    this.cpuMemory = new CPUMemorySpace(EmptyRom);
+    this.mapper = new NROMMapper(rom, this.cpuMemory, this.ppuMemory);
+    this.ppu = new PPU({}, this.mapper);
+    this.apu = new APU();
+    this.audioSampleCallback = null;
+    this.rom = EmptyRom;
+  }
+
+  initMachine(rom, enableTraceLogging = false, audioSampleCallback : ((number) => void) | null) {
+    this.ppuMemory = new PPUMemorySpace(rom);
+    this.cpuMemory = new CPUMemorySpace(rom);
+    this.mapper = parseMapper(rom, this.cpuMemory, this.ppuMemory);
     this.ppu = new PPU(rom.settings, this.mapper);
+    this.audioSampleCallback = audioSampleCallback;
 
     // Reset vector
     const startingLocation = this.mapper.cpuMemory.read(0xFFFC) + (this.mapper.cpuMemory.read(0xFFFD) << 8);
@@ -140,15 +160,17 @@ class EmulatorState {
     this.CYC = -1;
     this.settings = rom.settings;
     this.breakpoints = {};
-    this.nmiCounter = null;
+    this.nmiCounter = 0;
+    this.nmiCounterActive = false;
     this.traceLogLines = [];
-    this.controller1 = new Uint8Array(8);
-    this.controller2 = new Uint8Array(8);
+    this.controller1 = 0;
+    this.controller2 = 0;
     this.controller1Latch = 0;
     this.controller2Latch = 0;
     this.enableTraceLogging = enableTraceLogging;
     this.rom = rom;
-    this.lastNMI = null;
+    this.lastNMI = 0;
+    this.lastNMIOccured = false;
     this.apuSampleBucket = 0;
     this.audioSampleCallback = audioSampleCallback;
 
@@ -157,7 +179,7 @@ class EmulatorState {
       this.dummyReadTick();
     }
 
-    if (localStorageAutoloadEnabled()) {
+    if (!import.meta.env.VITEST && localStorageAutoloadEnabled()) {
       this.loadEmulatorFromLocalStorage();
     }
 
@@ -174,17 +196,21 @@ class EmulatorState {
   }
 
   saveEmulatorToLocalStorage() {
-    const key = 'save-' + this.rom.romSHA;
-    localStorage.setItem(key, JSON.stringify(this.saveEmulator()));
-  };
+    if (this.rom != null) {
+      const key = 'save-' + this.rom.romSHA;
+      localStorage.setItem(key, JSON.stringify(this.saveEmulator()));
+    }
+  }
 
   loadEmulatorFromLocalStorage() {
-    const key = 'save-' + this.rom.romSHA;
-    const savegame = localStorage.getItem(key);
+    if (this.rom != null) {
+      const key = 'save-' + this.rom.romSHA;
+      const savegame = localStorage.getItem(key);
 
-    if (savegame != null) {
-      const parsed = JSON.parse(savegame);
-      this.loadEmulator(parsed);
+      if (savegame != null) {
+        const parsed = JSON.parse(savegame);
+        this.loadEmulator(parsed);
+      }
     }
   }
 
@@ -276,7 +302,7 @@ class EmulatorState {
       this.dummyReadTick();
       this.ppu.pushOAMValue(value);
     }
-  };
+  }
 
   setMem(addr, value) {
     // TODO: Add mirroring here
@@ -295,24 +321,28 @@ class EmulatorState {
     }
 
     return value;
-  };
+  }
+
+  getResetVectorAddress() {
+    return this.readMem(0xFFFC) + (this.readMem(0xFFFD) << 8);
+  }
 
   reset() {
-    this.PC = getResetVectorAddress();
+    this.PC = this.getResetVectorAddress();
   }
 
   stepFrame(breakAfterScanlineChange) {
     let hitBreakpoint = false;
-    let vblankCount = this.ppu.vblankCount;
+    const vblankCount = this.ppu.vblankCount;
 
-    let prevScanline = this.ppu.scanline;
+    const prevScanline = this.ppu.scanline;
     while (!hitBreakpoint && vblankCount === this.ppu.vblankCount) {
-      let numCycles = this.CYC;
+      const numCycles = this.CYC;
       if (!this.step()) {
         break;
       }
 
-      let elapsedCycles = this.CYC - numCycles ;
+      const elapsedCycles = this.CYC - numCycles ;
 
       this.apuSampleBucket += elapsedCycles;
 
@@ -343,8 +373,9 @@ class EmulatorState {
     // Set an internal counter that will tick down each cycle until reaching zero. nmiCounter === 0 means that the emulator should
     // handle the NMI after the current opcode has completed execution.
     if (this.ppu.nmiOccurred && !this.prevNmiOccurred && this.ppu.controlGenerateNMI) {
+      this.nmiCounterActive = true;
       this.nmiCounter = 1;
-    } else if (this.nmiCounter != null) {
+    } else if (this.nmiCounterActive) {
       this.nmiCounter--;
     }
   }
@@ -418,9 +449,9 @@ class EmulatorState {
     this.startReadTick();
 
     if (this.enableTraceLogging) {
-      if (this.lastNMI != null && this.lastNMI <= this.CYC) {
+      if (this.lastNMIOccured && this.lastNMI <= this.CYC) {
         this.traceLogLines.push('[NMI - Cycle: ' + (this.lastNMI) + ']');
-        this.lastNMI = null;
+        this.lastNMIOccured = false;
       }
 
       this.traceLogLines.push(stateToString(this));
@@ -433,8 +464,8 @@ class EmulatorState {
     return opcode;
   }
 
-  step(logState = false) {
-    const opcode = this.readOpcode(logState);
+  step() {
+    const opcode = this.readOpcode();
 
     if (opcode in opcodeTable) {
       opcodeTable[opcode](this);
@@ -445,14 +476,14 @@ class EmulatorState {
 
     // This actually annoys me a bit, if an NMI triggers we won't get the log output from the preceding opcode.
     // But this is the way Mesen does it so we do it to stay compatible.
-    if (this.nmiCounter != null && this.nmiCounter <= 0 && this.ppu.controlGenerateNMI) {
-      this.nmiCounter = null;
+    if (this.nmiCounterActive && this.nmiCounter <= 0 && this.ppu.controlGenerateNMI) {
+      this.nmiCounterActive = false;
       nmi(this);
       this.lastNMI = this.CYC;
     }
 
     return true;
-  };
+  }
 }
 
 export const localStorageAutoloadEnabled = () => {

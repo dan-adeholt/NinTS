@@ -23,6 +23,7 @@ import {
 } from './instructions/util';
 import { onSamePageBoundary, PAGE_MASK } from './memory';
 import _ from 'lodash';
+import EmulatorState from "./EmulatorState";
 
 export const peekMem = (state, address) => {
   if (address !== 0x4015 && address !== 0x4016 && address !== 0x4017 && address > 0x4000 && address < 0x4020) {
@@ -74,7 +75,7 @@ const logFormatters = {
     const address = (base + state.Y) % 256;
     return "$" + hex(base) + ",Y @ " + hex(address, HEX_PREFIX) + " = " + hex(peekMem(state, address), HEX_PREFIX);
   },
-  [ModeImplied]: state => "",
+  [ModeImplied]: () => "",
   [ModeIndirect]: (state, pc) => {
     const address = absoluteAddress(state, pc);
 
@@ -103,7 +104,7 @@ const logFormatters = {
     const base = peekMem(state, zeroPageAddress) + (peekMem(state, (zeroPageAddress + 1) % 256) << 8);
     const address = (base + state.Y) & 0xFFFF;
 
-    let value = peekMem(state, address);
+    const value = peekMem(state, address);
 
     return "($" + hex(zeroPageAddress) + "),Y @ $" + hex16(address) + " = " + hex(value, HEX_PREFIX);
   },
@@ -163,7 +164,7 @@ const appendStateRegisters = (state, str) => {
 export const stateToString = (state) => {
   let str = hex16(state.PC) + ' ';
   const opcode = state.readMem(state.PC);
-  let hexPrefix = '$';
+  const hexPrefix = '$';
   str += hex(opcode, hexPrefix);
   str += ' ';
 
@@ -194,16 +195,16 @@ export const stateToString = (state) => {
 
 const maxInstructionSize = _.max(_.map(opcodeMetadata, 'instructionSize'));
 
-export const disassembleLine = (state, address) => {
+export const disassembleLine = (state, address): string[] => {
   const opcode = peekMem(state, address);
-  let line = ['0x' + hex16(address)];
+  const line = ['0x' + hex16(address)];
 
   if (opcode != null && opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {
     const { name, mode } = opcodeMetadata[opcode];
-    let instructionSize = getInstructionSize(mode);
+    const instructionSize = getInstructionSize(mode);
 
     if (address + instructionSize >= state.mapper.cpuMemory.memory.length) {
-      return;
+      return [];
     }
 
     for (let i = 0; i < instructionSize; i++) {
@@ -228,13 +229,18 @@ export const disassembleLine = (state, address) => {
   return line;
 }
 
-export const disassemble = (state) => {
+export type DisassembledLine = {
+  address: number
+  line: string[]
+}
+
+export const disassemble = (state : EmulatorState): DisassembledLine[] => {
   let address = 0x8000;
-  let lines = [];
+  const lines: DisassembledLine[] = [];
 
   while(address < state.mapper.cpuMemory.memory.length) {
     const opcode = peekMem(state, address);
-    let line = disassembleLine(state, address);
+    const line = disassembleLine(state, address);
     lines.push( { address, line });
 
     if (opcode in opcodeMetadata && opcodeMetadata[opcode] != null) {

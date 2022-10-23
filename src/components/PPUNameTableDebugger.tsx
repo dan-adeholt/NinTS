@@ -3,6 +3,7 @@ import { greyScaleColorForIndexedColor } from '../emulator/ppu';
 import { BIT_7 } from '../emulator/instructions/util';
 import { mirroringModeToString } from '../emulator/MirroringMode';
 import styles from './PPUDebugging.module.css';
+import EmulatorState from '../emulator/EmulatorState';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
@@ -29,7 +30,7 @@ const blit = (ppu, tileIndex, output, outX, outY, lineWidth) => {
   }
 };
 
-const generateFrameBuffer = emulator => {
+const generateFrameBuffer = (emulator: EmulatorState) => {
   const texture = new Uint32Array(NAME_TABLE_WIDTH * 2 * NAME_TABLE_HEIGHT * 2);
 
   for (let i = 0; i < texture.length; i++) {
@@ -40,18 +41,18 @@ const generateFrameBuffer = emulator => {
     return texture;
   }
 
-  let tileIndexOffset = emulator.ppu.controlBgPatternAddress === 1 ? 256 : 0;
+  const tileIndexOffset = emulator.ppu.controlBgPatternAddress === 1 ? 256 : 0;
 
   const offsets = [[0x2000, 0, 0], [0x2400, 256, 0], [0x2800, 0, 240], [0x2C00, 256, 240]];
   let curAddress;
 
-  for (let offset of offsets) {
+  for (const offset of offsets) {
     const [addressStart, offsetX, offsetY] = offset;
     curAddress = addressStart;
 
     for (let row = 0; row < 30; row++) {
       for (let col = 0; col < 32; col++) {
-        let tileIndex = emulator.ppu.readPPUMem(curAddress);
+        const tileIndex = emulator.ppu.readPPUMem(curAddress);
         blit(emulator.ppu, tileIndex + tileIndexOffset, texture, col * 8 + offsetX, row * 8 + offsetY, NAME_TABLE_WIDTH * 2);
         curAddress++;
       }
@@ -63,17 +64,24 @@ const generateFrameBuffer = emulator => {
   return texture;
 };
 
-const PPUNameTableDebugger = ({ emulator, refresh }) => {
-  const ppuCanvasRef = useRef();
+type PPUNameTableDebuggerProps = {
+  emulator: EmulatorState
+  refresh: boolean
+}
+
+const PPUNameTableDebugger = ({ emulator, refresh } : PPUNameTableDebuggerProps) => {
+  const ppuCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (ppuCanvasRef.current != null && emulator != null) {
       const context = ppuCanvasRef.current.getContext("2d");
-      const imageData = context.createImageData(NAME_TABLE_WIDTH * 2, NAME_TABLE_HEIGHT * 2);
-      const framebuffer = new Uint32Array(imageData.data.buffer);
+      if (context != null) {
+        const imageData = context.createImageData(NAME_TABLE_WIDTH * 2, NAME_TABLE_HEIGHT * 2);
+        const framebuffer = new Uint32Array(imageData.data.buffer);
 
-      framebuffer.set(generateFrameBuffer(emulator), 0);
-      context.putImageData(imageData, 0, 0);
+        framebuffer.set(generateFrameBuffer(emulator), 0);
+        context.putImageData(imageData, 0, 0);
+      }
     }
   }, [ppuCanvasRef, emulator, refresh]);
 

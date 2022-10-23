@@ -1,6 +1,8 @@
 import { testPPURom, testPPURomWithImage } from './testutil';
 import { COLORS } from '../emulator/constants';
 import _ from 'lodash';
+import { expect, test } from 'vitest'
+
 
 test('01 - Background', () => testPPURom(
   'ppu-tests/01-background/01-background',

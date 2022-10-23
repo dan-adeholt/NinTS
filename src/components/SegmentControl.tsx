@@ -1,9 +1,20 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import styles from './SegmentControl.module.css';
 
-const SegmentControl = ({ currentIndex, options, onClick, expand = false }) => {
+type SegmentControlOption = {
+  title: React.ReactNode,
+  view: React.ReactNode
+}
+
+type SegmentControlProps = {
+  currentIndex: number,
+  options: SegmentControlOption[],
+  onClick: (number) => void,
+  expand?: boolean
+};
+
+const SegmentControl = ({ currentIndex, options, onClick, expand = false } : SegmentControlProps) => {
   return (
     <>
       <div className={classNames(styles.segmentControl, expand && styles.expand)}>
@@ -16,17 +27,6 @@ const SegmentControl = ({ currentIndex, options, onClick, expand = false }) => {
       { options[currentIndex].view }
     </>
   );
-};
-
-const OptionPropType = PropTypes.shape({
-  title: PropTypes.string,
-  view: PropTypes.node
-});
-
-SegmentControl.propTypes = {
-  options: PropTypes.arrayOf(OptionPropType),
-  currentIndex: PropTypes.number,
-  onClick: PropTypes.func
 };
 
 export default React.memo(SegmentControl);

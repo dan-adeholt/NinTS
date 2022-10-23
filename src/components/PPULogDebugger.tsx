@@ -1,24 +1,42 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { hex } from '../emulator/stateLogging';
-import { prefixLine } from '../tests/testutil';
 import styles from './PPUDebugging.module.css';
+import EmulatorState from '../emulator/EmulatorState';
 
-const fileUrl = 'http://localhost:5000/Trace%20-%20zelda2.txt';
+const prefixLine = (idx, str) => '[' + idx + '] ' + str
+const fileUrl: string | null = 'http://localhost:5000/Trace%20-%20zelda2.txt';
 const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
 
-const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
-  const [lines, setLines] = useState([]);
-  const [error, setError] = useState(null);
+type ErrorDebugEntry = {
+  name: string
+  value: number
+}
+
+type ErrorType = {
+  expected: string
+  found: string
+  prevLines: string[]
+  debug: ErrorDebugEntry[]
+}
+
+type PPULogDebuggerProps = {
+  emulator: EmulatorState
+  triggerRefresh: () => void
+}
+
+const PPULogDebugger = ({ emulator, triggerRefresh } : PPULogDebuggerProps) => {
+  const [lines, setLines] = useState<string[]>([]);
+  const [error, setError] = useState<ErrorType | null>(null);
   const [mutedLocations, setMutedLocations] = useState(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? '[]') ?? []);
 
   useEffect(() => {
     if (fileUrl !== '') {
       fetch(fileUrl)
         .then(res => res.text())
-        .then((text, t2) => {
+        .then(text => {
           setLines(text.split('\r\n'));
         })
-          .catch(e => {
+          .catch(() => {
             // console.error(e);
           })
     }
@@ -30,13 +48,13 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
   });
 
   const dumpStates = useCallback(() => {
-    let isMatching = true;
+    const isMatching = true;
 
     let lineIndex = dumpingState.current.lineIndex;
 
     if (!dumpingState.current.initialized) {
       dumpingState.current.initialized = true;
-      Object.assign(emulator, emulator.initMachine(emulator.rom, true));
+      Object.assign(emulator, emulator.initMachine(emulator.rom, true, null));
     }
 
     while (isMatching && lineIndex < lines.length) {
@@ -44,7 +62,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
         emulator.step();
       }
 
-      let stateString = emulator.traceLogLines[lineIndex];
+      const stateString = emulator.traceLogLines[lineIndex];
 
       if (stateString !== lines[lineIndex] && !mutedLocations.includes(emulator.PC)) {
         const prevStart = Math.max(lineIndex - 20, 0);
@@ -76,7 +94,7 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
     dumpingState.current.lineIndex = lineIndex;
   }, [emulator, lines, mutedLocations, triggerRefresh]);
 
-  const [perfStr, setPerfStr] = useState(null);
+  const [perfStr, setPerfStr] = useState<string | null>(null);
 
   const profilePPU = useCallback(() => {
     const t0 = performance.now();
@@ -87,9 +105,9 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
     emulator.ppu.maskSpritesEnabled = true;
     emulator.ppu.updatePPU(emulator.ppu.masterClock + 200000000);
     const diffMs = (performance.now() - t0);
-    const ppuClockSpeed = 7.15909066666666666666;
+    const ntscPpuClockSpeed = 21.477272 / 3.0;
     const clockSpeed = ((emulator.ppu.cycle - startCycle) / (diffMs * 1000));
-    const ratio = (clockSpeed / ppuClockSpeed).toFixed(2);
+    const ratio = (clockSpeed / ntscPpuClockSpeed).toFixed(2);
     setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz: ' + ratio);
   }, [emulator]);
 
@@ -146,7 +164,5 @@ const PPULogDebugger = ({ emulator, refresh, triggerRefresh }) => {
     </>
   );
 };
-
-PPULogDebugger.propTypes = {};
 
 export default React.memo(PPULogDebugger);

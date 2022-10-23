@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { BIT_7 } from '../emulator/instructions/util';
 import styles from './PPUDebugging.module.css';
+import EmulatorState from '../emulator/EmulatorState';
 
 const PATTERN_TABLE_WIDTH = 256;
 const PATTERN_TABLE_HEIGHT = 128;
@@ -65,16 +66,22 @@ const generateFrameBuffer = ppu => {
   return texture;
 };
 
-const PPUSpritesDebugger = ({ emulator, refresh }) => {
-  const ppuCanvasRef = useRef();
+type PPUSpritesDebugger = {
+  emulator: EmulatorState
+}
+
+const PPUSpritesDebugger = ({ emulator } : PPUSpritesDebugger) => {
+  const ppuCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (ppuCanvasRef.current != null && emulator != null) {
       const context = ppuCanvasRef.current.getContext("2d");
-      const imageData = context.createImageData(PATTERN_TABLE_WIDTH, PATTERN_TABLE_HEIGHT);
-      const framebuffer = new Uint32Array(imageData.data.buffer);
-      framebuffer.set(generateFrameBuffer(emulator.ppu), 0);
-      context.putImageData(imageData, 0, 0);
+      if (context != null) {
+        const imageData = context.createImageData(PATTERN_TABLE_WIDTH, PATTERN_TABLE_HEIGHT);
+        const framebuffer = new Uint32Array(imageData.data.buffer);
+        framebuffer.set(generateFrameBuffer(emulator.ppu), 0);
+        context.putImageData(imageData, 0, 0);
+      }
     }
   }, [ppuCanvasRef, emulator]);
 

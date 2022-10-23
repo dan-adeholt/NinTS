@@ -1,15 +1,15 @@
 import { BIT_7 } from '../instructions/util';
-import PPUMemorySpace from './PPUMemorySpace';
-import CPUMemorySpace from './CPUMemorySpace';
 import MirroringMode from '../MirroringMode';
+import Mapper from "./Mapper";
+import { Rom } from '../parseROM';
 
-const MMCVariant = {
-  None: 0,
-  SNROM: 1,
-  SOROM: 2,
-  SUROM: 3,
-  SXROM: 4,
-  SZROM: 5
+enum MMCVariant {
+  None = 0,
+  SNROM = 1,
+  SOROM = 2,
+  SUROM = 3,
+  SXROM = 4,
+  SZROM = 5
 }
 
 const registerToMirroringMode = register => {
@@ -23,15 +23,19 @@ const registerToMirroringMode = register => {
     case 3:
     default:
       return MirroringMode.Horizontal;
-  };
+  }
 }
 
-class MMC1Mapper {
-  constructor(rom) {
-    this.ppuMemory = new PPUMemorySpace(rom);
-    this.cpuMemory = new CPUMemorySpace(rom);
+class MMC1Mapper extends Mapper {
+  registers = [0, 0, 0, 0];
+  variant = MMCVariant.None;
+  shiftRegister = 0;
+  rom: Rom;
+  count = 0;
+  prgRamDisabled = false;
 
-    this.registers = [0, 0, 0, 0];
+  constructor(rom, cpuMemory, ppuMemory) {
+    super(cpuMemory, ppuMemory);
 
     if (rom.settings.chrRamSize === 0) {
       this.variant = MMCVariant.None;
@@ -52,8 +56,6 @@ class MMC1Mapper {
     }
 
     this.rom = rom;
-    this.shiftRegister = 0;
-    this.count = 0;
     // TODO: Use prgRamDisable
     this.prgRamDisabled = false;
     this.update(0, 0x0C); // Ensure PRG Rom bank mode 3 at boot
@@ -64,7 +66,7 @@ class MMC1Mapper {
     this.count = 0;
   }
 
-  reload() {
+  override reload() {
     this.update(0, this.registers[0]);
   }
 
@@ -101,7 +103,7 @@ class MMC1Mapper {
       // but in practice that only leads to weird HW behavior. They can only have different values in 4kb mode, in 8kb mode
       // only the lower register setting matter.
       let prgRamBank = (this.registers[1] & 0b1100) >> 2;
-      let prgRomBank512 = (this.registers[1] & 0b10000);
+      const prgRomBank512 = (this.registers[1] & 0b10000);
 
       if (this.variant === MMCVariant.SOROM) {
         prgRamBank >>= 1; // Lower bit ignored

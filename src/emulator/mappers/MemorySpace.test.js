@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest'
 import MemorySpace from './MemorySpace';
 
 test('Mapping works correctly', () => {

@@ -125,11 +125,11 @@ export default class SquareWaveGenerator {
     // const print = unit === '1';
     // const print = true;
     switch (relAddress) {
-      case 0: // Duty cycle, length counter halt, constant volume/envelope flag, volume/envelope divider period
-        const dutyCycle =         (value & 0b11000000) >> 6;
+      case 0: { // Duty cycle, length counter halt, constant volume/envelope flag, volume/envelope divider period
+        const dutyCycle = (value & 0b11000000) >> 6;
         const lengthCounterHalt = (value & 0b00100000) >> 5;
-        const constantVolume =    (value & 0b00010000) >> 4;
-        const volumeEnvelope =    (value & 0b00001111);
+        const constantVolume = (value & 0b00010000) >> 4;
+        const volumeEnvelope = (value & 0b00001111);
 
         this.sequence = sequences[dutyCycle];
         this.haltCounterOrEnvelopeLoop = lengthCounterHalt === 1;
@@ -140,23 +140,22 @@ export default class SquareWaveGenerator {
         // }
         // if (--debug) console.log(this.index, 'SEQ', this.sequence, 'HC:', this.haltCounterOrEnvelopeLoop, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
         break;
-      case 1: // Sweep setup
-        this.sweepEnabled  =     ((value & 0b10000000) >> 7) === 1;
-        this.sweepPeriod =       (value & 0b01110000) >> 4;
-        this.sweepNegate =       ((value & 0b00001000) >> 3) === 1;
-        this.sweepShift =        (value & 0b00000111);
+      } case 1: { // Sweep setup
+        this.sweepEnabled = ((value & 0b10000000) >> 7) === 1;
+        this.sweepPeriod = (value & 0b01110000) >> 4;
+        this.sweepNegate = ((value & 0b00001000) >> 3) === 1;
+        this.sweepShift = (value & 0b00000111);
         this.sweepReloadFlag = true;
-        if (this.sweepEnabled) {
-
-        }
         break;
-      case 2: // Timer low 8 bits
+      }
+      case 2: { // Timer low 8 bits
         this.timerLow = value;
         // console.log(unit, 'TL, TS:', this.timerSetting, this.numSamplesGenerated, this.numBailed1);
         // console.log('TL', value);
         break;
-      case 3: // Length counter load and timer high 3 bits
-        this.timerHigh =         (value & 0b00000111);
+      }
+      case 3: { // Length counter load and timer high 3 bits
+        this.timerHigh = (value & 0b00000111);
         this.timerSetting = (this.timerHigh << 8) | this.timerLow;
         const timerIndex = (value & 0b11111000) >> 3;
         this.lengthCounter = lengthLookup[timerIndex];
@@ -167,6 +166,7 @@ export default class SquareWaveGenerator {
         // console.log('TH', this.timerHigh, 'TV', this.timerValue);
         // console.log('LC', this.lengthCounter);
         break;
+      }
       default:
         break;
     }

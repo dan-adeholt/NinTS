@@ -372,11 +372,12 @@ class PPU {
         }
 
         break;
-      case PPUDATA:
+      case PPUDATA: {
         const ppuAddress = this.V & 0x3FFF;
         this.writePPUMem(ppuAddress, value);
         this.incrementVRAMAddress();
         break;
+      }
       default:
     }
   };

@@ -2,6 +2,7 @@ import fs from 'fs';
 import { parseROM } from './parseROM';
 import EmulatorState  from './EmulatorState';
 import _ from 'lodash';
+import { expect, test } from 'vitest'
 
 test('Save state', () => {
     const data = fs.readFileSync('src/tests/roms/nestest.nes');

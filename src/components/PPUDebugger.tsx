@@ -8,8 +8,15 @@ import PPUVRAMDebugger from './PPUVRAMDebugger';
 import PPUScanlineDebugger from './PPUScanlineDebugger';
 import PPULogDebugger from './PPULogDebugger';
 import styles from './PPUDebugging.module.css';
+import EmulatorState from '../emulator/EmulatorState';
 
-const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
+type PPUDebuggerProps = {
+  emulator: EmulatorState
+  refresh: boolean
+  triggerRefresh: () => void
+}
+
+const PPUDebugger = ({ emulator, refresh, triggerRefresh } : PPUDebuggerProps) => {
   const options = useMemo(() => {
     return [
       {
@@ -18,7 +25,7 @@ const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
       },
       {
         title: 'Sprites',
-        view: <PPUSpritesDebugger emulator={emulator} refresh={refresh}/>
+        view: <PPUSpritesDebugger emulator={emulator}/>
       },
       {
         title: 'OAM',
@@ -30,7 +37,7 @@ const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
       },
       {
         title: 'Scanlines',
-        view: <PPUScanlineDebugger emulator={emulator} refresh={refresh}/>
+        view: <PPUScanlineDebugger refresh={refresh}/>
       }
     ];
   }, [emulator, refresh]);
@@ -39,7 +46,7 @@ const PPUDebugger = ({ emulator, refresh, triggerRefresh }) => {
 
   return (
     <div className={styles.ppuDebugger}>
-      <PPULogDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/>
+      <PPULogDebugger emulator={emulator} triggerRefresh={triggerRefresh}/>
       <br/><br/>
       <SegmentControl options={options} onClick={setIndex} currentIndex={index}/>
     </div>

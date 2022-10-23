@@ -40,7 +40,7 @@ export const parseROM = buffer => {
     index += 512;
   }
 
-  let hash = sha1.create();
+  const hash = sha1.create();
   hash.update(buffer.slice(index));
   const romSHA = hash.hex().toUpperCase();
 
@@ -69,4 +69,50 @@ export const parseROM = buffer => {
   const chrData = buffer.slice(index, index + 8192 * chrRomSize);
 
   return { prgData, chrData, settings, romSHA };
+}
+
+export type RomSettings = {
+  mirroringVertical: boolean
+  batteryBackedPRGRam: boolean
+  hasTrainer: boolean
+  useFourScreenVRAM: boolean
+  region: number
+  type: number
+  mapper: number
+  submapper: number
+  mirroring: string
+  battery: boolean
+  prgRomSize: number
+  chrRomSize: number
+  prgRamSize: number
+  chrRamSize: number
+}
+
+export type Rom = {
+  prgData: Uint8Array
+  chrData: Uint8Array
+  settings: RomSettings
+  romSHA: string
+}
+
+export const EmptyRom: Rom = {
+  settings: {
+    prgRomSize: 0x4000,
+    chrRomSize: 0x2000,
+    prgRamSize: 0,
+    chrRamSize: 0,
+    mirroringVertical: false,
+    batteryBackedPRGRam: false,
+    hasTrainer: false,
+    useFourScreenVRAM: false,
+    region: 0,
+    type: 0,
+    mapper: 0,
+    submapper: 0,
+    mirroring: 'H',
+    battery: false
+  },
+  prgData: new Uint8Array(16384),
+  chrData: new Uint8Array(8192),
+  romSHA: ''
 }

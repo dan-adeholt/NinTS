@@ -4,6 +4,7 @@ import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging'
 import { PNG } from 'pngjs';
 import _ from 'lodash';
 import fs from 'fs';
+import { expect } from 'vitest'
 
 const parseLog = (data) => data.toString().split(/[\r\n]+/);
 export const prefixLine = (idx, str) => '[' + idx + '] ' + str
@@ -11,7 +12,7 @@ export const prefixLine = (idx, str) => '[' + idx + '] ' + str
 const procRegex = / P:([0-9A-F][0-9A-F])/;
 const romRootPath = 'src/tests/roms/';
 
-export const runTestWithLogFile = (path, logPath, adjustState, swapPPU) => {
+export const runTestWithLogFile = (path, logPath, adjustState) => {
   const data = fs.readFileSync(romRootPath + path);
   const log = parseLog(fs.readFileSync(romRootPath + logPath));
 

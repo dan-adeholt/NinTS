@@ -38,6 +38,7 @@ class APU {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   readAPURegisterMem(address) {
     return 0;
   }

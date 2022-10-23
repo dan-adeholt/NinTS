@@ -37,7 +37,7 @@ class MemorySpace {
     const ret = this.banks[bankIndex][subIndex];
 
     if (ret === undefined) {
-      debugger;
+      console.error('Got error while reading memory bank', bankIndex, ',', subIndex)
     }
 
     return ret;

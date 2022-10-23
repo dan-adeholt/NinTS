@@ -1,9 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  CSSProperties,
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAlignCenter, faPause, faStepForward, faPlay, faCaretSquareRight } from '@fortawesome/free-solid-svg-icons'
-import { FixedSizeList as List } from 'react-window';
+import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { disassemble, disassembleLine, hex } from '../emulator/stateLogging';
+import { disassemble, disassembleLine, hex, DisassembledLine } from '../emulator/stateLogging';
 import classNames from 'classnames';
 import _ from 'lodash';
 import { opcodeMetadata } from '../emulator/cpu';
@@ -11,6 +20,7 @@ import { RunModeType } from '../App';
 import { setIsSteppingScanline } from '../emulator/ppu';
 import SegmentControl from './SegmentControl';
 import styles from './DebuggerSidebar.module.css';
+import EmulatorState from '../emulator/EmulatorState';
 
 export const BREAKPOINTS_KEY = 'Breakpoints';
 
@@ -25,29 +35,61 @@ const getComponentStyle = (component) => {
   return '';
 }
 
-const AddressRow = React.memo(({ data, index, style }) => {
+type AddressRowData = {
+  lines: DisassembledLine[],
+  emulator: EmulatorState,
+  breakpoints: Record<string, boolean>
+  toggleBreakpoint: (string) => void,
+  running: boolean
+};
+
+type AddressRowProps = {
+  data: AddressRowData
+  style: CSSProperties
+  index: number
+}
+
+const AddressRowRaw = ({ data, index, style } : AddressRowProps) => {
   const item = data.lines[index];
-  // Disassemble line again to make sure memory values etc are updated
+  // Disassemble line again to make sure memory values etc. are updated
   const line = disassembleLine(data.emulator, item.address);
 
-  return <div style={ style } className={classNames(styles.row, !data.running && item.address === data.emulator?.PC && styles.currentRow)}>
-    <div className={classNames(styles.breakpoint, data.breakpoints[item.address] === true && styles.active)} onClick={() => data.toggleBreakpoint(item.address)}>
+  return <div style={style}
+              className={classNames(styles.row, !data.running && item.address === data.emulator?.PC && styles.currentRow)}>
+    <div className={classNames(styles.breakpoint, data.breakpoints[item.address] && styles.active)}
+         onClick={() => data.toggleBreakpoint(item.address)}>
       <div/>
     </div>
     <div>
-      { line && line.map((component, idx) => (
-        <span key={idx} className={getComponentStyle(component)}>{ component } </span>
+      {line && line.map((component, idx) => (
+          <span key={idx} className={getComponentStyle(component)}>{component} </span>
       ))
       }
     </div>
   </div>
-});
+};
 
-const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, addKeyListener, removeKeyListener, initAudioContext, stopAudioContext }) => {
-  const [lines, setLines] = useState([]);
-  const [breakpoints, setBreakpoints] = useState(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
+const AddressRow = React.memo(AddressRowRaw);
+//
+
+
+type DebuggerSidebarProps = {
+  emulator: EmulatorState
+  setRunMode: Dispatch<SetStateAction<RunModeType>>
+  runMode: RunModeType
+  onRefresh: () => void
+  refresh: boolean
+  addKeyListener: (KeyboardEventHandler) => void
+  removeKeyListener: (KeyboardEventHandler) => void
+  initAudioContext: () => void
+  stopAudioContext: () => void
+}
+
+const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, addKeyListener, removeKeyListener, initAudioContext, stopAudioContext } : DebuggerSidebarProps) => {
+  const [lines, setLines] = useState<DisassembledLine[]>([]);
+  const [breakpoints, setBreakpoints] = useState<Record<string, boolean>>(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
   const [currentStep, setCurrentStep] = useState(0);
-  const listRef = useRef();
+  const listRef = useRef<FixedSizeList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [newBreakpointAddress, setNewBreakpointAddress] = useState('');
 
@@ -143,7 +185,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   }, [runMode, setRunMode, stopEmulator]);
 
   useEffect(() => {
-    if (emulator != null){
+    if (emulator != null && emulator.rom != null){
       const lines = disassemble(emulator);
       setLines(lines);
     }
@@ -190,7 +232,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
     }
   }, [handleKeyEvent, addKeyListener, removeKeyListener]);
 
-  const data = useMemo(() => ({
+  const data = useMemo<AddressRowData>(() => ({
     lines, emulator, breakpoints, toggleBreakpoint, running
   }), [lines, emulator, breakpoints, toggleBreakpoint, running]);
 
@@ -200,7 +242,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
           <div className={styles.listContainer}>
             <AutoSizer>
               { ({ width, height }) => (
-                <List
+                <FixedSizeList
                   height={ height }
                   ref={listRef}
                   itemCount={ lines.length }
@@ -209,7 +251,7 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
                   width={ width }
                 >
                   { AddressRow }
-                </List>
+                </FixedSizeList>
               )
               }
             </AutoSizer>
