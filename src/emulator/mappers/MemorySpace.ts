@@ -4,8 +4,10 @@ const BANK_INDEX_SIZE = 10;
 const BANK_MASK = ~BANK_INDEX_MASK;
 
 class MemorySpace {
+  banks: Uint8Array[] = []
+  length = 0;
+
   constructor(size) {
-    this.banks = [];
     const numBanks = size / BANK_SIZE;
     this.length = size;
 

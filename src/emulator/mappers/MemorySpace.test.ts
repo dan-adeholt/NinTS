@@ -3,7 +3,7 @@ import MemorySpace from './MemorySpace';
 
 test('Mapping works correctly', () => {
   const memorySpace = new MemorySpace(16384);
-  let sourceBuf = new Uint8Array(2048);
+  const sourceBuf = new Uint8Array(2048);
   for (let i = 0; i < sourceBuf.length; i++) {
     sourceBuf[i] = i % 256;
   }

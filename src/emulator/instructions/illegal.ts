@@ -59,7 +59,7 @@ export const arr = (state, address) => {
 
 // ISB - Add one to value at memory, then subtract that value from accumulator
 export const isb = (state, address) => {
-  let value = (readByte(state, address) + 1) & 0xFF;
+  const value = (readByte(state, address) + 1) & 0xFF;
   state.dummyReadTick();
   writeByte(state, address, value);
   performSBC(state, value);
@@ -76,7 +76,7 @@ export const atx = (state, address) => {
 // subtracts the read byte from memory from the X register - without borrow.
 export const axs = (state, address) => {
   const value = readByte(state, address);
-  let andResult = state.A & state.X;
+  const andResult = state.A & state.X;
   const result = andResult + (value ^ 0xFF) + 1;
   state.X = result & 0xFF;
   setCarry(state, result > 0xFF);

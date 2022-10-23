@@ -5,20 +5,18 @@ const sequence = [
   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15];
 
 class TriangleWaveGenerator {
-  constructor() {
-    this.isEnabled = false;
-    this.linearCounterHaltFlag = false; // I call it halt, it's really "control" but this makes it clearer
-    this.linearCounterReload = 0;
-    this.timerLow = 0;
-    this.timerSetting = 0;
-    this.timerValue = 0;
-    this.lengthCounter = 0;
-    this.linearCounter = 0;
-    this.generatorIndex = 0;
-    this.curOutputValue = 0;
-    this.linearReloadFlag = true;
-    this.lengthCounterHalt = true;
-  }
+  isEnabled = false;
+  linearCounterHaltFlag = false; // I call it halt, it's really "control" but this makes it clearer
+  linearCounterReload = 0;
+  timerLow = 0;
+  timerSetting = 0;
+  timerValue = 0;
+  lengthCounter = 0;
+  linearCounter = 0;
+  generatorIndex = 0;
+  curOutputValue = 0;
+  linearReloadFlag = true;
+  lengthCounterHalt = true;
 
   updateLinearCounter() {
     if (this.linearReloadFlag) {

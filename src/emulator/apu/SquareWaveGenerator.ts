@@ -8,33 +8,34 @@ const sequences = [
 ];
 
 export default class SquareWaveGenerator {
-  constructor(index) {
-    this.isEnabled = false;
-    this.index = index;
-    this.sequence = sequences[0];
-    this.haltCounterOrEnvelopeLoop = false;
-    this.constantVolume = false;
-    this.volumeOrEnvelopePeriod = 0;
-    this.timerLow = 0;
-    this.timerHigh = 0;
-    this.timerSetting = 200;
-    this.timerValue = 0;
-    this.lengthCounter = 0;
-    this.generatorIndex = 0;
-    this.curOutputValue = 0;
-    this.numSamplesGenerated = 0;
-    this.numBailed1 = 0;
-    this.startFlag = false;
-    this.envelopeDividerPeriod = 0;
-    this.decayLevelCounter = 15;
+  isEnabled = false;
+  index = 0
+  sequence = sequences[0];
+  haltCounterOrEnvelopeLoop = false;
+  constantVolume = false;
+  volumeOrEnvelopePeriod = 0;
+  timerLow = 0;
+  timerHigh = 0;
+  timerSetting = 200;
+  timerValue = 0;
+  lengthCounter = 0;
+  generatorIndex = 0;
+  curOutputValue = 0;
+  numSamplesGenerated = 0;
+  numBailed1 = 0;
+  startFlag = false;
+  envelopeDividerPeriod = 0;
+  decayLevelCounter = 15;
+  sweepEnabled  = false;
+  sweepPeriod = 0;
+  sweepNegate = false;
+  sweepShift = 0;
+  sweepMutesChannel = false;
+  sweepDivider = 0;
+  sweepReloadFlag = false;
 
-    this.sweepEnabled  = false;
-    this.sweepPeriod = 0;
-    this.sweepNegate = false;
-    this.sweepShift = 0;
-    this.sweepMutesChannel = false;
-    this.sweepDivider = 0;
-    this.sweepReloadFlag = false;
+  constructor(index) {
+    this.index = index;
   }
 
   updateEnvelope() {

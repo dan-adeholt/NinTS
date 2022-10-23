@@ -5,19 +5,17 @@ import DMCGenerator from './apu/DMCGenerator';
 const APUCycleStepNTSC = 3728.5 * 2 * 12;
 
 class APU {
-  constructor() {
-    this.square1 = new SquareWaveGenerator(0);
-    this.square2 = new SquareWaveGenerator(1);
-    this.triangle = new TriangleWaveGenerator();
-    this.dmc = new DMCGenerator();
-    this.masterClock = 0;
-    this.cpuDivider = 12;
-    this.elapsedApuCycles = 0;
-    this.apuStep = 0;
-    this.evenTick = false;
-    this.frameBucket = 0;
-    this.numTicks = 0;
-  }
+  square1 = new SquareWaveGenerator(0);
+  square2 = new SquareWaveGenerator(1);
+  triangle = new TriangleWaveGenerator();
+  dmc = new DMCGenerator();
+  masterClock = 0;
+  cpuDivider = 12;
+  elapsedApuCycles = 0;
+  apuStep = 0;
+  evenTick = false;
+  frameBucket = 0;
+  numTicks = 0;
 
   setAPURegisterMem(address, value) {
     // const time = this.masterClock / 21477272;

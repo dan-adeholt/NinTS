@@ -1,5 +1,5 @@
 class Logger {
-  lines = [];
+  lines: string[] = [];
 
   getLines() {
     return this.lines;
@@ -11,7 +11,7 @@ class Logger {
     }
   }
 
-  log(message) {
+  log(message: string) {
     this.lines.push(message);
   }
 }

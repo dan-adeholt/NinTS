@@ -3,12 +3,13 @@
  */
 import { P_REG_CARRY, P_REG_NEGATIVE, P_REG_OVERFLOW, P_REG_ZERO } from './util';
 import { onSamePageBoundary, readByte } from '../memory';
+import EmulatorState from '../EmulatorState';
 
-const branch = (state, address, shouldBranch) => {
-  let offset = readByte(state, address);
+const branch = (state: EmulatorState, address: number, shouldBranch: number | boolean) => {
+  const offset = readByte(state, address);
 
   if (shouldBranch) {
-    let offsetSigned = offset > 0x7F ? offset - 256 : offset;
+    const offsetSigned = offset > 0x7F ? offset - 256 : offset;
     const jumpLocation = state.PC + offsetSigned;
     state.dummyReadTick();
 

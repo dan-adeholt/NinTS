@@ -2,6 +2,7 @@ import { COLORS } from './constants';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
 import logger from './logger';
+import Mapper from './mappers/Mapper';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
@@ -139,7 +140,7 @@ class PPU {
   paletteRAM = new Uint8Array(32)
   slack = 0;
   disabled = false;
-  mapper = null;
+  mapper: Mapper;
 
   constructor(settings, mapper) {
     // Boot palette values are the same as Mesens in order to be compatible with value peeking
@@ -400,7 +401,7 @@ class PPU {
     const spriteSize = this.getSpriteSize();
 
     let secondaryIndex = 0;
-    let scanline = this.scanline;
+    const scanline = this.scanline;
 
     this.spriteZeroIsInSpriteUnits = false;
     for (let i = this.oamAddress; i < (this.oamMemory.length - 3) && secondaryIndex < this.secondaryOamMemory.length; i+=4) {
@@ -425,17 +426,17 @@ class PPU {
 
   copyToSpriteUnits = () => {
     let oamAddress = 0;
-    let spriteSize = this.getSpriteSize();
+    const spriteSize = this.getSpriteSize();
 
     for (let i = 0; i < SCREEN_WIDTH; i++) {
       this.spriteScanline[i] = 0;
     }
 
     for (let i = 0; i < 8; i++) {
-      let y = this.secondaryOamMemory[oamAddress++];
+      const y = this.secondaryOamMemory[oamAddress++];
       let tileIndex = this.secondaryOamMemory[oamAddress++];
-      let attributes = this.secondaryOamMemory[oamAddress++];
-      let x = this.secondaryOamMemory[oamAddress++];
+      const attributes = this.secondaryOamMemory[oamAddress++];
+      const x = this.secondaryOamMemory[oamAddress++];
       let pixelRow = this.scanline - y;
 
       if (attributes & SPRITE_ATTRIB_FLIP_VERTICAL) {
@@ -454,7 +455,7 @@ class PPU {
         tileIndex = (this.controlSpritePatternAddress << 8) | tileIndex;
       }
 
-      let chrIndex = tileIndex * 8 * 2 + pixelRow;
+      const chrIndex = tileIndex * 8 * 2 + pixelRow;
 
       const flipHorizontal = attributes & SPRITE_ATTRIB_FLIP_HORIZONTAL;
       const spritePriority = (attributes & SPRITE_ATTRIB_PRIORITY) >>> 5;
@@ -619,10 +620,10 @@ class PPU {
       let spriteColor = 0;
       const pixel = scanlineCycle - 1;
       const tileData = this.tileScanline[pixel + this.X];
-      let backgroundColorIndex = tileData & 0b11;
-      let backgroundPaletteIndex = (tileData & 0b1100) >>> 2;
+      const backgroundColorIndex = tileData & 0b11;
+      const backgroundPaletteIndex = (tileData & 0b1100) >>> 2;
 
-      let backgroundColor = this.maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
+      const backgroundColor = this.maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
 
       const spriteData = this.spriteScanline[pixel];
       const spritePatternColor = spriteData & 0b11;

@@ -2,11 +2,14 @@ import MemorySpace from './MemorySpace';
 import MirroringMode from '../MirroringMode';
 
 class PPUMemorySpace {
-  constructor(rom) {
-    this.memory = new MemorySpace(16384);
-    this.chrRam = new Uint8Array(rom.settings.chrRamSize);
+  memory = new MemorySpace(16384);
+  chrRam: Uint8Array
+  namespaceRam = new Uint8Array(4096); // Make it 4KB to allow for 4 screen mirroring
+  mirroringMode = MirroringMode.Vertical;
+  chrSource: Uint8Array
 
-    this.namespaceRam = new Uint8Array(4096); // Make it 4KB to allow for 4 screen mirroring
+  constructor(rom) {
+    this.chrRam = new Uint8Array(rom.settings.chrRamSize);
     if (rom.settings.chrRamSize > 0) {
       this.chrSource = this.chrRam;
     } else {
