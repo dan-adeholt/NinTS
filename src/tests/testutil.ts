@@ -18,7 +18,7 @@ export const runTestWithLogFile = (path, logPath, adjustState) => {
 
   const rom = parseROM(data);
   const state = new EmulatorState();
-  state.initMachine(rom, true);
+  state.initMachine(rom, true, null);
 
   if (adjustState != null) {
     adjustState(state);
@@ -41,15 +41,15 @@ export const runTestWithLogFile = (path, logPath, adjustState) => {
 
 
     const entryLine = prefixLine(i, entry);
-    let stateString = prefixLine(i, state.traceLogLines[i]);
+    const stateString = prefixLine(i, state.traceLogLines[i]);
 
-    let flagsString = procFlagsToString(state.P);
+    const flagsString = procFlagsToString(state.P);
 
     if (stateString !== entryLine) {
       const match = procRegex.exec(entryLine);
       console.log(prevStateString);
 
-      if (match?.length > 0) {
+      if (match != null && match?.length > 0) {
         const expectedP = parseInt(match[1], 16);
 
         if (expectedP !== state.P) {
@@ -67,20 +67,20 @@ export const runTestWithLogFile = (path, logPath, adjustState) => {
   }
 }
 
-export const testInstructionTestRom = (location, logOutputPath, haltAfterInstruction = -1) => {
+export const testInstructionTestRom = (location, logOutputPath: (string | null) = null, haltAfterInstruction = -1) => {
   const data = fs.readFileSync(romRootPath + location);
   const rom = parseROM(data);
   const state = new EmulatorState();
-  state.initMachine(rom);
+  state.initMachine(rom, false, null);
 
-  let stateValid = true;
+  const stateValid = true;
   let hasBeenRunning = false;
 
-  let logLines = [];
+  const logLines: string[] = [];
   for (let i = 0; stateValid; i++) {
 
     if (logOutputPath != null) {
-      logLines.push(stateToString(state, true));
+      logLines.push(stateToString(state));
     }
 
     if (i === haltAfterInstruction) {
@@ -132,11 +132,11 @@ export const testPPURom = (location, testCase) => {
 
   const data = fs.readFileSync(romFile);
   const rom = parseROM(data);
-  let state = new EmulatorState();
-  state.initMachine(rom);
+  const state = new EmulatorState();
+  state.initMachine(rom, false, null);
 
   for (let i = 0; i < 4; i++) {
-    state.stepFrame();
+    state.stepFrame(false);
   }
 
   testCase(state);
@@ -148,7 +148,7 @@ const convertBufferToVisibleArea = buffer => buffer.slice(8 * 256, buffer.length
 export const dumpFramebuffer = (visibleBuffer32) => {
   const width = 256;
   const height = visibleBuffer32.length / width;
-  let outPNG = new PNG({ width, height });
+  const outPNG = new PNG({ width, height });
   outPNG.data = new Uint8Array(visibleBuffer32.buffer);
   fs.writeFileSync('/tmp/out.png', PNG.sync.write(outPNG, {}));
 }
@@ -163,11 +163,11 @@ export const testPPURomWithImage = (location) => {
   const png = new Uint32Array(png8.data.buffer);
 
   const rom = parseROM(data);
-  let state = new EmulatorState();
-  state.initMachine(rom);
+  const state = new EmulatorState();
+  state.initMachine(rom, false, null);
 
   for (let i = 0; i < 5; i++) {
-    state.stepFrame();
+    state.stepFrame(false);
   }
 
   const visibleBuffer = convertBufferToVisibleArea(state.ppu.framebuffer);
