@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { hex } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
+import { parseROM } from '../emulator/parseROM';
 
 const prefixLine = (idx: number, str: string) => '[' + idx + '] ' + str
 const fileUrl: string | null = 'http://localhost:5000/Trace%20-%20zelda2.txt';
@@ -111,21 +112,76 @@ const PPULogDebugger = ({ emulator, triggerRefresh } : PPULogDebuggerProps) => {
     setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz: ' + ratio);
   }, [emulator]);
 
-  const profileCPU = useCallback(() => {
-    const t0 = performance.now();
-    emulator.ppu.disabled = true;
-    const startCyc = emulator.CYC;
+  const profileCPU = useCallback(async () => {
+    const romRootPath = 'http://localhost:5173/src/tests/roms/';
 
-    for (let i = 0; i < 10_500_000; i++) {
-     emulator.step();
+    const romPaths = [
+      'instr-test/01-basics.nes',
+      'instr-test/02-implied.nes',
+      'instr-test/03-immediate.nes',
+      'instr-test/04-zero_page.nes',
+      'instr-test/05-zp_xy.nes',
+      'instr-test/06-absolute.nes',
+      'instr-test/07-abs_xy.nes',
+      'instr-test/08-ind_x.nes',
+      'instr-test/09-ind_y.nes',
+      'instr-test/10-branches.nes',
+      'instr-test/11-stack.nes',
+      'instr-test/12-jmp_jsr.nes',
+      'instr-test/13-rts.nes',
+      'instr-test/14-rti.nes',
+      'instr-test/15-brk.nes',
+      'instr-test/16-special.nes'
+    ];
+
+    const promises = romPaths.map(path => fetch(romRootPath + '/' + path)
+      .then(response => response.arrayBuffer())
+      .then(arrayBuf => {
+        const rom = parseROM(new Uint8Array(arrayBuf));
+        const em = new EmulatorState();
+        em.initMachine(rom, false, null);
+        return em;
+      }));
+
+    const emulators = await Promise.all(promises);
+    const t0 = performance.now();
+
+    for (const emulator of emulators) {
+      let testIsRunning = false;
+      let testIsDone = false;
+
+      while (!testIsDone) {
+        const emulatorStatus = emulator.step();
+        if (!emulatorStatus) {
+          console.error('Invalid status');
+          break;
+        }
+
+        const status = emulator.readMem(0x6000);
+
+        if (testIsRunning && status !== 0x80) {
+          if (status === 0x81) {
+            emulator.reset();
+          } else {
+            if (status !== 0x00) {
+              let testText = '';
+
+              for (let i = 0x6004; emulator.readMem(i) !== 0; i++) {
+                testText += String.fromCharCode(emulator.readMem(i));
+              }
+
+              console.error('Failed with status: ', hex(status) + ' - ' + testText);
+            }
+            testIsDone = true;
+          }
+        } else if (!testIsRunning) {
+          testIsRunning = status === 0x80;
+        }
+      }
     }
 
-    emulator.ppu.disabled = false;
     const diffMs = (performance.now() - t0);
-    const cpuClockSpeed = 1.789773;
-    const clockSpeed = ((emulator.CYC - startCyc) / (diffMs * 1000));
-    const ratio = (clockSpeed / cpuClockSpeed).toFixed(2);
-    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + ' MHz: ' + ratio);
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms');
   }, [emulator]);
 
   const mute = useCallback(() => {
