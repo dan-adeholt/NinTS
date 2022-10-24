@@ -73,7 +73,7 @@ export const testInstructionTestRom = (location: string, logOutputPath: (string 
   state.initMachine(rom, false, null);
 
   const stateValid = true;
-  let hasBeenRunning = false;
+  let testIsRunning = false;
 
   const logLines: string[] = [];
   for (let i = 0; stateValid; i++) {
@@ -97,7 +97,7 @@ export const testInstructionTestRom = (location: string, logOutputPath: (string 
 
     const status = state.readMem(0x6000);
 
-    if (hasBeenRunning) {
+    if (testIsRunning) {
       if (status === 0x80) {
         // Test is running
       } else if(status === 0x81) {
@@ -121,7 +121,7 @@ export const testInstructionTestRom = (location: string, logOutputPath: (string 
         break;
       }
     } else {
-      hasBeenRunning = status === 0x80;
+      testIsRunning = status === 0x80;
     }
   }
 }
