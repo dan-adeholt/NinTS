@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { hex } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
-import { parseROM } from '../emulator/parseROM';
+import { EmptyRom, parseROM } from '../emulator/parseROM';
+import PPUMemorySpace from '../emulator/mappers/PPUMemorySpace';
+import CPUMemorySpace from '../emulator/mappers/CPUMemorySpace';
+import parseMapper from '../emulator/mappers/parseMapper';
+import PPU from '../emulator/ppu';
 
 const prefixLine = (idx: number, str: string) => '[' + idx + '] ' + str
 const fileUrl: string | null = 'http://localhost:5000/Trace%20-%20zelda2.txt';
@@ -100,17 +104,21 @@ const PPULogDebugger = ({ emulator, triggerRefresh } : PPULogDebuggerProps) => {
   const profilePPU = useCallback(() => {
     const t0 = performance.now();
     const startCycle = emulator.ppu.cycle;
-    emulator.ppu.maskRenderingEnabled = true;
-    emulator.ppu.maskBackgroundEnabled = true;
-    emulator.ppu.maskRenderLeftSide = true;
-    emulator.ppu.maskSpritesEnabled = true;
-    emulator.ppu.updatePPU(emulator.ppu.masterClock + 200000000);
+    const ppuMemory = new PPUMemorySpace(EmptyRom);
+    const cpuMemory = new CPUMemorySpace(EmptyRom);
+    const mapper = parseMapper(EmptyRom, cpuMemory, ppuMemory);
+    const ppu = new PPU(EmptyRom.settings, mapper);
+    ppu.maskRenderingEnabled = true;
+    ppu.maskBackgroundEnabled = true;
+    ppu.maskRenderLeftSide = true;
+    ppu.maskSpritesEnabled = true;
+    ppu.updatePPU(ppu.masterClock + 800000000);
     const diffMs = (performance.now() - t0);
     const ntscPpuClockSpeed = 21.477272 / 3.0;
-    const clockSpeed = ((emulator.ppu.cycle - startCycle) / (diffMs * 1000));
+    const clockSpeed = ((ppu.cycle - startCycle) / (diffMs * 1000));
     const ratio = (clockSpeed / ntscPpuClockSpeed).toFixed(2);
     setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz: ' + ratio);
-  }, [emulator]);
+  }, []);
 
   const profileCPU = useCallback(async () => {
     const romRootPath = 'http://localhost:5173/src/tests/roms/';
