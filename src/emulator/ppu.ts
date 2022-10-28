@@ -55,7 +55,9 @@ export const SCREEN_HEIGHT = 240;
 
 let isSteppingScanline = false;
 
-export const setIsSteppingScanline = (_isSteppingScanline: boolean) => isSteppingScanline = _isSteppingScanline;
+export function setIsSteppingScanline(_isSteppingScanline: boolean) {
+  isSteppingScanline = _isSteppingScanline;
+}
 
 // const dumpScrollPointer = pointer => {
 //   const FY = (pointer & 0b111000000000000) >> 12;
@@ -65,7 +67,7 @@ export const setIsSteppingScanline = (_isSteppingScanline: boolean) => isSteppin
 //   return '[FineY: ' + FY + ', NTable: ' + NT + ', CoarseY: ' + CY + ', CoarseX: ' + CX + ']';
 // }
 
-export const greyScaleColorForIndexedColor = (indexedColor: number) => {
+export function greyScaleColorForIndexedColor(indexedColor: number) {
   switch (indexedColor) {
     case 0x0:
       return 0x00000000;
@@ -79,11 +81,13 @@ export const greyScaleColorForIndexedColor = (indexedColor: number) => {
       console.log('Unhandled value', indexedColor);
       return 0;
   }
-};
+}
 
-const isPPUPaletteAddress = (ppuAddress: number) => ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF;
+function isPPUPaletteAddress(ppuAddress: number) {
+  return ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF;
+}
 
-const getPaletteFromByte = (v: number, byte: number) => {
+function getPaletteFromByte(v: number, byte: number) {
   const coarseX = (v & 0b0000011111) % 4;
   const coarseY = ((v & 0b1111100000) >>> 5) % 4;
 
@@ -97,7 +101,7 @@ const getPaletteFromByte = (v: number, byte: number) => {
   }
 
   return byte & 0b11;
-};
+}
 
 class PPU {
   cycle = -1;
@@ -109,7 +113,6 @@ class PPU {
   frameCount = 0;
   vblankCount = 0;
   nmiOccurred = false;
-  tiles = null;
   V = 0;
   T = 0;
   X = 0;
@@ -176,7 +179,7 @@ class PPU {
     return this.paletteIndexedColor(indexedColor, paletteIndex, VRAM_SPRITE_PALETTE_1_ADDRESS);
   }
 
-  incrementVRAMAddress = () => {
+  incrementVRAMAddress() {
     if (this.controlVramIncrement === 0) {
       this.V += 1;
     } else {
@@ -184,9 +187,9 @@ class PPU {
     }
 
     this.V = this.V % (1 << 16);
-  };
+  }
 
-  writePPUPaletteMem = (paletteAddress: number, value: number) => {
+  writePPUPaletteMem(paletteAddress: number, value: number) {
     if (paletteAddress === 0x00 || paletteAddress === 0x10) {
       this.paletteRAM[0x00] = value;
       this.paletteRAM[0x10] = value;
@@ -202,9 +205,9 @@ class PPU {
     } else {
       this.paletteRAM[paletteAddress] = value;
     }
-  };
+  }
 
-  readPPUMem = (ppuAddress: number) => {
+  readPPUMem(ppuAddress: number) {
     if (isPPUPaletteAddress(ppuAddress)) {
       return this.paletteRAM[ppuAddress & 0x1F];
     } else {
@@ -212,15 +215,15 @@ class PPU {
     }
   }
 
-  writePPUMem = (ppuAddress: number, value: number) => {
+  writePPUMem(ppuAddress: number, value: number) {
     if (isPPUPaletteAddress(ppuAddress)) {
       this.writePPUPaletteMem(ppuAddress & 0x1F, value);
     } else {
       this.mapper.ppuMemory.write(ppuAddress, value);
     }
-  };
+  }
 
-  readPPURegisterMem = (address: number, peek = false): number => {
+  readPPURegisterMem(address: number, peek = false): number {
     let ret = -1;
 
     if (address === PPUSTATUS) {
@@ -295,18 +298,18 @@ class PPU {
       console.error('Read PPU register returned undefined', hex(address, '0x'));
     }
     return ret;
-  };
+  }
 
-  pushOAMValue = (value: number) => {
+  pushOAMValue(value: number) {
     this.oamMemory[this.oamAddress] = value;
     this.oamAddress = (this.oamAddress + 1) & 0xFF;
-  };
+  }
 
-  getSpriteSize = () => {
+  getSpriteSize() {
     return this.controlSpriteSize === 1 ? 16 : 8;
-  };
+  }
 
-  setPPURegisterMem = (address: number, value: number) => {
+  setPPURegisterMem(address: number, value: number) {
     this.busLatch = value;
 
     switch (address) {
@@ -382,9 +385,9 @@ class PPU {
       }
       default:
     }
-  };
+  }
 
-  clearSecondaryOAM = () => {
+  clearSecondaryOAM() {
     if (isSteppingScanline) {
       console.log('Clearing secondary OAM');
     }
@@ -392,9 +395,9 @@ class PPU {
     for (let i = 0; i < this.secondaryOamMemory.length; i++) {
       this.secondaryOamMemory[i] = 0xFF;
     }
-  };
+  }
 
-  initializeSecondaryOAM = () => {
+  initializeSecondaryOAM() {
     if (isSteppingScanline) {
       console.log('Init secondary OAM');
     }
@@ -423,9 +426,9 @@ class PPU {
         }
       }
     }
-  };
+  }
 
-  copyToSpriteUnits = () => {
+  copyToSpriteUnits() {
     let oamAddress = 0;
     const spriteSize = this.getSpriteSize();
 
@@ -490,9 +493,9 @@ class PPU {
         }
       }
     }
-  };
+  }
 
-  incrementHorizontalV = () => {
+  incrementHorizontalV() {
     if ((this.V & 0b11111) === 31) {
       this.V = this.V & (~0b11111);
       // Toggle bit 10 => switch horizontal namespace
@@ -500,9 +503,9 @@ class PPU {
     } else {
       this.V += 1;
     }
-  };
+  }
 
-  incrementVerticalV = () => {
+  incrementVerticalV() {
     // If fine Y less than 7 (upper 3 bits of V = fine Y scroll)
     if ((this.V & POINTER_FINE_Y_MASK) !== POINTER_FINE_Y_MASK) {
       this.V += 0b001000000000000;
@@ -525,9 +528,9 @@ class PPU {
       this.V &= ~0b1111100000; // Clear coarse Y portion of V
       this.V |= (coarseY << 5); // Put modified coarse Y back into V
     }
-  };
+  }
 
-  updateBackgroundRegisters = () => {
+  updateBackgroundRegisters() {
     const scanlineCycle = this.scanlineCycle;
 
     if (scanlineCycle < 2 || (scanlineCycle > 257 && scanlineCycle < 322) || scanlineCycle > 337) {
@@ -579,9 +582,9 @@ class PPU {
     if (scanlineCycle === 257) {
       this.resetHorizontalScroll();
     }
-  };
+  }
 
-  updateSpriteScanning = () => {
+  updateSpriteScanning() {
     const { scanlineCycle } = this;
 
     if (scanlineCycle >= 257 && scanlineCycle <= 320) {
@@ -595,21 +598,21 @@ class PPU {
     } else if (scanlineCycle === 321) {
       this.copyToSpriteUnits();
     }
-  };
+  }
 
   // Reset vertical part (Y scroll) of current VRAM address
-  resetVerticalScroll = () => {
+  resetVerticalScroll() {
     this.V &= POINTER_Y_MASK_INV;
     this.V |= (this.T & POINTER_Y_MASK);
-  };
+  }
 
   // Reset horizontal part (X scroll) of current VRAM address
-  resetHorizontalScroll = () => {
+  resetHorizontalScroll() {
     this.V &= POINTER_HORIZ_MASK_INV;
     this.V |= (this.T & POINTER_HORIZ_MASK);
-  };
+  }
 
-  handleVisibleScanline = () => {
+  handleVisibleScanline() {
     if (this.maskRenderingEnabled) {
       this.updateSpriteScanning();
       this.updateBackgroundRegisters();
@@ -617,71 +620,73 @@ class PPU {
 
     const scanlineCycle = this.scanlineCycle;
 
-    if (scanlineCycle > 0 && scanlineCycle <= 256) {
-      let spriteColor = 0;
-      const pixel = scanlineCycle - 1;
-      const tileData = this.tileScanline[pixel + this.X];
-      const backgroundColorIndex = tileData & 0b11;
-      const backgroundPaletteIndex = (tileData & 0b1100) >>> 2;
-
-      const backgroundColor = this.maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
-
-      const spriteData = this.spriteScanline[pixel];
-      const spritePatternColor = spriteData & 0b11;
-
-      if (spritePatternColor !== 0 && this.maskSpritesEnabled) {
-        const spritePalette = (spriteData >>> 3) & 0b11;
-        spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
-      }
-
-      // Draw pixel
-      const index = (this.scanline * SCREEN_WIDTH) + pixel;
-
-      if (spriteColor === 0) {
-        if (backgroundColor !== 0) {
-          this.framebuffer[index] = backgroundColor;
-        } else {
-          const vramBackgroundColor = this.readPPUMem(VRAM_BACKGROUND_COLOR);
-          this.framebuffer[index] = COLORS[vramBackgroundColor];
-        }
-      } else if (backgroundColor !== 0) {
-        const spritePriority = (spriteData >>> 2) & 0b1;
-
-        // Both colors set
-        if (spritePriority === 0) {
-          this.framebuffer[index] = spriteColor;
-        } else {
-          this.framebuffer[index] = backgroundColor;
-        }
-
-        const spriteNumber = (spriteData >>> 5);
-
-        // Sprite zero handling
-        if (!this.spriteZeroHit &&
-            this.spriteZeroIsInSpriteUnits &&
-            // If sprite zero is among the sprite units, it's always at sprite number 0
-            spriteNumber === 0 &&
-            scanlineCycle !== 255 &&
-            ((scanlineCycle > 8) || this.maskRenderLeftSide)
-        ) {
-          this.spriteZeroHit = true;
-        }
-      } else {
-        this.framebuffer[index] = spriteColor;
-      }
+    if (scanlineCycle <= 0 || scanlineCycle > 256) {
+      return;
     }
-  };
 
-  handleVblankScanline = () => {
+    let spriteColor = 0;
+    const pixel = scanlineCycle - 1;
+    const tileData = this.tileScanline[pixel + this.X];
+    const backgroundColorIndex = tileData & 0b11;
+    const backgroundPaletteIndex = (tileData & 0b1100) >>> 2;
+
+    const backgroundColor = this.maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
+
+    const spriteData = this.spriteScanline[pixel];
+    const spritePatternColor = spriteData & 0b11;
+
+    if (spritePatternColor !== 0 && this.maskSpritesEnabled) {
+      const spritePalette = (spriteData >>> 3) & 0b11;
+      spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
+    }
+
+    // Draw pixel
+    const index = (this.scanline * SCREEN_WIDTH) + pixel;
+
+    if (spriteColor === 0) {
+      if (backgroundColor !== 0) {
+        this.framebuffer[index] = backgroundColor;
+      } else {
+        const vramBackgroundColor = this.readPPUMem(VRAM_BACKGROUND_COLOR);
+        this.framebuffer[index] = COLORS[vramBackgroundColor];
+      }
+    } else if (backgroundColor !== 0) {
+      const spritePriority = (spriteData >>> 2) & 0b1;
+
+      // Both colors set
+      if (spritePriority === 0) {
+        this.framebuffer[index] = spriteColor;
+      } else {
+        this.framebuffer[index] = backgroundColor;
+      }
+
+      const spriteNumber = (spriteData >>> 5);
+
+      // Sprite zero handling
+      if (!this.spriteZeroHit &&
+        this.spriteZeroIsInSpriteUnits &&
+        // If sprite zero is among the sprite units, it's always at sprite number 0
+        spriteNumber === 0 &&
+        scanlineCycle !== 255 &&
+        ((scanlineCycle > 8) || this.maskRenderLeftSide)
+      ) {
+        this.spriteZeroHit = true;
+      }
+    } else {
+      this.framebuffer[index] = spriteColor;
+    }
+  }
+
+  handleVblankScanline() {
     if (this.scanlineCycle === 1) {
       // Generate vblank interrupt
       this.nmiOccurred = true;
 
       this.vblankCount++;
     }
-  };
+  }
 
-  handlePrerenderScanline = () => {
+  handlePrerenderScanline() {
     if (this.maskRenderingEnabled) {
       this.updateBackgroundRegisters();
     }
@@ -705,18 +710,17 @@ class PPU {
         }
       }
     }
-  };
+  }
 
-  incrementDot = () => {
-    this.scanlineCycle++;
-
+  incrementDot() {
+    let scanlineCycle = this.scanlineCycle + 1;
     const skipLastCycle = this.maskRenderingEnabled && !this.evenFrame;
 
-    if (this.scanlineCycle === 339 && this.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
-      this.scanlineCycle = 340;
-    } else if (this.scanlineCycle === 341) {
+    if (scanlineCycle === 339 && this.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
+      scanlineCycle = 340;
+    } else if (scanlineCycle === 341) {
       this.scanline++;
-      this.scanlineCycle = 0;
+      scanlineCycle = 0;
 
       if (this.scanline === POST_RENDER_SCANLINE) {
         this.frameCount++;
@@ -727,9 +731,10 @@ class PPU {
         this.evenFrame = !this.evenFrame;
       }
     }
-  };
+    this.scanlineCycle = scanlineCycle;
+  }
 
-  updatePPU = (targetMasterClock: number) => {
+  updatePPU(targetMasterClock: number) {
     if (this.disabled) {
       return;
     }
