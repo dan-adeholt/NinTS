@@ -1,3 +1,9 @@
+* {
+  box-sizing: border-box;
+  scrollbar-color: rgba(0, 0, 0, 0.18) #e5e5e5;
+  scrollbar-width: thin;
+}
+
 body {
   background: #1e1e1e;
   color: white;
@@ -18,11 +24,6 @@ body {
 #root {
   height: 100%;
   box-sizing: border-box;
-}
-
-* {
-  scrollbar-color: rgba(0, 0, 0, 0.18) #e5e5e5;
-  scrollbar-width: thin;
 }
 
 ::-webkit-scrollbar {
@@ -106,11 +107,19 @@ td label {
   margin-right: 5px;
 }
 
+
 .displayContainer {
   width: 770px;
   height: 722px;
   box-sizing: border-box;
   border: 1px solid gray;
+}
+
+.debugDisplayContainer {
+  width: 770px;
+  height: 40px;
+  border: 1px solid gray;
+  border-bottom: 0;
 }
 
 .displayContainer canvas {
@@ -122,4 +131,9 @@ td label {
   image-rendering: crisp-edges;
   /* Chromium + Safari */
   image-rendering: pixelated;
+}
+
+.canvasContainer {
+  display: flex;
+  flex-direction: column;
 }

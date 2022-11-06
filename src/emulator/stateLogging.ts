@@ -114,6 +114,11 @@ const logFormatters: Record<number, (state: EmulatorState, pc: number) => string
       offset -= 256;
     }
     const addr = pc + offset + 2;
+
+    if (addr > state.mapper.cpuMemory.memory.length) {
+      return '???';
+    }
+
     return "$" + hex(addr) + ' = ' + hex(peekMem(state, addr) ?? 0, HEX_PREFIX);
   }
 };

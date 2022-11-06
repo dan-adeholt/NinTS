@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { hex } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
-import EmulatorState from '../emulator/EmulatorState';
+import EmulatorState  from '../emulator/EmulatorState';
 import { EmptyRom, parseROM } from '../emulator/parseROM';
 import PPUMemorySpace from '../emulator/mappers/PPUMemorySpace';
 import CPUMemorySpace from '../emulator/mappers/CPUMemorySpace';
 import parseMapper from '../emulator/mappers/parseMapper';
 import PPU from '../emulator/ppu';
+import { NTSC_CPU_CYCLES_PER_SECOND } from '../emulator/apu';
 
 const prefixLine = (idx: number, str: string) => '[' + idx + '] ' + str
 const fileUrl: string | null = 'http://localhost:5000/Trace%20-%20zelda2.txt';
@@ -100,6 +101,26 @@ const PPULogDebugger = ({ emulator, triggerRefresh } : PPULogDebuggerProps) => {
   }, [emulator, lines, mutedLocations, triggerRefresh]);
 
   const [perfStr, setPerfStr] = useState<string | null>(null);
+
+  const profileAPU = useCallback(() => {
+    let numSamples = 0;
+    const onSample = () => {
+      numSamples++;
+    };
+
+    const testEmulator = new EmulatorState();
+    testEmulator.initMachine(EmptyRom, false, onSample);
+    testEmulator.CYC = 0;
+
+    const numSeconds = 20;
+
+    while(testEmulator.CYC < (NTSC_CPU_CYCLES_PER_SECOND * numSeconds)) {
+      testEmulator.stepFrame(false);
+    }
+
+    setPerfStr('Num samples: ' + numSamples / numSeconds);
+  }, []);
+
 
   const profilePPU = useCallback(() => {
     const t0 = performance.now();
@@ -208,6 +229,7 @@ const PPULogDebugger = ({ emulator, triggerRefresh } : PPULogDebuggerProps) => {
   return (
     <>
       <div>
+        <button onClick={profileAPU}>Profile APU</button>
         <button onClick={profilePPU}>Profile PPU</button>
         <button onClick={profileCPU}>Profile CPU</button>
         <button onClick={dumpStates} disabled={lines.length === 0}>Compare trace</button>

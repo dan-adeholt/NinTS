@@ -3,20 +3,20 @@ import styles from './App.module.css';
 import { parseROM } from './emulator/parseROM';
 import { hex, hex16 } from './emulator/stateLogging';
 import EmulatorState, {
-    AUDIO_BUFFER_SIZE,
     INPUT_A,
     INPUT_B,
     INPUT_DOWN,
     INPUT_LEFT,
     INPUT_RIGHT, INPUT_SELECT, INPUT_START,
-    INPUT_UP, SAMPLE_RATE
+    INPUT_UP
 } from './emulator/EmulatorState';
-import { SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
+import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
 import _ from 'lodash';
 import PPUDebugger from './components/PPUDebugger';
 import EmulatorControls from './components/EmulatorControls';
 import AudioBuffer from './AudioBuffer';
+import { AUDIO_BUFFER_SIZE, SAMPLE_RATE } from './emulator/apu';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
 const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
@@ -39,7 +39,7 @@ const KeyTable: Record<string, number> = {
     '-': INPUT_START
 };
 
-const frameLength = 1000.0 / 60.0;
+const ntscFrameLength = 1000.0 / 60.0;
 
 type AudioState = {
     scriptProcessor: ScriptProcessorNode
@@ -58,7 +58,6 @@ function App() {
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     const [title, setTitle] = useState("No file selected");
     const audioBuffer = useMemo(() => new AudioBuffer(), []);
-
     const startTime = useRef(performance.now());
 
     const emulator = useMemo(()=> new EmulatorState(), []);
@@ -122,14 +121,20 @@ function App() {
 
         console.log('Sample rate:', audioContext.sampleRate);
         const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
-        scriptProcessor.onaudioprocess = event => audioBuffer.writeToDestination(event.outputBuffer);
+        scriptProcessor.onaudioprocess = event => {
+            audioBuffer.writeToDestination(event.outputBuffer, () => {
+                while (emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
+                    emulator.step();
+                }
+            });
+        }
         scriptProcessor.connect(audioContext.destination);
 
         audioRef.current = {
             scriptProcessor,
             audioContext
         };
-    }, [stopAudioContext, audioBuffer]);
+    }, [stopAudioContext, audioBuffer, emulator]);
 
 
     useEffect(() => {
@@ -186,8 +191,8 @@ function App() {
     const updateFrame = useCallback((timestamp: number) => {
         let stopped = false;
 
-        while ((timestamp - startTime.current) >= frameLength) {
-            startTime.current += frameLength;
+        while ((timestamp - startTime.current) >= ntscFrameLength) {
+            startTime.current += ntscFrameLength;
 
             const gamepads = navigator.getGamepads();
 
@@ -312,12 +317,16 @@ function App() {
                 ) }
 
                 <div className={styles.drawingArea}>
-                    <div className={styles.displayContainer}>
-                        <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
+                    <div className={styles.canvasContainer}>
+                        <div className={styles.displayContainer}>
+                            <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
+                        </div>
                     </div>
+
+
                     <div className={styles.controlsArea}>
                         <EmulatorControls emulator={emulator}/>
-                        { emulator && <PPUDebugger emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/> }
+                        { emulator && <PPUDebugger runMode={runMode} emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/> }
                     </div>
                 </div>
 

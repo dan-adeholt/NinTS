@@ -12,12 +12,6 @@ import PPUMemorySpace from "./mappers/PPUMemorySpace";
 import CPUMemorySpace from "./mappers/CPUMemorySpace";
 import Mapper from "./mappers/Mapper";
 
-const NTSC_CPU_CYCLES_PER_SECOND = 1789773;
-export const SAMPLE_RATE = 48000;
-export const AUDIO_BUFFER_SIZE = 4096;
-
-const CPU_CYCLES_PER_SAMPLE = NTSC_CPU_CYCLES_PER_SECOND / SAMPLE_RATE;
-
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
 export const INPUT_SELECT   = 0b00000100;
@@ -122,7 +116,6 @@ class EmulatorState {
   rom: Rom
   lastNMI = 0;
   lastNMIOccured = false;
-  apuSampleBucket = 0;
   audioSampleCallback: ((sample: number) => void) | null
   ppuMemory: PPUMemorySpace
   cpuMemory: CPUMemorySpace
@@ -134,7 +127,7 @@ class EmulatorState {
     this.cpuMemory = new CPUMemorySpace(EmptyRom);
     this.mapper = new NROMMapper(rom, this.cpuMemory, this.ppuMemory);
     this.ppu = new PPU(EmptyRom.settings, this.mapper);
-    this.apu = new APU();
+    this.apu = new APU(null);
     this.audioSampleCallback = null;
     this.rom = EmptyRom;
     this.settings = EmptyRom.settings;
@@ -150,7 +143,7 @@ class EmulatorState {
     // Reset vector
     const startingLocation = this.mapper.cpuMemory.read(0xFFFC) + (this.mapper.cpuMemory.read(0xFFFD) << 8);
 
-    this.apu = new APU();
+    this.apu = new APU(audioSampleCallback);
     this.A = 0;
     this.X = 0;
     this.Y = 0;
@@ -175,7 +168,6 @@ class EmulatorState {
     this.rom = rom;
     this.lastNMI = 0;
     this.lastNMIOccured = false;
-    this.apuSampleBucket = 0;
     this.audioSampleCallback = audioSampleCallback;
 
     // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
@@ -342,18 +334,9 @@ class EmulatorState {
 
     const prevScanline = this.ppu.scanline;
     while (!hitBreakpoint && vblankCount === this.ppu.vblankCount) {
-      const numCycles = this.CYC;
+
       if (!this.step()) {
         break;
-      }
-
-      const elapsedCycles = this.CYC - numCycles ;
-
-      this.apuSampleBucket += elapsedCycles;
-
-      while (this.apuSampleBucket > CPU_CYCLES_PER_SAMPLE) {
-        this.audioSampleCallback?.(this.apu.readSampleValue());
-        this.apuSampleBucket -= CPU_CYCLES_PER_SAMPLE;
       }
 
       hitBreakpoint = this.PC in this.breakpoints;
@@ -423,12 +406,12 @@ class EmulatorState {
   }
 
   /**
-   * So Mesen logs trace this.ents in a really weird way. In order to be
+   * So Mesen logs trace statements in a really weird way. In order to be
    * compatible we have to log our traces at a very particular point in time.
    *
-   * Basically, Mesen logs the last trace this.ent when fetching the opcode
-   * for the next this.ent. But at that point in time, one CPU cycle has
-   * already passed. Which means that the cycle count in the trace this.ent
+   * Basically, Mesen logs the last trace statement when fetching the opcode
+   * for the next statement. But at that point in time, one CPU cycle has
+   * already passed. Which means that the cycle count in the trace statement
    * is one more than it would be otherwise. That would be fairly easy to
    * simulate, but the problem is that the PPU has ALSO had time to execute
    * some cycles.
@@ -441,10 +424,10 @@ class EmulatorState {
    * write operations. I do not know why they do it this way; we might end up doing
    * something similar for all our ticks. But right now we only do it for the opcodes.
    *
-   * Now the actual trace this.ent is actually recorded after the first phase of the
+   * Now the actual trace statement is actually recorded after the first phase of the
    * opcode read has taken place, which means that the cycle count has been updated
    * with 1 and the master clock has been incremented by 5 (read operation). So at
-   * that particular point in time we also record our trace this.ent.
+   * that particular point in time we also record our trace statement.
    *
    * The reason they do it this way is that they implement logging by listening
    * to memory accesses.
@@ -486,6 +469,7 @@ class EmulatorState {
       nmi(this);
       this.lastNMI = this.CYC;
     }
+
 
     return true;
   }

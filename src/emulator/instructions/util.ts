@@ -1,8 +1,10 @@
 import EmulatorState from '../EmulatorState';
 
+export const BIT_6 = 0b01000000;
 export const BIT_7 = 0b10000000;
 export const BIT_15 = 0b1000000000000000;
 export const BIT_0 = 0b00000001;
+export const BIT_1 = 0b00000010;
 export const BIT_7_MASK = ~BIT_7;
 
 export const P_REG_CARRY     = 0b00000001;

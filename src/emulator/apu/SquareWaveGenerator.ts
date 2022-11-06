@@ -1,4 +1,5 @@
-import { lengthLookup } from './apuConstants';
+import EnvelopeGenerator from './EnvelopeGenerator';
+import LengthCounter from './LengthCounter';
 
 const sequences = [
   [0, 1, 0, 0, 0, 0, 0, 0],
@@ -11,21 +12,12 @@ export default class SquareWaveGenerator {
   isEnabled = false;
   index = 0
   sequence = sequences[0];
-  haltCounterOrEnvelopeLoop = false;
   constantVolume = false;
   volumeOrEnvelopePeriod = 0;
-  timerLow = 0;
-  timerHigh = 0;
   timerSetting = 200;
   timerValue = 0;
-  lengthCounter = 0;
   generatorIndex = 0;
   curOutputValue = 0;
-  numSamplesGenerated = 0;
-  numBailed1 = 0;
-  startFlag = false;
-  envelopeDividerPeriod = 0;
-  decayLevelCounter = 15;
   sweepEnabled  = false;
   sweepPeriod = 0;
   sweepNegate = false;
@@ -33,39 +25,19 @@ export default class SquareWaveGenerator {
   sweepMutesChannel = false;
   sweepDivider = 0;
   sweepReloadFlag = false;
+  envelope = new EnvelopeGenerator();
+  lengthCounter = new LengthCounter();
 
   constructor(index: number) {
     this.index = index;
   }
 
   updateEnvelope() {
-    if (this.startFlag) {
-      this.startFlag = false;
-      this.envelopeDividerPeriod = this.volumeOrEnvelopePeriod;
-      this.decayLevelCounter = 15;
-    } else {
-      this.envelopeDividerPeriod--;
-
-      if (this.envelopeDividerPeriod === 0) {
-        this.envelopeDividerPeriod = this.volumeOrEnvelopePeriod;
-
-        if (this.decayLevelCounter > 0) {
-          this.decayLevelCounter--;
-        } else if (this.haltCounterOrEnvelopeLoop) {
-          this.decayLevelCounter = 15;
-        }
-      }
-    }
+    this.envelope.update();
   }
 
   updateLengthCounterAndSweepUnit() {
-    if (!this.haltCounterOrEnvelopeLoop) {
-      this.lengthCounter--;
-
-      if (this.lengthCounter < 0) {
-        this.lengthCounter = 0;
-      }
-    }
+    this.lengthCounter.update();
 
     let targetPeriod = this.timerSetting;
     if (this.sweepDivider === 0 && this.sweepEnabled) {
@@ -95,12 +67,8 @@ export default class SquareWaveGenerator {
   }
 
   updateSequencer() {
-    if (this.lengthCounter === 0) {
-      this.numBailed1++;
-    }
-
-    if (!this.isEnabled || (!this.haltCounterOrEnvelopeLoop && this.lengthCounter === 0) || this.sweepMutesChannel) {
-      this.curOutputValue = 0;
+    if (!this.isEnabled || (!this.lengthCounter.haltCounter && this.lengthCounter.lengthCounter === 0) || this.sweepMutesChannel) {
+      // this.curOutputValue = 0;
     }
     else if (--this.timerValue <= -1) {
       this.timerValue = this.timerSetting;
@@ -108,18 +76,17 @@ export default class SquareWaveGenerator {
       if (this.constantVolume) {
         this.curOutputValue = this.sequence[this.generatorIndex] * this.volumeOrEnvelopePeriod;
       } else {
-        this.curOutputValue =this.sequence[this.generatorIndex] * this.decayLevelCounter;
+        this.curOutputValue =this.sequence[this.generatorIndex] * this.envelope.decayLevelCounter;
       }
 
       this.generatorIndex = ((this.generatorIndex + 1) % this.sequence.length)
-
-      if (this.curOutputValue > 0) {
-        this.numSamplesGenerated++;
-      }
     }
   }
 
   setRegisterMem(address: number, value: number) {
+    // if (this.index === 0) {
+    //   console.log(hex16(address), bin8(value));
+    // }
     const relAddress = (address - 0x4000) % 0x4;
 
     // const unit = address > 0x4004 ? '2' : '1';
@@ -133,37 +100,48 @@ export default class SquareWaveGenerator {
         const volumeEnvelope = (value & 0b00001111);
 
         this.sequence = sequences[dutyCycle];
-        this.haltCounterOrEnvelopeLoop = lengthCounterHalt === 1;
+        const haltCounterOrEnvelopeLoop = lengthCounterHalt === 1;
+        this.lengthCounter.haltCounter = haltCounterOrEnvelopeLoop;
+        this.envelope.envelopeLoop = haltCounterOrEnvelopeLoop;
+
         this.constantVolume = constantVolume === 1;
         this.volumeOrEnvelopePeriod = volumeEnvelope;
+        this.envelope.envelopePeriod = this.volumeOrEnvelopePeriod;
+
         // if (this.volumeOrEnvelopePeriod != 0) {
         //   if (--debug) console.log('Sq lc', this.index, this.lengthCounter, this.volumeOrEnvelopePeriod);
         // }
-        // if (--debug) console.log(this.index, 'SEQ', this.sequence, 'HC:', this.haltCounterOrEnvelopeLoop, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
+        // if (this.index === 0) {
+        //   console.log('SEQ', dutyCycle, 'HC:', haltCounterOrEnvelopeLoop, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
+        // }
         break;
       } case 1: { // Sweep setup
-        this.sweepEnabled = ((value & 0b10000000) >> 7) === 1;
+        const sweepEnabled = ((value & 0b10000000) >> 7) === 1;
+
+        this.sweepEnabled = sweepEnabled;
         this.sweepPeriod = (value & 0b01110000) >> 4;
         this.sweepNegate = ((value & 0b00001000) >> 3) === 1;
         this.sweepShift = (value & 0b00000111);
         this.sweepReloadFlag = true;
+        // if (this.index === 0 && debug) {
+        //   console.log('SWEEP', this.sweepEnabled, this.sweepPeriod, this.sweepNegate, this.sweepShift);
+        // }
+
         break;
       }
       case 2: { // Timer low 8 bits
-        this.timerLow = value;
-        // console.log(unit, 'TL, TS:', this.timerSetting, this.numSamplesGenerated, this.numBailed1);
-        // console.log('TL', value);
+        this.timerSetting = value | (this.timerSetting & 0b11100000000);
         break;
       }
       case 3: { // Length counter load and timer high 3 bits
-        this.timerHigh = (value & 0b00000111);
-        this.timerSetting = (this.timerHigh << 8) | this.timerLow;
-        const timerIndex = (value & 0b11111000) >> 3;
-        this.lengthCounter = lengthLookup[timerIndex];
+        const timerHigh = (value & 0b00000111);
+        this.timerSetting = (timerHigh << 8) | (this.timerSetting & 0b11111111);
         this.timerValue = this.timerSetting;
-        this.startFlag = true;
+        this.generatorIndex = 0;
+        this.lengthCounter.init(value);
+        this.envelope.envelopeStartFlag = true;
         // console.log('Set square', this.index, timerIndex, this.lengthCounter);
-        // if (print) console.log(unit, 'TH, TS:', this.timerSetting, 'LC:', this.lengthCounter, '|', this.numSamplesGenerated, this.numBailed1);
+        // if (this.index === 0) console.log('TH, TS:', this.timerSetting, 'LC:', this.lengthCounter);
         // console.log('TH', this.timerHigh, 'TV', this.timerValue);
         // console.log('LC', this.lengthCounter);
         break;

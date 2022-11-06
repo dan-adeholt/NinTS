@@ -1,4 +1,4 @@
-import { lengthLookup } from './apuConstants';
+import LengthCounter from './LengthCounter';
 
 const sequence = [
   15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
@@ -8,10 +8,9 @@ class TriangleWaveGenerator {
   isEnabled = false;
   linearCounterHaltFlag = false; // I call it halt, it's really "control" but this makes it clearer
   linearCounterReload = 0;
-  timerLow = 0;
   timerSetting = 0;
   timerValue = 0;
-  lengthCounter = 0;
+  lengthCounter = new LengthCounter();
   linearCounter = 0;
   generatorIndex = 0;
   curOutputValue = 0;
@@ -31,26 +30,19 @@ class TriangleWaveGenerator {
   }
 
   updateLengthCounter() {
-    if (!this.lengthCounterHalt) {
-      this.lengthCounter--;
-      // if (--debug) console.log('Tri lc', this.lengthCounter);
-
-      if (this.lengthCounter < 0) {
-        this.lengthCounter = 0;
-      }
-    }
+    this.lengthCounter.update();
   }
 
   updateSequencer() {
     if (!this.isEnabled) {
+      this.curOutputValue = 0;
       return;
     }
 
+    this.curOutputValue = sequence[this.generatorIndex];
+
     if (--this.timerValue <= -1) {
-      if (this.lengthCounter === 0 || this.linearCounter === 0) {
-        this.curOutputValue = 0;
-      } else {
-        this.curOutputValue = sequence[this.generatorIndex];
+      if (this.timerSetting > 2 && this.lengthCounter.lengthCounter > 0 && this.linearCounter > 0) {
         this.generatorIndex = ((this.generatorIndex + 1) % sequence.length)
       }
 
@@ -63,15 +55,19 @@ class TriangleWaveGenerator {
       this.linearCounterHaltFlag = ((value & 0b10000000) >> 7) === 1;
       this.lengthCounterHalt = this.linearCounterHaltFlag;
       this.linearCounterReload = value & 0b01111111;
+      // console.log('0x4008 Halt', this.linearCounterHaltFlag, 'Reload', this.linearCounterReload);
     } else if (address === 0x400A) {
-      this.timerLow = value;
+      this.timerSetting &= 0b11100000000;
+      this.timerSetting |= value;
+      // console.log('0x400A timer', this.timerSetting);
     } else if (address === 0x400B) {
       const timerHigh =    (value & 0b00000111);
-      const lengthIndex = (value & 0b11111000) >> 3;
-      this.lengthCounter = lengthLookup[lengthIndex];
-      this.timerSetting = this.timerLow | (timerHigh << 8);
+      this.lengthCounter.init(value);
+      this.timerSetting &= 0b11111111;
+      this.timerSetting |= (timerHigh << 8);
       this.timerValue = this.timerSetting;
       this.linearReloadFlag = true;
+      // console.log('0x400B', this.timerSetting, this.lengthCounter.lengthCounter);
     }
   }
 
