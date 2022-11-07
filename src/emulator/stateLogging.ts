@@ -240,10 +240,10 @@ export type DisassembledLine = {
 }
 
 export const disassemble = (state : EmulatorState): DisassembledLine[] => {
-  let address = 0x8000;
+  let address = state.PC;
   const lines: DisassembledLine[] = [];
 
-  while(address < state.mapper.cpuMemory.memory.length) {
+  while(address < state.mapper.cpuMemory.memory.length && lines.length < 50) {
     const opcode = peekMem(state, address);
     const line = disassembleLine(state, address);
     lines.push( { address, line });

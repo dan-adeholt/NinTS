@@ -1,11 +1,10 @@
 .instructionBar {
-    width: 460px;
+    width: 470px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    font-size: 15px;
     font-family: Menlo, Monaco, Consolas, 'Courier New', monospace !important;
-    margin-right: 20px;
 }
 
 .debugArea {
@@ -70,8 +69,9 @@
 .listContainer, .breakpointContainer {
     flex-grow: 1;
     flex-shrink: 0;
-    min-width: 370px;
-    padding: 14px;
+    min-width: 70px;
+    height: 50vh;
+    overflow-y: scroll;
 }
 
 

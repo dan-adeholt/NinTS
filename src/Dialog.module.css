@@ -1,0 +1,63 @@
+.dialog {
+    position: absolute;
+
+    box-shadow: 0px 4px 32px rgba(0,0,0,0.9);
+
+    width: auto;
+    height: auto;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: #202020;
+    border: 1px solid #dadada;
+    border-radius: 4px;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 200;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-y: auto;
+}
+
+.isOpen {
+    opacity: 1.0;
+    visibility: visible;
+}
+
+.header {
+    display: flex;
+    font-weight: 600;
+    cursor: move;
+    border-bottom: 1px solid #dadada;
+}
+
+.body {
+    padding: 10px;
+}
+
+.flexSpace {
+    flex-grow: 1;
+}
+
+.headerText {
+    padding: 10px;
+}
+
+
+.closeButton button {
+    background: #333;
+    width: 50px;
+    height: 40px;
+    color: white;
+    font-size: 16px;
+    border-top-right-radius: 4px;
+    border-left: 1px solid #666;
+}
+
+.closeButton button:hover {
+    background: #2d2d2d;
+}
+
+.withoutPadding {
+    padding: 0;
+}

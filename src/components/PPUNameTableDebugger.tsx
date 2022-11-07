@@ -66,7 +66,7 @@ const generateFrameBuffer = (emulator: EmulatorState) => {
 
 type PPUNameTableDebuggerProps = {
   emulator: EmulatorState
-  refresh: boolean
+  refresh: number
 }
 
 const PPUNameTableDebugger = ({ emulator, refresh } : PPUNameTableDebuggerProps) => {

@@ -9,23 +9,18 @@ import PPUScanlineDebugger from './PPUScanlineDebugger';
 import PPULogDebugger from './PPULogDebugger';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
-import APUDebugger from './APUDebugger';
 import { RunModeType } from '../App';
 
 type PPUDebuggerProps = {
   emulator: EmulatorState
-  refresh: boolean
+  refresh: number
   triggerRefresh: () => void
   runMode: RunModeType
 }
 
-const PPUDebugger = ({ emulator, refresh, runMode, triggerRefresh } : PPUDebuggerProps) => {
+const PPUDebugger = ({ emulator, refresh, triggerRefresh } : PPUDebuggerProps) => {
   const options = useMemo(() => {
     return [
-      {
-        title: 'APU',
-        view: <APUDebugger emulator={emulator} runMode={runMode} />
-      },
       {
         title: 'Nametables',
         view: <PPUNameTableDebugger emulator={emulator} refresh={refresh}/>

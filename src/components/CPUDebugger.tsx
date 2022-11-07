@@ -1,26 +1,17 @@
-import React, {
-  CSSProperties,
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faAlignCenter, faPause, faStepForward, faPlay, faCaretSquareRight } from '@fortawesome/free-solid-svg-icons'
-import { FixedSizeList } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
-import { disassemble, disassembleLine, hex, DisassembledLine } from '../emulator/stateLogging';
+import { faCaretSquareRight, faPause, faPlay, faStepForward } from '@fortawesome/free-solid-svg-icons'
+import { disassemble, DisassembledLine, disassembleLine, hex, hex16 } from '../emulator/stateLogging';
 import classNames from 'classnames';
 import _ from 'lodash';
 import { opcodeMetadata } from '../emulator/cpu';
-import { KeyListener, RunModeType } from '../App';
+import { RunModeType } from '../App';
 import { setIsSteppingScanline } from '../emulator/ppu';
 import SegmentControl from './SegmentControl';
-import styles from './DebuggerSidebar.module.css';
+import styles from './CPUDebugger.module.css';
 import EmulatorState from '../emulator/EmulatorState';
+import { DebugDialogProps } from '../DebugDialog';
+import Dialog, { DialogHorizontalPosition } from '../Dialog';
 
 export const BREAKPOINTS_KEY = 'Breakpoints';
 
@@ -45,17 +36,15 @@ type AddressRowData = {
 
 type AddressRowProps = {
   data: AddressRowData
-  style: CSSProperties
   index: number
 }
 
-const AddressRowRaw = ({ data, index, style } : AddressRowProps) => {
+const AddressRowRaw = ({ data, index } : AddressRowProps) => {
   const item = data.lines[index];
   // Disassemble line again to make sure memory values etc. are updated
   const line = disassembleLine(data.emulator, item.address);
 
-  return <div style={style}
-              className={classNames(styles.row, !data.running && item.address === data.emulator?.PC && styles.currentRow)}>
+  return <div className={classNames(styles.row, !data.running && item.address === data.emulator?.PC && styles.currentRow)}>
     <div className={classNames(styles.breakpoint, data.breakpoints[item.address] && styles.active)}
          onClick={() => data.toggleBreakpoint(item.address.toString(10))}>
       <div/>
@@ -70,42 +59,16 @@ const AddressRowRaw = ({ data, index, style } : AddressRowProps) => {
 };
 
 const AddressRow = React.memo(AddressRowRaw);
-//
 
-
-type DebuggerSidebarProps = {
-  emulator: EmulatorState
-  setRunMode: Dispatch<SetStateAction<RunModeType>>
-  runMode: RunModeType
-  onRefresh: () => void
-  refresh: boolean
-  addKeyListener: (handler: KeyListener) => void
-  removeKeyListener: (handler: KeyListener) => void
-  initAudioContext: () => void
-  stopAudioContext: () => void
-}
-
-const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, addKeyListener, removeKeyListener, initAudioContext, stopAudioContext } : DebuggerSidebarProps) => {
-  const [lines, setLines] = useState<DisassembledLine[]>([]);
+const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, setRunMode, addKeyListener, removeKeyListener } : DebugDialogProps) => {
   const [breakpoints, setBreakpoints] = useState<Record<string, boolean>>(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
-  const [currentStep, setCurrentStep] = useState(0);
-  const listRef = useRef<FixedSizeList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [newBreakpointAddress, setNewBreakpointAddress] = useState('');
 
   const stepEmulator = useCallback(() => {
     emulator.step();
-    setCurrentStep(s => s + 1);
     onRefresh();
   }, [emulator, onRefresh]);
-
-  const updateDebugger = useCallback(() => {
-    _.noop(refresh);
-    if (listRef.current != null && emulator != null) {
-      const itemAddress = lines.findIndex(x => x.address === emulator.PC);
-      listRef.current.scrollToItem(itemAddress, 'center');
-    }
-  }, [emulator, listRef, lines, refresh]);
 
   const removeBreakpoint = useCallback((address: string) => {
     setBreakpoints(oldBreakpoints => {
@@ -139,31 +102,21 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
 
   const runEmulator = useCallback(() => {
     setRunMode(RunModeType.RUNNING);
-    setCurrentStep(s => s + 1);
-    initAudioContext();
-  }, [setRunMode, setCurrentStep, initAudioContext]);
+  }, [setRunMode]);
 
   const runEmulatorFrame = useCallback(() => {
     setRunMode(RunModeType.RUNNING_SINGLE_FRAME);
-    setCurrentStep(s => s + 1);
-  }, [setRunMode, setCurrentStep]);
+  }, [setRunMode]);
 
   const runScanline = useCallback(() => {
     setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
     setIsSteppingScanline(true);
-    setCurrentStep(s => s + 1);
-  }, [setRunMode, setCurrentStep]);
+  }, [setRunMode]);
 
   const stopEmulator = useCallback(() => {
     setRunMode(RunModeType.STOPPED);
     setIsSteppingScanline(false);
-    setCurrentStep(s => s + 1);
-    _.defer(() => {
-      updateDebugger();
-    })
-
-    stopAudioContext();
-  }, [updateDebugger, setRunMode, setCurrentStep, stopAudioContext]);
+  }, [setRunMode]);
 
   // Sync breakpoints with emulator
   useEffect(() => {
@@ -173,23 +126,11 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
   }, [breakpoints, emulator]);
 
   useEffect(() => {
-    updateDebugger();
-  }, [lines, currentStep, updateDebugger]);
-
-  useEffect(() => {
     if (runMode === RunModeType.STOPPED) {
-      setCurrentStep(s => s + 1);
       setRunMode(RunModeType.STOPPED);
       stopEmulator();
     }
   }, [runMode, setRunMode, stopEmulator]);
-
-  useEffect(() => {
-    if (emulator != null && emulator.rom != null){
-      const lines = disassemble(emulator);
-      setLines(lines);
-    }
-  }, [emulator]);
 
   const running = runMode !== RunModeType.STOPPED;
 
@@ -232,33 +173,25 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
     }
   }, [handleKeyEvent, addKeyListener, removeKeyListener]);
 
+  const lines = useMemo(() => {
+    return disassemble(emulator);
+  }, [emulator, refresh, runMode]);
+
   const data = useMemo<AddressRowData>(() => ({
     lines, emulator, breakpoints, toggleBreakpoint, running
   }), [lines, emulator, breakpoints, toggleBreakpoint, running]);
 
   const options = useMemo(()=> ([
-      {
-        view: (
-          <div className={styles.listContainer}>
-            <AutoSizer>
-              { ({ width, height }) => (
-                <FixedSizeList
-                  height={ height }
-                  ref={listRef}
-                  itemCount={ lines.length }
-                  itemData={ data }
-                  itemSize={ 35 }
-                  width={ width }
-                >
-                  { AddressRow }
-                </FixedSizeList>
-              )
-              }
-            </AutoSizer>
-          </div>
-        ),
-        title: 'Instructions'
-      },
+    {
+      view: (
+        <div className={styles.listContainer}>
+          { lines.map((line, idx) => (
+            <AddressRow key={idx} data={ data } index={ idx }/>
+          ))
+          }
+        </div>),
+      title: 'Instructions'
+    },
     {
       view: (<div className={styles.breakpointContainer}>
         { _.map(breakpoints, (breakpointState, breakpointAddress) => (
@@ -279,24 +212,65 @@ const DebuggerSidebar = ({ emulator, setRunMode, runMode, onRefresh, refresh, ad
       </div>),
       title: 'Breakpoints'
     }
-    ]), [lines, data, breakpoints, newBreakpointAddress, addBreakpoint, removeBreakpoint, toggleBreakpoint]);
+    ]), [lines, data, breakpoints, newBreakpointAddress, addBreakpoint, removeBreakpoint, toggleBreakpoint, refresh]);
+
+  const registerCell = (label: React.ReactNode, register: number, formatter = hex) => (
+    <td>
+      <label>{ label }</label>
+      { running ? '-' : formatter(register) }
+    </td>
+  );
 
   return (
-    <div className={styles.instructionBar}>
-      <SegmentControl onClick={setCurrentIndex} currentIndex={currentIndex} options={options} expand/>
+    <Dialog
+      withoutPadding
+      isOpen={isOpen}
+      onClose={onClose}
+      title="CPU Debugger"
+      horizontalPosition={DialogHorizontalPosition.LEFT}
+    >
+      { emulator && (
+        <div>
+          <table>
+            <tbody>
+            <tr>
+              <td>
+                <label>Running</label>
+                { running ? '1' : '0' }
+              </td>
+              { registerCell('A', emulator.A) }
+              { registerCell('X', emulator.X) }
+              { registerCell('Y', emulator.Y) }
+              { registerCell('P', emulator.P) }
+              { registerCell('SP', emulator.SP) }
+            </tr>
+            <tr>
+              { registerCell('PC', emulator.PC) }
+              { registerCell('V', emulator.ppu?.V ?? '', hex16) }
+              { registerCell('T', emulator.ppu.T, hex16) }
+              { registerCell('CYC', emulator.ppu.scanlineCycle, _.identity) }
+              { registerCell('CPU CYC', emulator.CYC, _.identity) }
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      ) }
+
+      <div className={styles.instructionBar}>
+        <SegmentControl onClick={setCurrentIndex} currentIndex={currentIndex} options={options} expand/>
 
 
-      <div className={styles.debugArea}>
-        <button onClick={updateDebugger}><FontAwesomeIcon icon={faAlignCenter} size="lg"/></button>
-        <button onClick={stopEmulator}><FontAwesomeIcon icon={faPause} size="lg"/></button>
-        <button onClick={stepEmulator}><FontAwesomeIcon icon={faStepForward} size="lg"/></button>
-        <button onClick={runEmulatorFrame}><FontAwesomeIcon icon={faCaretSquareRight} size="lg"/></button>
-        <button onClick={runEmulator}><FontAwesomeIcon icon={faPlay} size="lg"/></button>
+        <div className={styles.debugArea}>
+          <button onClick={stopEmulator}><FontAwesomeIcon icon={faPause} size="lg"/></button>
+          <button onClick={stepEmulator}><FontAwesomeIcon icon={faStepForward} size="lg"/></button>
+          <button onClick={runEmulatorFrame}><FontAwesomeIcon icon={faCaretSquareRight} size="lg"/></button>
+          <button onClick={runEmulator}><FontAwesomeIcon icon={faPlay} size="lg"/></button>
+        </div>
       </div>
-    </div>
+    </Dialog>
   );
 };
 
-DebuggerSidebar.propTypes = {};
+CPUDebugger.propTypes = {};
 
-export default DebuggerSidebar;
+export default React.memo(CPUDebugger);

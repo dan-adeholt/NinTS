@@ -13,12 +13,16 @@ body {
 
 .content {
   flex-grow: 1;
+
 }
 
 .app {
   display: flex;
   height: 100%;
   box-sizing: border-box;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 
 #root {

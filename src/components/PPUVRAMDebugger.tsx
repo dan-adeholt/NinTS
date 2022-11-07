@@ -6,7 +6,7 @@ import EmulatorState from '../emulator/EmulatorState';
 
 type PPUVRAMDebuggerProps = {
   emulator: EmulatorState
-  refresh: boolean
+  refresh: number
 }
 
 const PPUVRAMDebugger = ({ emulator, refresh } : PPUVRAMDebuggerProps) => {

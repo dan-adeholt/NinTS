@@ -1,0 +1,29 @@
+.dropdown {
+    position: absolute;
+    width: 200px;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background: #222;
+    border: 1px solid #555;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    margin-top: 5px;
+    z-index: 2;
+}
+.open {
+    visibility: visible;
+    opacity: 1;
+}
+
+.dropdown button {
+    color: white;
+    text-align: left;
+    border-bottom: 1px solid #444;
+    background: transparent;
+}
+
+.dropdown button:hover {
+    background: #333;
+}

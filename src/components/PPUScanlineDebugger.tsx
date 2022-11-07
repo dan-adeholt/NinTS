@@ -4,7 +4,7 @@ import logger from '../emulator/logger';
 import styles from './PPUDebugging.module.css';
 
 type PPUScanlineDebuggerProps = {
-  refresh: boolean
+  refresh: number
 }
 
 const PPUScanlineDebugger = ({ refresh } : PPUScanlineDebuggerProps) => {

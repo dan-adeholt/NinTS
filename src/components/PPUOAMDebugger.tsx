@@ -21,7 +21,7 @@ type OAMLine = {
 }
 
 type PPUOAMDebuggerProps = {
-  refresh: boolean
+  refresh: number
   emulator: EmulatorState
 }
 

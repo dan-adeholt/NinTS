@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './App.module.css';
 import { parseROM } from './emulator/parseROM';
-import { hex, hex16 } from './emulator/stateLogging';
 import EmulatorState, {
     INPUT_A,
     INPUT_B,
@@ -11,12 +10,12 @@ import EmulatorState, {
     INPUT_UP
 } from './emulator/EmulatorState';
 import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
-import DebuggerSidebar, { BREAKPOINTS_KEY } from './components/DebuggerSidebar';
+import { BREAKPOINTS_KEY } from './components/CPUDebugger';
 import _ from 'lodash';
-import PPUDebugger from './components/PPUDebugger';
-import EmulatorControls from './components/EmulatorControls';
 import AudioBuffer from './AudioBuffer';
 import { AUDIO_BUFFER_SIZE, SAMPLE_RATE } from './emulator/apu';
+import Toolbar from './Toolbar';
+import { DebugDialogHotkeys, getDebugDialogComponents } from './DebugDialog';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
 const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
@@ -55,10 +54,20 @@ type Display = {
 export type KeyListener = (event: KeyboardEvent) => void
 
 function App() {
+// NamedExoticComponent is because we React.memo all the debug dialogs
+    const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
+    const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
+
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     const [title, setTitle] = useState("No file selected");
     const audioBuffer = useMemo(() => new AudioBuffer(), []);
     const startTime = useRef(performance.now());
+
+    const [dialogState, setDialogState] = useState<Record<string, boolean>>({
+        // [DebugDialog.APUDebugger]: true,
+        // [DebugDialog.CPUDebugger]: true
+    });
+    const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
     const emulator = useMemo(()=> new EmulatorState(), []);
 
@@ -82,6 +91,10 @@ function App() {
     const handleKeyEvent = useCallback((e : KeyboardEvent) => {
         if ((e.target as HTMLInputElement)?.type === 'text') {
             return;
+        }
+
+        if (e.type === 'keydown' && e.key in DebugDialogHotkeys) {
+            toggleOpenDialog(DebugDialogHotkeys[e.key]);
         }
 
         if (e.key in KeyTable) {
@@ -153,7 +166,9 @@ function App() {
     const loadRom = useCallback((romBuffer : Uint8Array) => {
         const rom = parseROM(romBuffer);
         emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
-    }, [audioBuffer, emulator]);
+        console.log('ROm loaded');
+        triggerRefresh();
+    }, [audioBuffer, emulator, triggerRefresh]);
 
     const handleFileRead = useCallback((event : ProgressEvent<FileReader>) => {
         if (event.target != null) {
@@ -247,15 +262,6 @@ function App() {
         }
     }, [updateFrame, animationFrameRef, runMode]);
 
-    const running = runMode !== RunModeType.STOPPED;
-
-    const registerCell = (label: React.ReactNode, register: number, formatter = hex) => (
-        <td>
-            <label>{ label }</label>
-            { running ? '-' : formatter(register) }
-        </td>
-    );
-
     useEffect(() => {
         if (canvasRef.current != null) {
             const context = canvasRef.current.getContext("2d");
@@ -267,71 +273,52 @@ function App() {
         }
     }, [canvasRef]);
 
-    const [refresh, setRefresh] = useState(false);
-    const triggerRefresh = useCallback(() => setRefresh(s => !s), []);
-
     useEffect(() => {
         triggerRefresh();
     }, [runMode, triggerRefresh]);
 
+    const _setRunMode = useCallback((_runMode: RunModeType) => {
+        setRunMode(_runMode);
+        if (_runMode === RunModeType.RUNNING) {
+            initAudioContext();
+        } else {
+            stopAudioContext();
+        }
+    }, []);
+
     return (
-        <div className={styles.app}>
-            <DebuggerSidebar
-                emulator={emulator}
-                initAudioContext={initAudioContext}
-                stopAudioContext={stopAudioContext}
-                runMode={runMode}
-                setRunMode={setRunMode}
-                onRefresh={triggerRefresh}
-                refresh={refresh}
-                addKeyListener={addKeyListener}
-                removeKeyListener={removeKeyListener}
+      <div>
+          <Toolbar toggleOpenDialog={toggleOpenDialog}/>
+
+          { Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (
+            <DialogComponent
+              isOpen={dialogState[type]}
+              onClose={() => toggleOpenDialog(type)}
+              emulator={emulator}
+              runMode={runMode}
+              setRunMode={_setRunMode}
+              key={type}
+              onRefresh={triggerRefresh}
+              refresh={refresh}
+              addKeyListener={addKeyListener}
+              removeKeyListener={removeKeyListener}
             />
-            <div className={styles.content}>
+          ))
+          }
+          <div className={styles.app}>
+              <h1>{ title }</h1>
+              <input type="file" onChange={romFileChanged} />
 
-                <h1>{ title }</h1>
-                <input type="file" onChange={romFileChanged} />
-                { emulator && (
-                    <div>
-                        <table>
-                            <tbody>
-                            <tr>
-                                <td>
-                                    <label>Running</label>
-                                    { running ? '1' : '0' }
-                                </td>
-                                { registerCell('A', emulator.A) }
-                                { registerCell('X', emulator.X) }
-                                { registerCell('Y', emulator.Y) }
-                                { registerCell('P', emulator.P) }
-                                { registerCell('SP', emulator.SP) }
-                                { registerCell('PC', emulator.PC) }
-                                { registerCell('V', emulator.ppu?.V ?? '', hex16) }
-                                { registerCell('T', emulator.ppu.T, hex16) }
-                                { registerCell('CYC', emulator.ppu.scanlineCycle, _.identity) }
-                                { registerCell('CPU CYC', emulator.CYC, _.identity) }
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                ) }
+              <div className={styles.drawingArea}>
+                  <div className={styles.canvasContainer}>
+                      <div className={styles.displayContainer}>
+                          <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
+                      </div>
+                  </div>
+              </div>
 
-                <div className={styles.drawingArea}>
-                    <div className={styles.canvasContainer}>
-                        <div className={styles.displayContainer}>
-                            <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
-                        </div>
-                    </div>
-
-
-                    <div className={styles.controlsArea}>
-                        <EmulatorControls emulator={emulator}/>
-                        { emulator && <PPUDebugger runMode={runMode} emulator={emulator} refresh={refresh} triggerRefresh={triggerRefresh}/> }
-                    </div>
-                </div>
-
-            </div>
-        </div>
+          </div>
+      </div>
     );
 }
 
