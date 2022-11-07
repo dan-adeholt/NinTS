@@ -6,6 +6,7 @@ import { KeyListener, RunModeType } from './App';
 import CPUDebugger from './components/CPUDebugger';
 import _ from 'lodash';
 import PPUNameTableDebugger from './components/PPUNameTableDebugger';
+import PPUSpritesDebugger from './components/PPUSpritesDebugger';
 
 export enum DebugDialog {
   CPUDebugger = 'CPU Debugger',
@@ -34,13 +35,15 @@ export type DebugDialogProps = BaseDialogProps & {
 export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<DebugDialogProps>> => ({
   [DebugDialog.APUDebugger]: APUDebugger,
   [DebugDialog.CPUDebugger]: CPUDebugger,
-  [DebugDialog.PPUNametables]: PPUNameTableDebugger
+  [DebugDialog.PPUNametables]: PPUNameTableDebugger,
+  [DebugDialog.PPUSprites]: PPUSpritesDebugger
 });
 
 export const DebugDialogHotkeys : Record<string, DebugDialog> = {
   'F1': DebugDialog.CPUDebugger,
   'F2': DebugDialog.APUDebugger,
-  'F3': DebugDialog.PPUNametables
+  'F3': DebugDialog.PPUNametables,
+  'F4': DebugDialog.PPUSprites
 }
 
 export const DebugDialogHotkeysComponents = _.invert(DebugDialogHotkeys);

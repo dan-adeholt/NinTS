@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import PropTypes from 'prop-types';
+import React, { useLayoutEffect, useRef } from 'react';
 import { BIT_7 } from '../emulator/instructions/util';
 import styles from './PPUDebugging.module.css';
-import EmulatorState from '../emulator/EmulatorState';
 import PPU from '../emulator/ppu';
+import { DebugDialogProps } from '../DebugDialog';
+import Dialog from '../Dialog';
 
 const PATTERN_TABLE_WIDTH = 256;
 const PATTERN_TABLE_HEIGHT = 128;
@@ -67,15 +67,13 @@ const generateFrameBuffer = (ppu: PPU) => {
   return texture;
 };
 
-type PPUSpritesDebugger = {
-  emulator: EmulatorState
-}
 
-const PPUSpritesDebugger = ({ emulator } : PPUSpritesDebugger) => {
+const PPUSpritesDebugger = ({ emulator, isOpen, onClose, refresh } : DebugDialogProps) => {
   const ppuCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    if (ppuCanvasRef.current != null && emulator != null) {
+  useLayoutEffect(() => {
+    if (ppuCanvasRef.current != null) {
+      console.log('Here');
       const context = ppuCanvasRef.current.getContext("2d");
       if (context != null) {
         const imageData = context.createImageData(PATTERN_TABLE_WIDTH, PATTERN_TABLE_HEIGHT);
@@ -84,19 +82,15 @@ const PPUSpritesDebugger = ({ emulator } : PPUSpritesDebugger) => {
         context.putImageData(imageData, 0, 0);
       }
     }
-  }, [ppuCanvasRef, emulator]);
+  }, [ppuCanvasRef, emulator, refresh]);
 
   return (
-    <div>
+    <Dialog isOpen={isOpen} onClose={onClose} title="PPU Sprites">
       <div className={styles.ppuContainer}>
         <canvas width={256} height={128} ref={ppuCanvasRef}/>
       </div>
-    </div>
+    </Dialog>
   );
 };
 
-PPUSpritesDebugger.propTypes = {
-  emulator: PropTypes.object
-};
-
-export default PPUSpritesDebugger;
+export default React.memo(PPUSpritesDebugger);

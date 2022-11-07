@@ -55,6 +55,13 @@
     width: auto;
 }
 
+.ppuContainer {
+    width: 770px;
+    height: 386px;
+    box-sizing: border-box;
+    border: 1px solid gray;
+}
+
 .ppuContainer canvas {
     box-sizing: border-box;
 

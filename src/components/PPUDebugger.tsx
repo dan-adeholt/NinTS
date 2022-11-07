@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import PPUOAMDebugger from './PPUOAMDebugger';
 import SegmentControl from './SegmentControl';
-import PPUSpritesDebugger from './PPUSpritesDebugger';
 import PPUVRAMDebugger from './PPUVRAMDebugger';
 import PPUScanlineDebugger from './PPUScanlineDebugger';
 import PPULogDebugger from './PPULogDebugger';
@@ -20,10 +19,6 @@ type PPUDebuggerProps = {
 const PPUDebugger = ({ emulator, refresh, triggerRefresh } : PPUDebuggerProps) => {
   const options = useMemo(() => {
     return [
-      {
-        title: 'Sprites',
-        view: <PPUSpritesDebugger emulator={emulator}/>
-      },
       {
         title: 'OAM',
         view: <PPUOAMDebugger emulator={emulator} refresh={refresh}/>
