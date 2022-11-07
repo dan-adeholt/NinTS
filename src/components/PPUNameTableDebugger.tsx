@@ -4,6 +4,8 @@ import { BIT_7 } from '../emulator/instructions/util';
 import { mirroringModeToString } from '../emulator/MirroringMode';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
+import { DebugDialogProps } from '../DebugDialog';
+import Dialog from '../Dialog';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
@@ -64,12 +66,7 @@ const generateFrameBuffer = (emulator: EmulatorState) => {
   return texture;
 };
 
-type PPUNameTableDebuggerProps = {
-  emulator: EmulatorState
-  refresh: number
-}
-
-const PPUNameTableDebugger = ({ emulator, refresh } : PPUNameTableDebuggerProps) => {
+const PPUNameTableDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
   const ppuCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -93,16 +90,16 @@ const PPUNameTableDebugger = ({ emulator, refresh } : PPUNameTableDebuggerProps)
     scrollPos = 'X:' + (emulator.ppu.T & coarseXMask) + ', Y:' + ((emulator.ppu.T & coarseYMask) >> 5) + ', NT:' + ((emulator.ppu.T & ntMask) >> 10);
   }
 
+  const titleStringSuffix = mirroringModeToString(emulator?.mapper?.ppuMemory?.mirroringMode) + ' - Scroll pos: ' + scrollPos;
+
   return (
-    <>
-      { mirroringModeToString(emulator?.mapper?.ppuMemory?.mirroringMode) } - Scroll pos: { scrollPos }
+    <Dialog onClose={onClose} isOpen={isOpen} title={"PPU Nametables " + titleStringSuffix}>
+
       <div className={styles.ppuNameTableContainer}>
         <canvas width={NAME_TABLE_WIDTH * 2} height={NAME_TABLE_HEIGHT * 2} ref={ppuCanvasRef}/>
       </div>
-    </>
+    </Dialog>
   );
 };
 
-PPUNameTableDebugger.propTypes = {};
-
-export default PPUNameTableDebugger;
+export default React.memo(PPUNameTableDebugger);

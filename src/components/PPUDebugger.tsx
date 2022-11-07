@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import PPUOAMDebugger from './PPUOAMDebugger';
-import PPUNameTableDebugger from './PPUNameTableDebugger';
 import SegmentControl from './SegmentControl';
 import PPUSpritesDebugger from './PPUSpritesDebugger';
 import PPUVRAMDebugger from './PPUVRAMDebugger';
@@ -21,10 +20,6 @@ type PPUDebuggerProps = {
 const PPUDebugger = ({ emulator, refresh, triggerRefresh } : PPUDebuggerProps) => {
   const options = useMemo(() => {
     return [
-      {
-        title: 'Nametables',
-        view: <PPUNameTableDebugger emulator={emulator} refresh={refresh}/>
-      },
       {
         title: 'Sprites',
         view: <PPUSpritesDebugger emulator={emulator}/>

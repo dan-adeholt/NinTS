@@ -5,6 +5,7 @@ import EmulatorState from './emulator/EmulatorState';
 import { KeyListener, RunModeType } from './App';
 import CPUDebugger from './components/CPUDebugger';
 import _ from 'lodash';
+import PPUNameTableDebugger from './components/PPUNameTableDebugger';
 
 export enum DebugDialog {
   CPUDebugger = 'CPU Debugger',
@@ -32,12 +33,14 @@ export type DebugDialogProps = BaseDialogProps & {
 // Function instead of constant so that HMR works
 export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<DebugDialogProps>> => ({
   [DebugDialog.APUDebugger]: APUDebugger,
-  [DebugDialog.CPUDebugger]: CPUDebugger
+  [DebugDialog.CPUDebugger]: CPUDebugger,
+  [DebugDialog.PPUNametables]: PPUNameTableDebugger
 });
 
 export const DebugDialogHotkeys : Record<string, DebugDialog> = {
   'F1': DebugDialog.CPUDebugger,
-  'F2': DebugDialog.APUDebugger
+  'F2': DebugDialog.APUDebugger,
+  'F3': DebugDialog.PPUNametables
 }
 
 export const DebugDialogHotkeysComponents = _.invert(DebugDialogHotkeys);
