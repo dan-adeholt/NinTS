@@ -66,7 +66,7 @@ function App() {
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
 
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
-    const [title, setTitle] = useState("No file selected");
+    const [title, setTitle] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string) ?? "No file selected");
     const audioBuffer = useMemo(() => new AudioBuffer(), []);
     const startTime = useRef(performance.now());
 
