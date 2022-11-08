@@ -1,0 +1,47 @@
+button, .labelButton {
+    flex-grow: 1;
+    height: 35px;
+    border: 0;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 4px;
+    display: flex;
+    background: #EFEFEF;
+    color: black;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+
+}
+
+button svg + span, .labelButton svg + span, button>input + span {
+    margin-left: 10px;
+}
+
+
+
+button>svg, button > input[type="checkbox"] {
+    margin-left: 0;
+    margin-right: 2px;
+    width: 14px;
+}
+
+button:focus {
+    outline: none;
+}
+
+button:hover, .labelButton:hover {
+    background: #cacaca;
+}
+
+td {
+    padding: 7px;
+    min-width: 50px;
+}
+
+td label {
+    color: #569BD5;
+    clear:both;
+    display:block;
+    font-size: 0.8em;
+}

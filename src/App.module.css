@@ -64,32 +64,6 @@ body {
   background: transparent;
 }
 
-button {
-  flex-grow: 1;
-  height: 35px;
-  border: 0;
-  cursor: pointer;
-}
-
-button:focus {
-  outline: none;
-}
-
-button:hover {
-  background: #cacaca;
-}
-
-td {
-  padding: 7px;
-  min-width: 50px;
-}
-
-td label {
-  color: #569BD5;
-  clear:both;
-  display:block;
-  font-size: 0.8em;
-}
 
 .ppuContainer {
   width: 770px;
@@ -140,4 +114,8 @@ td label {
 .canvasContainer {
   display: flex;
   flex-direction: column;
+}
+
+input[type="file"] {
+  display: none;
 }

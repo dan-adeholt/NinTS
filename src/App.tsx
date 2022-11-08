@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './App.module.css';
+import './global.css';
 import { parseROM } from './emulator/parseROM';
 import EmulatorState, {
     INPUT_A,
@@ -51,10 +52,16 @@ type Display = {
     framebuffer: Uint32Array
 }
 
+const renderScreen = (display: Display | null, emulator: EmulatorState | null ) => {
+    if (display != null && emulator != null) {
+        display.framebuffer.set(emulator.ppu.framebuffer, 0);
+        display.context.putImageData(display.imageData, 0, 0);
+    }
+}
+
 export type KeyListener = (event: KeyboardEvent) => void
 
 function App() {
-// NamedExoticComponent is because we React.memo all the debug dialogs
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
 
@@ -70,9 +77,7 @@ function App() {
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
     const emulator = useMemo(()=> new EmulatorState(), []);
-
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [display, setDisplay] = useState<Display | null>(null);
+    const display = useRef<Display | null>(null);
 
     const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
 
@@ -124,18 +129,17 @@ function App() {
 
     const initAudioContext = useCallback(() => {
         stopAudioContext();
-        console.log('Init audio context');
         // Setup audio.
-        const audioContext = new window.AudioContext({ sampleRate: SAMPLE_RATE });
+        const audioContext = new window.AudioContext({
+            sampleRate: SAMPLE_RATE
+        });
 
-        audioContext.onstatechange = e => {
-            console.log(e);
-        }
-
-        console.log('Sample rate:', audioContext.sampleRate);
         const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
         scriptProcessor.onaudioprocess = event => {
             audioBuffer.writeToDestination(event.outputBuffer, () => {
+                // We are missing a few samples. The emulator stops right after vblank is hit,
+                // we can try to do a few more cycles before the pre-render scanline so that the
+                // audio buffer can be filled
                 while (emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
                     emulator.step();
                 }
@@ -149,6 +153,19 @@ function App() {
         };
     }, [stopAudioContext, audioBuffer, emulator]);
 
+    const loadRom = useCallback((romBuffer : Uint8Array, filename: string) => {
+        const rom = parseROM(romBuffer);
+        emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+        setTitle(filename);
+        triggerRefresh();
+    }, [audioBuffer, emulator, triggerRefresh]);
+
+    const loadRomFromUserInput = useCallback((romBuffer: Uint8Array, filename: string) => {
+        localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, JSON.stringify(Array.from(romBuffer)));
+        localStorage.setItem(LOCAL_STORAGE_KEY_LAST_TITLE, filename);
+        localStorage.removeItem(BREAKPOINTS_KEY);
+        loadRom(romBuffer, filename);
+    }, [loadRom]);
 
     useEffect(() => {
         document.addEventListener('keydown', handleKeyEvent);
@@ -160,48 +177,36 @@ function App() {
             document.removeEventListener('keyup', handleKeyEvent);
             window.removeEventListener('gamepadconnected', handleGamepad);
         }
-
     }, [handleKeyEvent, handleGamepad])
-
-    const loadRom = useCallback((romBuffer : Uint8Array) => {
-        const rom = parseROM(romBuffer);
-        emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
-        console.log('ROm loaded');
-        triggerRefresh();
-    }, [audioBuffer, emulator, triggerRefresh]);
-
-    const handleFileRead = useCallback((event : ProgressEvent<FileReader>) => {
-        if (event.target != null) {
-            const buf = new Uint8Array(event.target.result as ArrayBuffer);
-            localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, JSON.stringify(Array.from(buf)));
-            loadRom(buf);
-        }
-    }, [loadRom]);
 
     useEffect(() => {
         const lastRomArray = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM);
-        const lastTitle = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE);
+        const lastTitle = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string;
         if (lastRomArray != null){
-            setTitle(lastTitle ?? '');
             const parsed = new Uint8Array(JSON.parse(lastRomArray));
-            loadRom(parsed);
+            loadRom(parsed, lastTitle ?? '');
         }
     }, [loadRom]);
 
-    const romFileChanged = useCallback((e : React.ChangeEvent<HTMLInputElement>) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-
-        if (file != null) {
-            setTitle(file.name);
-            localStorage.setItem(LOCAL_STORAGE_KEY_LAST_TITLE, file.name);
-            const fileReader = new FileReader();
-            fileReader.onloadend = handleFileRead;
-            fileReader.readAsArrayBuffer(file);
-            localStorage.removeItem(BREAKPOINTS_KEY);
-        }
-    }, [handleFileRead]);
-
     const animationFrameRef = useRef<number | null>(null);
+
+    const _setRunMode = useCallback((_runMode: RunModeType) => {
+        setRunMode(_runMode);
+
+        if (_runMode === RunModeType.RUNNING_SINGLE_SCANLINE) {
+            setIsSteppingScanline(true);
+        } else {
+            setIsSteppingScanline(false);
+        }
+
+        if (_runMode === RunModeType.RUNNING) {
+            initAudioContext();
+        } else {
+            stopAudioContext();
+        }
+
+        triggerRefresh();
+    }, [triggerRefresh]);
 
     const updateFrame = useCallback((timestamp: number) => {
         let stopped = false;
@@ -228,27 +233,32 @@ function App() {
                 emulator.setInputController(INPUT_B, gamepad.buttons[0].pressed);
             }
 
-            if (emulator.stepFrame(runMode === RunModeType.RUNNING_SINGLE_SCANLINE) || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
+            if (emulator.stepFrame(runMode === RunModeType.RUNNING_SINGLE_SCANLINE)) {
                 // Hit breakpoint
-                setRunMode(RunModeType.STOPPED);
+                console.log('Frame done');
+                _setRunMode(RunModeType.STOPPED);
                 setIsSteppingScanline(false);
                 stopped = true;
                 break;
             }
         }
 
-        if (display != null && emulator) {
-            display.framebuffer.set(emulator.ppu.framebuffer, 0);
-            display.context.putImageData(display.imageData, 0, 0);
-        }
+        renderScreen(display.current, emulator);
 
         if (!stopped) {
             animationFrameRef.current = window.requestAnimationFrame(updateFrame);
         }
-    }, [runMode, emulator, display]);
+    }, [runMode, emulator, display, _setRunMode]);
 
     useEffect(() => {
-        if (runMode !== RunModeType.STOPPED) {
+        if (runMode === RunModeType.RUNNING_SINGLE_FRAME) {
+            emulator.stepFrame(false);
+            if (display.current != null && emulator) {
+                display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
+                display.current.context.putImageData(display.current.imageData, 0, 0);
+            }
+            _setRunMode(RunModeType.STOPPED);
+        } else if (runMode !== RunModeType.STOPPED) {
             startTime.current = performance.now();
             updateFrame(startTime.current);
         }
@@ -262,33 +272,19 @@ function App() {
         }
     }, [updateFrame, animationFrameRef, runMode]);
 
-    useEffect(() => {
-        if (canvasRef.current != null) {
-            const context = canvasRef.current.getContext("2d");
-            if (context != null) {
-                const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
-                const framebuffer = new Uint32Array(imageData.data.buffer);
-                setDisplay({ imageData, framebuffer, context });
-            }
-        }
-    }, [canvasRef]);
-
-    useEffect(() => {
-        triggerRefresh();
-    }, [runMode, triggerRefresh]);
-
-    const _setRunMode = useCallback((_runMode: RunModeType) => {
-        setRunMode(_runMode);
-        if (_runMode === RunModeType.RUNNING) {
-            initAudioContext();
-        } else {
-            stopAudioContext();
-        }
-    }, []);
+    const reboot = useCallback(() => {
+        emulator.reboot();
+    }, [emulator]);
 
     return (
       <div>
-          <Toolbar toggleOpenDialog={toggleOpenDialog}/>
+          <Toolbar
+            emulator={emulator}
+            toggleOpenDialog={toggleOpenDialog}
+            loadRom={loadRomFromUserInput}
+            setRunMode={_setRunMode}
+            reboot={reboot}
+          />
 
           { Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (
             <DialogComponent
@@ -307,12 +303,17 @@ function App() {
           }
           <div className={styles.app}>
               <h1>{ title }</h1>
-              <input type="file" onChange={romFileChanged} />
-
               <div className={styles.drawingArea}>
                   <div className={styles.canvasContainer}>
                       <div className={styles.displayContainer}>
-                          <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRef}/>
+                          <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
+                              const context = ref?.getContext("2d");
+                              if (context != null) {
+                                  const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+                                  const framebuffer = new Uint32Array(imageData.data.buffer);
+                                  display.current = { imageData, framebuffer, context };
+                              }
+                          }}/>
                       </div>
                   </div>
               </div>

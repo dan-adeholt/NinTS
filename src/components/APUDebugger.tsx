@@ -45,7 +45,6 @@ const APUDebugger = ({ emulator, runMode, isOpen, onClose, setRunMode } : DebugD
       context.fillRect(0, 0, viewspaceWidth, CANVAS_HEIGHT);
       context.strokeStyle = "gray";
       context.setLineDash([4, 2]);
-      console.log(zoom);
 
       if (runMode !== RunModeType.RUNNING) {
         const scrollerWidth = Math.max(40, (CANVAS_WIDTH / (viewspaceWidth)) * CANVAS_WIDTH);
@@ -136,7 +135,7 @@ const APUDebugger = ({ emulator, runMode, isOpen, onClose, setRunMode } : DebugD
             emulator.apu.logAudio = true;
           }
         }}>
-          <FontAwesomeIcon icon={faRecordVinyl}/>{ loggingEnabled ? 'Stop' : 'Start' } recording</button>
+          <FontAwesomeIcon icon={faRecordVinyl}/><span>{ loggingEnabled ? 'Stop' : 'Start' } recording</span></button>
       </div>
     </Dialog>
   );

@@ -8,7 +8,9 @@ import {
 } from '../emulator/ppu';
 import { hex } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
-import EmulatorState from '../emulator/EmulatorState';
+import { DebugDialogProps } from '../DebugDialog';
+import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import classNames from 'classnames';
 
 type OAMLine = {
   x: number
@@ -20,12 +22,8 @@ type OAMLine = {
   palette: number
 }
 
-type PPUOAMDebuggerProps = {
-  refresh: number
-  emulator: EmulatorState
-}
 
-const PPUOAMDebugger = ({ refresh, emulator } : PPUOAMDebuggerProps) => {
+const PPUOAMDebugger = ({ refresh, emulator, isOpen, onClose } : DebugDialogProps) => {
   const lines = useMemo<OAMLine[]>(() => {
     _.noop(refresh);
     if (emulator === null) {
@@ -50,20 +48,21 @@ const PPUOAMDebugger = ({ refresh, emulator } : PPUOAMDebuggerProps) => {
   }, [refresh, emulator]);
 
   return (
-    <>
-      <div className={styles.ppuOamDebugger}>
+    <Dialog isOpen={isOpen} onClose={onClose} title={"OAM Debugger"} horizontalPosition={DialogHorizontalPosition.RIGHT}>
+      <div className={classNames(styles.ppuOamDebugger, styles.monospace)}>
 
         { lines.map((line, idx) => (
           <div key={idx}>
-            { idx + ' - ' + line.x + ',' + line.y + ' - ' + line.tile + ' - FlipH  ' + line.flipHorizontal + ', FlipV' + line.flipVertical + ', Prio: ' + line.priority + ', Palette: ' + line.palette }
+            { idx.toString().padStart(3, '0') +
+              ' - ' + line.x.toString().padStart(3, '0') +
+              ',' + line.y.toString().padStart(3, '0') +
+              ' - ' + line.tile + ' - FlipH ' + line.flipHorizontal + ', FlipV' + line.flipVertical + ', Prio: ' + line.priority + ', Palette: ' + line.palette }
           </div>
         ))
         }
       </div>
-    </>
+    </Dialog>
   );
 };
 
-PPUOAMDebugger.propTypes = {};
-
-export default PPUOAMDebugger;
+export default React.memo(PPUOAMDebugger);

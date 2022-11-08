@@ -73,7 +73,6 @@ const PPUSpritesDebugger = ({ emulator, isOpen, onClose, refresh } : DebugDialog
 
   useLayoutEffect(() => {
     if (ppuCanvasRef.current != null) {
-      console.log('Here');
       const context = ppuCanvasRef.current.getContext("2d");
       if (context != null) {
         const imageData = context.createImageData(PATTERN_TABLE_WIDTH, PATTERN_TABLE_HEIGHT);

@@ -6,7 +6,6 @@ import classNames from 'classnames';
 import _ from 'lodash';
 import { opcodeMetadata } from '../emulator/cpu';
 import { RunModeType } from '../App';
-import { setIsSteppingScanline } from '../emulator/ppu';
 import SegmentControl from './SegmentControl';
 import styles from './CPUDebugger.module.css';
 import EmulatorState from '../emulator/EmulatorState';
@@ -110,12 +109,10 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
 
   const runScanline = useCallback(() => {
     setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
-    setIsSteppingScanline(true);
   }, [setRunMode]);
 
   const stopEmulator = useCallback(() => {
     setRunMode(RunModeType.STOPPED);
-    setIsSteppingScanline(false);
   }, [setRunMode]);
 
   // Sync breakpoints with emulator
@@ -261,9 +258,9 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
 
 
         <div className={styles.debugArea}>
-          <button onClick={stopEmulator}><FontAwesomeIcon icon={faPause} size="lg"/></button>
           <button onClick={stepEmulator}><FontAwesomeIcon icon={faStepForward} size="lg"/></button>
           <button onClick={runEmulatorFrame}><FontAwesomeIcon icon={faCaretSquareRight} size="lg"/></button>
+          <button onClick={stopEmulator}><FontAwesomeIcon icon={faPause} size="lg"/></button>
           <button onClick={runEmulator}><FontAwesomeIcon icon={faPlay} size="lg"/></button>
         </div>
       </div>

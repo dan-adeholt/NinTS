@@ -11,6 +11,17 @@
     display: flex;
 }
 
+.debugArea button {
+    border-radius: 0;
+    border-left: 1px solid silver;
+    border-top: 1px solid silver;
+}
+
+.debugArea button:first-child {
+    border-left: 0;
+}
+
+
 .row {
     display: flex;
     padding: 8px 0 0 8px;

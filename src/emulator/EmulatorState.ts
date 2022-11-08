@@ -133,6 +133,10 @@ class EmulatorState {
     this.settings = EmptyRom.settings;
   }
 
+  reboot() {
+    this.initMachine(this.rom, this.enableTraceLogging, this.audioSampleCallback);
+  }
+
   initMachine(rom : Rom, enableTraceLogging = false, audioSampleCallback : ((sample: number) => void) | null) {
     this.ppuMemory = new PPUMemorySpace(rom);
     this.cpuMemory = new CPUMemorySpace(rom);

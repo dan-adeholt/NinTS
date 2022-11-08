@@ -13,6 +13,7 @@
 
 
 .ppuOamDebugger {
+    width: 580px;
     height: 256px;
     overflow-y: auto;
     padding: 4px;

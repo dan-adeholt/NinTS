@@ -5,6 +5,7 @@
 
     width: auto;
     height: auto;
+    min-width: 300px;
     max-width: 90vw;
     max-height: 92vh;
     background: #202020;
@@ -52,6 +53,7 @@
     font-size: 16px;
     border-top-right-radius: 4px;
     border-left: 1px solid #666;
+    justify-content: center;
 }
 
 .closeButton button:hover {

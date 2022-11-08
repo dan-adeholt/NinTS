@@ -7,6 +7,7 @@ import CPUDebugger from './components/CPUDebugger';
 import _ from 'lodash';
 import PPUNameTableDebugger from './components/PPUNameTableDebugger';
 import PPUSpritesDebugger from './components/PPUSpritesDebugger';
+import PPUOAMDebugger from './components/PPUOAMDebugger';
 
 export enum DebugDialog {
   CPUDebugger = 'CPU Debugger',
@@ -36,14 +37,16 @@ export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<
   [DebugDialog.APUDebugger]: APUDebugger,
   [DebugDialog.CPUDebugger]: CPUDebugger,
   [DebugDialog.PPUNametables]: PPUNameTableDebugger,
-  [DebugDialog.PPUSprites]: PPUSpritesDebugger
+  [DebugDialog.PPUSprites]: PPUSpritesDebugger,
+  [DebugDialog.PPUOAM]: PPUOAMDebugger
 });
 
 export const DebugDialogHotkeys : Record<string, DebugDialog> = {
   'F1': DebugDialog.CPUDebugger,
   'F2': DebugDialog.APUDebugger,
   'F3': DebugDialog.PPUNametables,
-  'F4': DebugDialog.PPUSprites
+  'F4': DebugDialog.PPUSprites,
+  'F5': DebugDialog.PPUOAM
 }
 
 export const DebugDialogHotkeysComponents = _.invert(DebugDialogHotkeys);
