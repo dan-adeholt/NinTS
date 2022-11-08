@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import styles from './Toolbar.module.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPowerOff, faFileAlt, faClock, faFile, faPause, faPlay, faRefresh, faSave, faTools } from '@fortawesome/free-solid-svg-icons'
+import { faPowerOff, faFileAlt, faFile, faPause, faPlay, faRefresh, faSave, faTools } from '@fortawesome/free-solid-svg-icons'
 import Dropdown from './Dropdown';
 import { DebugDialog, DebugDialogHotkeysComponents } from './DebugDialog';
 import { RunModeType } from './App';
@@ -91,14 +91,6 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, reboot } : T
               toggleOpenDialog(dialog);
             }} key={dialog}>{ dialog } <div className={styles.buttonSpace}/> { DebugDialogHotkeysComponents[dialog] } </button>
           ))}
-        </Dropdown>
-      </div>
-      <div className={styles.item}>
-        <button onClick={() => toggleOpen(DropdownMenu.Profile)}><FontAwesomeIcon icon={faClock}/><span>Profile</span></button>
-        <Dropdown isOpen={menuState[DropdownMenu.Profile]}>
-          <button> Profile APU </button>
-          <button> Profile PPU </button>
-          <button> Profile CPU </button>
         </Dropdown>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { mirroringModeToString } from '../emulator/MirroringMode';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
 import { DebugDialogProps } from '../DebugDialog';
-import Dialog from '../Dialog';
+import Dialog, { DialogHorizontalPosition } from '../Dialog';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;
@@ -93,7 +93,12 @@ const PPUNameTableDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDial
   const titleStringSuffix = mirroringModeToString(emulator?.mapper?.ppuMemory?.mirroringMode) + ' - Scroll pos: ' + scrollPos;
 
   return (
-    <Dialog onClose={onClose} isOpen={isOpen} title={"PPU Nametables " + titleStringSuffix}>
+    <Dialog
+      onClose={onClose}
+      isOpen={isOpen}
+      title={"PPU Nametables " + titleStringSuffix}
+      horizontalPosition={DialogHorizontalPosition.RIGHT}
+    >
 
       <div className={styles.ppuNameTableContainer}>
         <canvas width={NAME_TABLE_WIDTH * 2} height={NAME_TABLE_HEIGHT * 2} ref={ppuCanvasRef}/>

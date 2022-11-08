@@ -1,9 +1,9 @@
 import { COLORS } from './constants';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
-import logger from './logger';
 import Mapper from './mappers/Mapper';
 import { RomSettings } from './parseROM';
+import Logger from './logger';
 
 const PPUCTRL	= 0x2000;
 const PPUMASK	= 0x2001;
@@ -145,6 +145,7 @@ class PPU {
   slack = 0;
   disabled = false;
   mapper: Mapper;
+  scanlineLogger = new Logger();
 
   constructor(settings: RomSettings, mapper: Mapper) {
     // Boot palette values are the same as Mesens in order to be compatible with value peeking
@@ -389,7 +390,7 @@ class PPU {
 
   clearSecondaryOAM() {
     if (isSteppingScanline) {
-      console.log('Clearing secondary OAM');
+      this.scanlineLogger.log('Clearing secondary OAM');
     }
 
     for (let i = 0; i < this.secondaryOamMemory.length; i++) {
@@ -399,7 +400,7 @@ class PPU {
 
   initializeSecondaryOAM() {
     if (isSteppingScanline) {
-      console.log('Init secondary OAM');
+      this.scanlineLogger.log('Init secondary OAM');
     }
 
     const spriteSize = this.getSpriteSize();
@@ -412,7 +413,7 @@ class PPU {
       const y = this.oamMemory[i];
       if (scanline >= y && scanline < (y + spriteSize)) {
         if (isSteppingScanline) {
-          console.log(i, 'Adding sprite to secondary OAM at ', this.oamMemory[i+3] + ',' + y + ' - ', this.oamMemory[i+1], this.oamMemory[i+2]);
+          this.scanlineLogger.log(i + ' - Adding sprite to secondary OAM at ' + this.oamMemory[i+3] + ',' + y + ' - ' + this.oamMemory[i+1] + ' ' + this.oamMemory[i+2]);
         }
 
         this.secondaryOamMemory[secondaryIndex++] = y;
@@ -695,7 +696,9 @@ class PPU {
       this.nmiOccurred = false;
     }
 
-    logger.clear();
+    if (isSteppingScanline) {
+      this.scanlineLogger.clear();
+    }
 
     if (this.scanlineCycle === 0) {
       this.spriteZeroHit = false;

@@ -8,6 +8,10 @@ import _ from 'lodash';
 import PPUNameTableDebugger from './components/PPUNameTableDebugger';
 import PPUSpritesDebugger from './components/PPUSpritesDebugger';
 import PPUOAMDebugger from './components/PPUOAMDebugger';
+import PPUVRAMDebugger from './components/PPUVRAMDebugger';
+import PPUScanlineDebugger from './components/PPUScanlineDebugger';
+import CompareTraceDebugger from './components/CompareTraceDebugger';
+import Profiler from './components/Profiler';
 
 export enum DebugDialog {
   CPUDebugger = 'CPU Debugger',
@@ -17,7 +21,8 @@ export enum DebugDialog {
   PPUOAM = 'PPU OAM',
   VRAMDebugger = 'VRAM Debugger',
   PPUScanlines = 'PPU Scanlines',
-  CompareTrace = 'CompareTrace'
+  CompareTrace = 'CompareTrace',
+  Profiler = 'Profiler'
 }
 
 
@@ -38,7 +43,11 @@ export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<
   [DebugDialog.CPUDebugger]: CPUDebugger,
   [DebugDialog.PPUNametables]: PPUNameTableDebugger,
   [DebugDialog.PPUSprites]: PPUSpritesDebugger,
-  [DebugDialog.PPUOAM]: PPUOAMDebugger
+  [DebugDialog.PPUOAM]: PPUOAMDebugger,
+  [DebugDialog.VRAMDebugger]: PPUVRAMDebugger,
+  [DebugDialog.PPUScanlines]: PPUScanlineDebugger,
+  [DebugDialog.CompareTrace]: CompareTraceDebugger,
+  [DebugDialog.Profiler]: Profiler
 });
 
 export const DebugDialogHotkeys : Record<string, DebugDialog> = {
@@ -46,7 +55,11 @@ export const DebugDialogHotkeys : Record<string, DebugDialog> = {
   'F2': DebugDialog.APUDebugger,
   'F3': DebugDialog.PPUNametables,
   'F4': DebugDialog.PPUSprites,
-  'F5': DebugDialog.PPUOAM
+  'F5': DebugDialog.PPUOAM,
+  'F6': DebugDialog.VRAMDebugger,
+  'F8': DebugDialog.PPUScanlines,
+  'F9': DebugDialog.CompareTrace,
+  'F12': DebugDialog.Profiler,
 }
 
 export const DebugDialogHotkeysComponents = _.invert(DebugDialogHotkeys);

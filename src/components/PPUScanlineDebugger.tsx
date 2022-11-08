@@ -1,16 +1,14 @@
 import React, { useMemo } from 'react';
 import _ from 'lodash';
-import logger from '../emulator/logger';
 import styles from './PPUDebugging.module.css';
+import { DebugDialogProps } from '../DebugDialog';
+import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import classNames from 'classnames';
 
-type PPUScanlineDebuggerProps = {
-  refresh: number
-}
-
-const PPUScanlineDebugger = ({ refresh } : PPUScanlineDebuggerProps) => {
+const PPUScanlineDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
   const lines = useMemo(() => {
     _.noop(refresh);
-    const lines = logger.getLines();
+    const lines = emulator.ppu.scanlineLogger.getLines();
 
     let ret = '';
 
@@ -19,17 +17,15 @@ const PPUScanlineDebugger = ({ refresh } : PPUScanlineDebuggerProps) => {
     }
 
     return ret;
-  }, [refresh])
+  }, [refresh, emulator])
 
   return (
-    <>
-      <div className={styles.hexViewer}>
+    <Dialog isOpen={isOpen} onClose={onClose} title={"PPU Scanline logs"} horizontalPosition={DialogHorizontalPosition.RIGHT}>
+      <div className={classNames(styles.ppuScanlineDebugger, styles.hexViewer)}>
         { lines }
       </div>
-    </>
+    </Dialog>
   );
 };
 
-PPUScanlineDebugger.propTypes = {};
-
-export default PPUScanlineDebugger;
+export default React.memo(PPUScanlineDebugger);

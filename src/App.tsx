@@ -70,10 +70,8 @@ function App() {
     const audioBuffer = useMemo(() => new AudioBuffer(), []);
     const startTime = useRef(performance.now());
 
-    const [dialogState, setDialogState] = useState<Record<string, boolean>>({
-        // [DebugDialog.APUDebugger]: true,
-        // [DebugDialog.CPUDebugger]: true
-    });
+    const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
+
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
     const emulator = useMemo(()=> new EmulatorState(), []);
@@ -235,7 +233,6 @@ function App() {
 
             if (emulator.stepFrame(runMode === RunModeType.RUNNING_SINGLE_SCANLINE)) {
                 // Hit breakpoint
-                console.log('Frame done');
                 _setRunMode(RunModeType.STOPPED);
                 setIsSteppingScanline(false);
                 stopped = true;
@@ -251,8 +248,8 @@ function App() {
     }, [runMode, emulator, display, _setRunMode]);
 
     useEffect(() => {
-        if (runMode === RunModeType.RUNNING_SINGLE_FRAME) {
-            emulator.stepFrame(false);
+        if (runMode === RunModeType.RUNNING_SINGLE_SCANLINE || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
+            emulator.stepFrame(runMode === RunModeType.RUNNING_SINGLE_FRAME);
             if (display.current != null && emulator) {
                 display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
                 display.current.context.putImageData(display.current.imageData, 0, 0);

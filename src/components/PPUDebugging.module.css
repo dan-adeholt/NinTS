@@ -11,8 +11,7 @@
     font-family: Menlo, Monaco, Consolas, 'Courier New', monospace !important;
 }
 
-
-.ppuOamDebugger {
+.ppuOamDebugger, .ppuScanlineDebugger, .compareTraceDebugger, .profiler {
     width: 580px;
     height: 256px;
     overflow-y: auto;
@@ -21,10 +20,27 @@
     border: 1px solid gray;
 }
 
+.compareTraceDebugger {
+    width: 1300px;
+    height: 450px;
+}
+
+.inputRow {
+    display: flex;
+}
+
+.inputRow input {
+    flex-grow: 1;
+}
+.inputRow button {
+    flex-grow: 0;
+    margin-left: 10px;
+}
+
 .hexViewer {
     max-height: 600px;
     overflow-y: auto;
-    width: 720px;
+    width: 555px;
 }
 
 .ppuNameTableContainer {

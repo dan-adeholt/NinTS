@@ -2,14 +2,10 @@ import React, { useMemo } from 'react';
 import { hex, hex16 } from '../emulator/stateLogging';
 import _ from 'lodash';
 import styles from './PPUDebugging.module.css';
-import EmulatorState from '../emulator/EmulatorState';
+import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import { DebugDialogProps } from '../DebugDialog';
 
-type PPUVRAMDebuggerProps = {
-  emulator: EmulatorState
-  refresh: number
-}
-
-const PPUVRAMDebugger = ({ emulator, refresh } : PPUVRAMDebuggerProps) => {
+const PPUVRAMDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
   const lines = useMemo<string[]>(() => {
     _.noop(refresh);
 
@@ -28,12 +24,12 @@ const PPUVRAMDebugger = ({ emulator, refresh } : PPUVRAMDebuggerProps) => {
   }, [emulator, refresh])
 
   return (
-    <div className={styles.hexViewer}>
-      { lines }
-    </div>
+    <Dialog isOpen={isOpen} onClose={onClose} title="PPU VRAM Debugger" horizontalPosition={DialogHorizontalPosition.RIGHT}>
+      <div className={styles.hexViewer}>
+        { lines }
+      </div>
+    </Dialog>
   );
 };
 
-PPUVRAMDebugger.propTypes = {};
-
-export default PPUVRAMDebugger;
+export default React.memo(PPUVRAMDebugger);

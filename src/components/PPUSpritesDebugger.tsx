@@ -3,7 +3,7 @@ import { BIT_7 } from '../emulator/instructions/util';
 import styles from './PPUDebugging.module.css';
 import PPU from '../emulator/ppu';
 import { DebugDialogProps } from '../DebugDialog';
-import Dialog from '../Dialog';
+import Dialog, { DialogHorizontalPosition } from '../Dialog';
 
 const PATTERN_TABLE_WIDTH = 256;
 const PATTERN_TABLE_HEIGHT = 128;
@@ -84,7 +84,7 @@ const PPUSpritesDebugger = ({ emulator, isOpen, onClose, refresh } : DebugDialog
   }, [ppuCanvasRef, emulator, refresh]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="PPU Sprites">
+    <Dialog isOpen={isOpen} onClose={onClose} title="PPU Sprites" horizontalPosition={DialogHorizontalPosition.RIGHT}>
       <div className={styles.ppuContainer}>
         <canvas width={256} height={128} ref={ppuCanvasRef}/>
       </div>
