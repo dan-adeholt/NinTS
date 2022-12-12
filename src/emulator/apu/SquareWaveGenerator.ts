@@ -40,6 +40,7 @@ export default class SquareWaveGenerator {
     this.lengthCounter.update();
 
     let targetPeriod = this.timerSetting;
+
     if (this.sweepDivider === 0 && this.sweepEnabled) {
       let targetPeriodOffset = (this.timerSetting >> this.sweepShift);
       if (this.sweepNegate) {
@@ -49,7 +50,7 @@ export default class SquareWaveGenerator {
         }
       }
 
-      targetPeriod = this.timerSetting + targetPeriodOffset;
+      targetPeriod += targetPeriodOffset;
     }
 
 
@@ -60,7 +61,9 @@ export default class SquareWaveGenerator {
     }
 
     if (this.sweepReloadFlag || this.sweepDivider === 0) {
+
       this.sweepDivider = this.sweepPeriod;
+      this.sweepReloadFlag = false;
     } else {
       this.sweepDivider--;
     }
@@ -68,7 +71,7 @@ export default class SquareWaveGenerator {
 
   updateSequencer() {
     if (!this.isEnabled || (!this.lengthCounter.haltCounter && this.lengthCounter.lengthCounter === 0) || this.sweepMutesChannel) {
-      // this.curOutputValue = 0;
+      this.curOutputValue = 0;
     }
     else if (--this.timerValue <= -1) {
       this.timerValue = this.timerSetting;
@@ -84,14 +87,8 @@ export default class SquareWaveGenerator {
   }
 
   setRegisterMem(address: number, value: number) {
-    // if (this.index === 0) {
-    //   console.log(hex16(address), bin8(value));
-    // }
     const relAddress = (address - 0x4000) % 0x4;
 
-    // const unit = address > 0x4004 ? '2' : '1';
-    // const print = unit === '1';
-    // const print = true;
     switch (relAddress) {
       case 0: { // Duty cycle, length counter halt, constant volume/envelope flag, volume/envelope divider period
         const dutyCycle = (value & 0b11000000) >> 6;
@@ -108,6 +105,10 @@ export default class SquareWaveGenerator {
         this.volumeOrEnvelopePeriod = volumeEnvelope;
         this.envelope.envelopePeriod = this.volumeOrEnvelopePeriod;
 
+        // if (print) {
+        //   console.log('1SEQ', dutyCycle, 'HC:', haltCounterOrEnvelopeLoop, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
+        // }
+
         // if (this.volumeOrEnvelopePeriod != 0) {
         //   if (--debug) console.log('Sq lc', this.index, this.lengthCounter, this.volumeOrEnvelopePeriod);
         // }
@@ -118,13 +119,15 @@ export default class SquareWaveGenerator {
       } case 1: { // Sweep setup
         const sweepEnabled = ((value & 0b10000000) >> 7) === 1;
 
+
         this.sweepEnabled = sweepEnabled;
         this.sweepPeriod = (value & 0b01110000) >> 4;
         this.sweepNegate = ((value & 0b00001000) >> 3) === 1;
         this.sweepShift = (value & 0b00000111);
         this.sweepReloadFlag = true;
-        // if (this.index === 0 && debug) {
-        //   console.log('SWEEP', this.sweepEnabled, this.sweepPeriod, this.sweepNegate, this.sweepShift);
+
+        // if (print) {
+        //   console.log('2SWEEP', this.sweepEnabled, this.sweepPeriod, this.sweepNegate, this.sweepShift);
         // }
 
         break;
@@ -140,6 +143,7 @@ export default class SquareWaveGenerator {
         this.generatorIndex = 0;
         this.lengthCounter.init(value);
         this.envelope.envelopeStartFlag = true;
+
         // console.log('Set square', this.index, timerIndex, this.lengthCounter);
         // if (this.index === 0) console.log('TH, TS:', this.timerSetting, 'LC:', this.lengthCounter);
         // console.log('TH', this.timerHigh, 'TV', this.timerValue);
@@ -153,9 +157,9 @@ export default class SquareWaveGenerator {
 
   setEnabled(isEnabled: boolean) {
     this.isEnabled = isEnabled;
+
     if (!this.isEnabled) {
-      this.timerValue = 0;
-      this.curOutputValue = 0;
+      this.lengthCounter.reset();
     }
   }
 }

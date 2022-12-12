@@ -6,6 +6,8 @@ const NTSCEntryTable = [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762,
 
 class NoiseGenerator {
   mode = 0;
+  timerSetting = 0;
+  timerValue = 0;
   shiftRegister = 1;
   curOutputValue = 0;
   volumeOrEnvelopePeriod = 0;
@@ -39,17 +41,21 @@ class NoiseGenerator {
   }
 
   updateSequencer() {
-    let xorBit;
-    if (this.mode === 1) {
-      xorBit = (this.shiftRegister >> 6) & 0b1;
-    } else {
-      xorBit = (this.shiftRegister >> 1) & 0b1;
-    }
+    if (--this.timerValue <= -1) {
+      this.timerValue = this.timerSetting;
 
-    const feedback = (this.shiftRegister & BIT_0) ^ xorBit;
-    this.shiftRegister >>= 1;
-    this.shiftRegister = this.shiftRegister | (feedback << 14);
-    this.updateSampleValue();
+      let xorBit;
+      if (this.mode === 1) {
+        xorBit = (this.shiftRegister >> 6) & 0b1;
+      } else {
+        xorBit = (this.shiftRegister >> 1) & 0b1;
+      }
+
+      const feedback = (this.shiftRegister & BIT_0) ^ xorBit;
+      this.shiftRegister >>= 1;
+      this.shiftRegister = this.shiftRegister | (feedback << 14);
+      this.updateSampleValue();
+    }
   }
 
   setRegisterMem(address: number, value: number) {
@@ -66,12 +72,16 @@ class NoiseGenerator {
         this.constantVolume = constantVolume === 1;
         this.volumeOrEnvelopePeriod = volumeEnvelope;
         this.envelope.envelopePeriod = this.volumeOrEnvelopePeriod;
+
         break;
       } case 0x400E: {
         const mode = (value & 0b10000000);
         const periodIndex = (value & 0b00001111);
 
         this.mode = mode >> 7;
+        this.timerSetting = NTSCEntryTable[periodIndex];
+        this.timerValue = this.timerSetting;
+
         this.shiftRegister = NTSCEntryTable[periodIndex];
         break;
       }
@@ -87,6 +97,11 @@ class NoiseGenerator {
 
   setEnabled(enabled: boolean) {
     this.isEnabled = enabled;
+
+    if (enabled) {
+      this.lengthCounter.reset();
+    }
+
     this.updateSampleValue();
   }
 }

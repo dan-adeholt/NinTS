@@ -74,8 +74,7 @@ class TriangleWaveGenerator {
   setEnabled(isEnabled: boolean) {
     this.isEnabled = isEnabled;
     if (!isEnabled) {
-      this.curOutputValue = 0;
-      this.timerValue = 0;
+      this.lengthCounter.reset();
     }
   }
 }

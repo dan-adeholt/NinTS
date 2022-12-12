@@ -12,6 +12,10 @@ class LengthCounter {
     this.lengthCounter = lengthLookup[timerIndex];
   }
 
+  reset() {
+    this.lengthCounter = 0;
+  }
+
   update() {
     if (!this.haltCounter) {
       this.lengthCounter--;
