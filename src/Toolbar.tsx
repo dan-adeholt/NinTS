@@ -13,7 +13,6 @@ type ToolbarProps = {
   toggleOpenDialog: (dialog : DebugDialog) => void
   loadRom: (rom: Uint8Array, filename: string) => void,
   setRunMode: (newRunMode: RunModeType) => void
-  reboot: () => void
 };
 
 enum DropdownMenu {
@@ -22,7 +21,7 @@ enum DropdownMenu {
   Savegames = 3
 }
 
-const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, reboot } : ToolbarProps) => {
+const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode } : ToolbarProps) => {
   const [menuState, setMenuState] = useState<Record<number, boolean>>({});
   const toggleOpen = (menu: DropdownMenu) => setMenuState(oldState => ({ [menu]: !oldState[menu]}));
   const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);
@@ -60,7 +59,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, reboot } : T
       <div className={classNames(styles.buttonRow, styles.item)}>
         <button onClick={() => setRunMode(RunModeType.RUNNING)}><FontAwesomeIcon icon={faPlay}/></button>
         <button onClick={() => setRunMode(RunModeType.STOPPED)}><FontAwesomeIcon icon={faPause}/></button>
-        <button onClick={reboot}><FontAwesomeIcon icon={faPowerOff}/></button>
+        <button onClick={() => emulator.reboot()}><FontAwesomeIcon icon={faPowerOff}/></button>
       </div>
       <div className={styles.item}>
         <button onClick={() => toggleOpen(DropdownMenu.Savegames)}>

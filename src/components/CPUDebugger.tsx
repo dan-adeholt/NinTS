@@ -117,17 +117,8 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
 
   // Sync breakpoints with emulator
   useEffect(() => {
-    if (emulator != null) {
-      emulator.breakpoints = breakpoints;
-    }
+    emulator.breakpoints = breakpoints;
   }, [breakpoints, emulator]);
-
-  useEffect(() => {
-    if (runMode === RunModeType.STOPPED) {
-      setRunMode(RunModeType.STOPPED);
-      stopEmulator();
-    }
-  }, [runMode, setRunMode, stopEmulator]);
 
   const running = runMode !== RunModeType.STOPPED;
 

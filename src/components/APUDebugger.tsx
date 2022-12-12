@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Dialog, { DialogHorizontalPosition, DialogVerticalPosition } from '../Dialog';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRecordVinyl } from '@fortawesome/free-solid-svg-icons'
@@ -27,12 +27,10 @@ const APUDebugger = ({ emulator, runMode, isOpen, onClose, setRunMode } : DebugD
 
   const apuCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    if (runMode === RunModeType.STOPPED) {
-      setLoggingEnabled(false)
-      emulator.apu.logAudio = false;
-    }
-  }, [runMode]);
+  if (runMode === RunModeType.STOPPED && loggingEnabled) {
+    setLoggingEnabled(false)
+    emulator.apu.logAudio = false;
+  }
 
   useLayoutEffect(() => {
     const context = apuCanvasRef.current?.getContext("2d");
@@ -56,8 +54,8 @@ const APUDebugger = ({ emulator, runMode, isOpen, onClose, setRunMode } : DebugD
         context.fillStyle = "black";
         context.fillRect(offset.x, CANVAS_HEIGHT - scrollerHeight, scrollerWidth, scrollerHeight);
 
-
         context.scale(zoom, 1);
+        context.lineWidth = Math.min(2.0, 1.0 / zoom);
         context.translate(scaledScroll, 0);
         context.beginPath();
         context.moveTo(0, CANVAS_HEIGHT / 2);
@@ -70,7 +68,7 @@ const APUDebugger = ({ emulator, runMode, isOpen, onClose, setRunMode } : DebugD
         context.beginPath();
 
         const startIndex = Math.floor(-scaledScroll);
-        const endIndex = Math.min(emulator.apu.audioSamples.length, (startIndex + CANVAS_WIDTH) / zoom);
+        const endIndex = emulator.apu.audioSamples.length;
 
         for (let sampleIndex = startIndex; sampleIndex < endIndex; sampleIndex++) {
           const sample = emulator.apu.audioSamples[sampleIndex];

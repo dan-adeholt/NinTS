@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { DebugDialogProps } from '../DebugDialog';
 import Dialog from '../Dialog';
 import styles from './PPUDebugging.module.css';
@@ -37,22 +37,8 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
     localStorage.setItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL, newUrl);
   }
 
-  const [lines, setLines] = useState<string[]>([]);
   const [error, setError] = useState<ErrorType | null>(null);
   const [mutedLocations, setMutedLocations] = useState<number[]>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? '[]') ?? []);
-
-  useEffect(() => {
-    if (fileUrl !== '') {
-      fetch(fileUrl)
-        .then(res => res.text())
-        .then(text => {
-          setLines(text.split('\r\n'));
-        })
-        .catch(() => {
-          // console.error(e);
-        })
-    }
-  }, []);
 
   const dumpingState = useRef<DumpingState>({
     lineIndex: 0,
@@ -102,7 +88,6 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
       emulator.initMachine(emulator.rom, true, null);
     }
 
-    console.log(lineIndex, lines.length);
     while (lineIndex < lines.length) {
       if (lineIndex >= emulator.traceLogLines.length) {
         emulator.step();
@@ -113,10 +98,6 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
         const prevStart = Math.max(lineIndex - 20, 0);
         const prevEnd = Math.max(lineIndex, 0);
         const prevLines = lines.slice(prevStart, prevEnd);
-
-        if (lineIndex % 1000 === 0) {
-          console.log('Here');
-        }
 
         onRefresh();
 
@@ -141,26 +122,24 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
     }
 
     dumpingState.current.lineIndex = lineIndex;
-  }, [emulator, lines, mutedLocations, onRefresh, fileUrl]);
+  }, [emulator, mutedLocations, onRefresh, fileUrl]);
 
   const mute = useCallback(() => {
-    console.log('Muting', hex(emulator.PC), emulator.PC);
-    setMutedLocations(oldMutedLocations => oldMutedLocations.concat([emulator.PC]));
-  }, [emulator]);
+    const newMutedLocations = mutedLocations.concat([emulator.PC])
+    setMutedLocations(newMutedLocations);
+    localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS, JSON.stringify(newMutedLocations));
+  }, [emulator, mutedLocations]);
 
   const clearMuted = useCallback(() => {
     setMutedLocations([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS, JSON.stringify([]));
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS, JSON.stringify(mutedLocations));
-  }, [mutedLocations]);
 
   return (
     <Dialog onClose={onClose} isOpen={isOpen} title="Compare trace debugger">
       <div className={styles.inputRow}>
         <input value={fileUrl} onChange={e => _setFileUrl(e.target.value)}/>
-        <button disabled={loading || lines.length === 0} onClick={compare}>Compare</button>
+        <button disabled={loading} onClick={compare}>Compare</button>
         <button disabled={loading} onClick={mute}>Mute</button>
         <button disabled={loading} onClick={clearMuted}>Clear muted</button>
       </div>

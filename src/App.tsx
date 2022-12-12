@@ -62,6 +62,7 @@ const renderScreen = (display: Display | null, emulator: EmulatorState | null ) 
 export type KeyListener = (event: KeyboardEvent) => void
 
 function App() {
+    // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
 
@@ -74,7 +75,19 @@ function App() {
 
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
-    const emulator = useMemo(()=> new EmulatorState(), []);
+    const emulator = useMemo(()=> {
+        const _emulator = new EmulatorState();
+        const lastRomArray = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM);
+
+        if (lastRomArray != null){
+            const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
+            const rom = parseROM(romBuffer);
+            _emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+        }
+
+        return _emulator;
+    }, [audioBuffer]);
+
     const display = useRef<Display | null>(null);
 
     const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
@@ -89,7 +102,6 @@ function App() {
     const removeKeyListener = useCallback((listener : KeyListener) => {
         setKeyListeners(oldListeners => _.without(oldListeners, listener));
     }, []);
-
 
     const handleKeyEvent = useCallback((e : KeyboardEvent) => {
         if ((e.target as HTMLInputElement)?.type === 'text') {
@@ -123,7 +135,6 @@ function App() {
             audioRef.current = null;
         }
     }, []);
-
 
     const initAudioContext = useCallback(() => {
         stopAudioContext();
@@ -177,30 +188,36 @@ function App() {
         }
     }, [handleKeyEvent, handleGamepad])
 
-    useEffect(() => {
-        const lastRomArray = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM);
-        const lastTitle = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string;
-        if (lastRomArray != null){
-            const parsed = new Uint8Array(JSON.parse(lastRomArray));
-            loadRom(parsed, lastTitle ?? '');
-        }
-    }, [loadRom]);
-
     const animationFrameRef = useRef<number | null>(null);
 
-    const _setRunMode = useCallback((_runMode: RunModeType) => {
-        setRunMode(_runMode);
-
-        if (_runMode === RunModeType.RUNNING_SINGLE_SCANLINE) {
-            setIsSteppingScanline(true);
-        } else {
-            setIsSteppingScanline(false);
+    const _setRunMode = useCallback((newRunMode: RunModeType) => {
+        if (animationFrameRef.current != null) {
+            window.cancelAnimationFrame(animationFrameRef.current);
         }
 
-        if (_runMode === RunModeType.RUNNING) {
+        if (newRunMode === RunModeType.RUNNING) {
             initAudioContext();
         } else {
             stopAudioContext();
+        }
+
+        animationFrameRef.current = null;
+
+        if (newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE || newRunMode === RunModeType.RUNNING_SINGLE_FRAME) {
+            setIsSteppingScanline(newRunMode == RunModeType.RUNNING_SINGLE_SCANLINE);
+            emulator.stepFrame(newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE);
+            if (display.current != null && emulator) {
+                display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
+                display.current.context.putImageData(display.current.imageData, 0, 0);
+            }
+            setRunMode(RunModeType.STOPPED);
+            setIsSteppingScanline(false);
+        } else if (newRunMode !== RunModeType.STOPPED) {
+            setRunMode(newRunMode);
+            startTime.current = performance.now();
+            updateFrame(startTime.current);
+        } else {
+            setRunMode(newRunMode);
         }
 
         triggerRefresh();
@@ -231,10 +248,9 @@ function App() {
                 emulator.setInputController(INPUT_B, gamepad.buttons[0].pressed);
             }
 
-            if (emulator.stepFrame(runMode === RunModeType.RUNNING_SINGLE_SCANLINE)) {
+            if (emulator.stepFrame(false)) {
                 // Hit breakpoint
-                _setRunMode(RunModeType.STOPPED);
-                setIsSteppingScanline(false);
+                setRunMode(RunModeType.STOPPED);
                 stopped = true;
                 break;
             }
@@ -245,33 +261,7 @@ function App() {
         if (!stopped) {
             animationFrameRef.current = window.requestAnimationFrame(updateFrame);
         }
-    }, [runMode, emulator, display, _setRunMode]);
-
-    useEffect(() => {
-        if (runMode === RunModeType.RUNNING_SINGLE_SCANLINE || runMode === RunModeType.RUNNING_SINGLE_FRAME) {
-            emulator.stepFrame(runMode === RunModeType.RUNNING_SINGLE_FRAME);
-            if (display.current != null && emulator) {
-                display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
-                display.current.context.putImageData(display.current.imageData, 0, 0);
-            }
-            _setRunMode(RunModeType.STOPPED);
-        } else if (runMode !== RunModeType.STOPPED) {
-            startTime.current = performance.now();
-            updateFrame(startTime.current);
-        }
-
-        return () => {
-            if (animationFrameRef.current != null) {
-                window.cancelAnimationFrame(animationFrameRef.current);
-            }
-
-            animationFrameRef.current = null;
-        }
-    }, [updateFrame, animationFrameRef, runMode]);
-
-    const reboot = useCallback(() => {
-        emulator.reboot();
-    }, [emulator]);
+    }, [runMode, emulator, display]);
 
     return (
       <div>
@@ -280,7 +270,6 @@ function App() {
             toggleOpenDialog={toggleOpenDialog}
             loadRom={loadRomFromUserInput}
             setRunMode={_setRunMode}
-            reboot={reboot}
           />
 
           { Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (

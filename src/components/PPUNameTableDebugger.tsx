@@ -70,7 +70,7 @@ const PPUNameTableDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDial
   const ppuCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (ppuCanvasRef.current != null && emulator != null) {
+    if (ppuCanvasRef.current != null) {
       const context = ppuCanvasRef.current.getContext("2d");
       if (context != null) {
         const imageData = context.createImageData(NAME_TABLE_WIDTH * 2, NAME_TABLE_HEIGHT * 2);
