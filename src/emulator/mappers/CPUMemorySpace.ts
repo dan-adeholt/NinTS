@@ -12,6 +12,9 @@ class CPUMemorySpace {
     this.prgRom = rom.prgData;
 
     this.memory.map(this.baseRam, 0x0000, 0x0000, this.baseRam.length);
+    this.memory.map(this.baseRam, 0x0800, 0x0000, this.baseRam.length);
+    this.memory.map(this.baseRam, 0x1000, 0x0000, this.baseRam.length);
+    this.memory.map(this.baseRam, 0x1800, 0x0000, this.baseRam.length);
 
     if (rom.settings.prgRamSize === 0x2000) {
       this.memory.map(this.prgRam, 0x6000, 0x0000, Math.min(0x2000, rom.settings.prgRamSize));
