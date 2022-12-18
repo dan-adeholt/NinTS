@@ -50,12 +50,23 @@ export const readIndirect = (state : EmulatorState) => {
 }
 
 const readAbsoluteWithOffset = (state : EmulatorState, offset: number, shortenCycle: boolean) => {
-  const base = readWord(state, state.PC);
-  const address = (base + offset) & 0xFFFF;
+  let lowByte = readByte(state, state.PC);
+  let highByte = readByte(state, state.PC + 1);
 
-  if (!onSamePageBoundary(base, address) || !shortenCycle) {
-    state.dummyReadTick();
+  lowByte = (lowByte + offset) & 0xFF;
+
+  const didOverflow = lowByte < offset;
+
+  if (didOverflow || !shortenCycle) {
+    const possiblyInvalidAddress = (lowByte + (highByte << 8)) & 0xFFFF;
+    readByte(state, possiblyInvalidAddress);
   }
+
+  if (didOverflow) {
+    highByte = (highByte + 1) & 0xFF;
+  }
+
+  const address = (lowByte + (highByte << 8)) & 0xFFFF;
 
   state.PC += 2;
 
