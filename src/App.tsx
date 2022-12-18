@@ -176,18 +176,6 @@ function App() {
         loadRom(romBuffer, filename);
     }, [loadRom]);
 
-    useEffect(() => {
-        document.addEventListener('keydown', handleKeyEvent);
-        document.addEventListener('keyup', handleKeyEvent);
-        window.addEventListener('gamepadconnected', handleGamepad);
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyEvent);
-            document.removeEventListener('keyup', handleKeyEvent);
-            window.removeEventListener('gamepadconnected', handleGamepad);
-        }
-    }, [handleKeyEvent, handleGamepad])
-
     const animationFrameRef = useRef<number | null>(null);
 
     const _setRunMode = useCallback((newRunMode: RunModeType) => {
@@ -222,6 +210,30 @@ function App() {
 
         triggerRefresh();
     }, [triggerRefresh]);
+
+
+    const handleFocus = useCallback(() => {
+        console.log('Inside handle focus');
+        if (document.visibilityState === 'hidden') {
+            console.log('Stopping');
+            _setRunMode(RunModeType.STOPPED);
+        }
+    }, [_setRunMode]);
+
+    useEffect(() => {
+        document.addEventListener('keydown', handleKeyEvent);
+        document.addEventListener('keyup', handleKeyEvent);
+        document.addEventListener('visibilitychange', handleFocus);
+        window.addEventListener('gamepadconnected', handleGamepad);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleFocus);
+            document.removeEventListener('keydown', handleKeyEvent);
+            document.removeEventListener('keyup', handleKeyEvent);
+            window.removeEventListener('gamepadconnected', handleGamepad);
+        }
+    }, [handleKeyEvent, handleGamepad, handleFocus])
+
 
     const updateFrame = useCallback((timestamp: number) => {
         let stopped = false;
