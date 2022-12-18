@@ -25,12 +25,16 @@ export const parseROM = (buffer: Uint8Array) => {
 
   const chrRomSize = buffer[index++];
   const flags = [
-    buffer[index++], // Flags 6: Memoryspace, mirroring, battery, trainer
-    buffer[index++], // Flags 7: Memoryspace, VS/Playchoice, NES 2.0
+    buffer[index++], // Flags 6: Mapper, mirroring, battery, trainer
+    buffer[index++], // Flags 7: Mapper, VS/Playchoice, NES 2.0
     buffer[index++], // Flags 8: PRG-RAM size (rarely used extension)
     buffer[index++], // Flags 9: TV system (rarely used extension)
     buffer[index++], // Flags 10: TV system, PRG-RAM presence (unofficial, rarely used extension)
   ];
+
+  const mapperLow = flags[0] >> 4;
+  const mapperHigh = flags[1] >> 4;
+  const inesMapper = mapperLow | mapperHigh << 4;
 
   const hasTrainer = (flags[0] & BIT_2) === 1;
 
@@ -45,7 +49,10 @@ export const parseROM = (buffer: Uint8Array) => {
   const romSHA = hash.hex().toUpperCase();
 
   const databaseSettings = database[romSHA];
-  const [region, type, mapper, submapper, mirroring, battery, prgRamSize, prgNVRamSize, chrRamSize, chrNVRamSize] = (databaseSettings ?? [0,0,0,0,"H",false,0,0,0,0]);
+
+  const inesMirroring = (flags[0] & 0b1) === 1 ? 'V' : 'H';
+
+  const [region, type, mapper, submapper, mirroring, battery, prgRamSize, prgNVRamSize, chrRamSize, chrNVRamSize] = (databaseSettings ?? [0,0,inesMapper,0,inesMirroring,false,0,0,0,0]);
 
   const settings = {
     mirroringVertical: mirroring === 'V',
