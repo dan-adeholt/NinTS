@@ -1,4 +1,4 @@
-import { COLORS } from './constants';
+import { COLOR_TABLE } from './constants';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
 import Mapper from './mappers/Mapper';
@@ -32,9 +32,7 @@ const PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS = 1 << 1;
 const PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS = 1 << 2;
 const PPUMASK_RENDER_BACKGROUND = 1 << 3;
 const PPUMASK_RENDER_SPRITES = 1 << 4;
-// const PPUMASK_EMPHASIZE_RED = 1 << 5;
-// const PPUMASK_EMPHASIZE_GREEN = 1 << 6;
-// const PPUMASK_EMPHASIZE_BLUE = 1 << 7;
+const PPUMASK_EMPHASIZE = 0b111 << 5;
 
 const PPUMASK_RENDER_ENABLED_FLAGS = PPUMASK_RENDER_BACKGROUND | PPUMASK_RENDER_SPRITES;
 const PPUMASK_RENDER_LEFT_SIDE = PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS | PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
@@ -131,6 +129,8 @@ class PPU {
   maskRenderingEnabled = false;
   maskSpritesEnabled = false;
   maskBackgroundEnabled = false;
+  colors = COLOR_TABLE[0];
+
   oamMemory = (new Uint8Array(256)).fill(0xFF);
   secondaryOamMemory = new Uint8Array(32);
   spriteZeroIsInSpriteUnits = false;
@@ -161,9 +161,9 @@ class PPU {
   paletteIndexedColor(indexedColor: number, paletteIndex: number, baseOffset: number) {
     let paletteAddress = baseOffset + paletteIndex * 4;
 
-    const p1Color = COLORS[this.readPPUMem(paletteAddress++)];
-    const p2Color = COLORS[this.readPPUMem(paletteAddress++)];
-    const p3Color = COLORS[this.readPPUMem(paletteAddress++)];
+    const p1Color = this.colors[this.readPPUMem(paletteAddress++)];
+    const p2Color = this.colors[this.readPPUMem(paletteAddress++)];
+    const p3Color = this.colors[this.readPPUMem(paletteAddress++)];
 
     if (indexedColor === 1) {
       return p1Color;
@@ -269,18 +269,9 @@ class PPU {
     } else if (address === OAMDATA) {
       ret = this.oamMemory[this.oamAddress];
     } else {
-      // Reading from write-only registers return the last value on the bus. Reading from PPUCTRL
-      // increments VRAM address.
-
-      if (address === PPUCTRL) {
-        if (!peek && this.controlVramIncrement === 0) {
-          this.incrementVRAMAddress();
-        }
-
-        return this.busLatch;
-      }
-
+      // Reading from write-only registers return the last value on the bus.
       switch (address) {
+        case PPUCTRL:
         case PPUMASK:
         case OAMADDR:
         case PPUSCROLL:
@@ -320,12 +311,18 @@ class PPU {
       case OAMADDR:
         this.oamAddress = value;
         break;
-      case PPUMASK:
+      case PPUMASK: {
         this.maskRenderLeftSide = (value & PPUMASK_RENDER_LEFT_SIDE) !== 0;
         this.maskRenderingEnabled = (value & PPUMASK_RENDER_ENABLED_FLAGS) !== 0;
         this.maskSpritesEnabled = (value & PPUMASK_RENDER_SPRITES) !== 0;
         this.maskBackgroundEnabled = (value & PPUMASK_RENDER_BACKGROUND) !== 0;
+
+        const emphasis = (value & PPUMASK_EMPHASIZE) >> 5;
+        this.colors = COLOR_TABLE[emphasis];
+
+
         break;
+      }
       case PPUCTRL:
         this.controlBaseNameTable =         (value & 0b00000011);
         this.controlVramIncrement =         (value & 0b00000100) >>> 2;
@@ -649,7 +646,7 @@ class PPU {
         this.framebuffer[index] = backgroundColor;
       } else {
         const vramBackgroundColor = this.readPPUMem(VRAM_BACKGROUND_COLOR);
-        this.framebuffer[index] = COLORS[vramBackgroundColor];
+        this.framebuffer[index] = this.colors[vramBackgroundColor];
       }
     } else if (backgroundColor !== 0) {
       const spritePriority = (spriteData >>> 2) & 0b1;

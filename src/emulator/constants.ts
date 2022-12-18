@@ -84,3 +84,48 @@ export const COLORS = new Uint32Array([
   0xFF000000, //3E
   0xFF000000  //3F
 ]);
+
+const COLOR_ATTENUATION = 0.746;
+
+export const COLOR_TABLE = [
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+]
+
+for (let mask = 0; mask <= 0b111; mask++) {
+  let redFactor = 1.0;
+  let greenFactor = 1.0;
+  let blueFactor = 1.0;
+
+  // Emphasise red
+  if (mask & 0b001) {
+    greenFactor = COLOR_ATTENUATION;
+    blueFactor = COLOR_ATTENUATION;
+  }
+
+  // Green
+  if (mask & 0b010) {
+    redFactor = COLOR_ATTENUATION;
+    blueFactor = COLOR_ATTENUATION;
+  }
+
+  // Blue
+  if (mask & 0b100) {
+    redFactor = COLOR_ATTENUATION;
+    greenFactor = COLOR_ATTENUATION;
+  }
+
+  for (let i = 0; i < COLORS.length; i++) {
+    const color = COLORS[i];
+    const r = Math.floor(((color >> 16) & 0b11111111) * redFactor);
+    const g = Math.floor(((color >> 8) & 0b11111111) * greenFactor);
+    const b = Math.floor(((color) & 0b11111111) * blueFactor);
+    COLOR_TABLE[mask][i] = 0xFF000000 | r << 16 | g << 8 | b;
+  }
+}
