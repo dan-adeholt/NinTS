@@ -252,7 +252,6 @@ class EmulatorState {
   }
 
   readMem (addr: number, peek = false): number {
-    // TODO: Add mirroring here
     if (addr >= 0x2000 && addr <= 0x3FFF) {
       const modAddr = 0x2000 + (addr & 0b111);
       const ret = this.ppu.readPPURegisterMem(modAddr, peek);
@@ -309,8 +308,8 @@ class EmulatorState {
     // TODO: Add mirroring here
     if (address === OAM_DMA) {
       this.writeDMA(address, value);
-    } else if (address >= 0x2000 && address <= 0x2007) {
-      this.ppu.setPPURegisterMem(address, value);
+    } else if (address >= 0x2000 && address <= 0x3FFF) {
+      this.ppu.setPPURegisterMem(0x2000 + (address % 8), value);
     } else if (address === 0x4016 || address === 0x4017) {
       this.setInputMem(address, value);
     } else if (address >= 0x4000 && address <= 0x4017) {
