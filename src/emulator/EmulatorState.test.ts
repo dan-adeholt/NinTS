@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { expect, test } from 'vitest'
 
 test('Save state', () => {
-    const data = fs.readFileSync('src/tests/roms/nestest.nes');
+    const data = fs.readFileSync('nes-test-roms/other/nestest.nes');
     const rom = parseROM(data);
     const emulator = new EmulatorState();
     emulator.initMachine(rom, false, null);
