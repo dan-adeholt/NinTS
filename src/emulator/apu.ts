@@ -12,7 +12,31 @@ export const AUDIO_BUFFER_SIZE = 2048;
 
 const CPU_CYCLES_PER_SAMPLE = (NTSC_CPU_CYCLES_PER_SECOND / SAMPLE_RATE);
 
-const APUCycleStepNTSC = 3728.5 * 2 * 12;
+const APU_CPU_DIVIDER = 12;
+const FRAME_TYPE_QUARTER = 1;
+const FRAME_TYPE_HALF = 2;
+const FRAME_TYPE_IRQ = 3;
+const FRAME_TYPE_IDLE = 4;
+
+// Mode 0: 4-Step Sequence (bit 7 of $4017 clear) - all steps in this sequence with cycle time and event type
+const steps4 = [
+  [7457 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
+  [14913 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
+  [22371 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
+  [29828 * APU_CPU_DIVIDER, FRAME_TYPE_IRQ],
+  [29829 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
+  [29830 * APU_CPU_DIVIDER, FRAME_TYPE_IRQ]
+];
+
+// Mode 1: 5-Step Sequence (bit 7 of $4017 set) - all steps in this sequence with cycle time and event type
+const steps5 = [
+  [7457 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
+  [14913 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
+  [22371 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
+  [29829 * APU_CPU_DIVIDER, FRAME_TYPE_IDLE],
+  [37281 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
+  [37282 * APU_CPU_DIVIDER, FRAME_TYPE_IDLE]
+];
 
 class APU {
   square1 = new SquareWaveGenerator(0);
@@ -21,7 +45,7 @@ class APU {
   noise = new NoiseGenerator();
   dmc = new DMCGenerator();
   masterClock = 0;
-  cpuDivider = 12;
+  cpuDivider = APU_CPU_DIVIDER;
   elapsedApuCycles = 0;
   apuStep = 0;
   evenTick = false;
@@ -74,11 +98,11 @@ class APU {
     } else if (address === 0x4017) {
       this.pendingFrameCounterMode = (value & 0b10000000) >> 7;
       if (cpuCycles % 2 === 0) {
-        // If the write occurs during an APU cycle, the effects occur 3 CPU cycles after the $4017 write cycle
-        this.frameCounterDelayCycles = 3;
+        // If the write occurs during an APU cycle, the effects occur 2 CPU cycles after the $4017 write cycle
+        this.frameCounterDelayCycles = 2;
       } else {
-        // If the write occurs between APU cycles, the effects occur 4 CPU cycles after the write cycle.
-        this.frameCounterDelayCycles = 4;
+        // If the write occurs between APU cycles, the effects occur 3 CPU cycles after the write cycle.
+        this.frameCounterDelayCycles = 3;
       }
       this.triggerIRQ = (value & 0b01000000) == 0;
       if (!this.triggerIRQ) {
@@ -177,6 +201,13 @@ class APU {
     return newSample;
   }
 
+  irqStep() {
+    if (this.triggerIRQ) {
+      this.frameInterrupt = true;
+      this.frameInterruptCycle = this.masterClock;
+    }
+  }
+
   quarterStep() {
     this.triangle.updateLinearCounter();
     this.square1.updateEnvelope();
@@ -205,7 +236,6 @@ class APU {
       }
 
       this.frameBucket += this.cpuDivider;
-
       this.apuSampleBucket++;
       this.accumulateSampleValue();
 
@@ -224,33 +254,35 @@ class APU {
       this.masterClock+=this.cpuDivider;
       this.elapsedApuCycles += this.cpuDivider;
 
-      if (this.elapsedApuCycles > APUCycleStepNTSC) {
-        // TODO: This shouldnt be float
-        this.elapsedApuCycles -= APUCycleStepNTSC;
+      const curSteps = step4 ? steps4 : steps5;
 
-        if (this.apuStep === 1 || (step4 && this.apuStep === 3) || (!step4 && this.apuStep === 4)) {
-          this.halfStep();
-        }
-
+      if (this.elapsedApuCycles > curSteps[this.apuStep][0]) {
+        const frameType = curSteps[this.apuStep][1];
         this.numTicks++;
 
-        if (step4 && this.apuStep === 3 && this.triggerIRQ) {
-          this.frameInterrupt = true;
-          this.frameInterruptCycle = this.masterClock;
+        switch (frameType) {
+          case FRAME_TYPE_HALF:
+            this.halfStep();
+            break;
+          case FRAME_TYPE_QUARTER:
+            this.quarterStep();
+            break;
+          case FRAME_TYPE_IRQ:
+            this.irqStep();
+            break;
+          default:
+          case FRAME_TYPE_IDLE:
+            break;
         }
 
-        if (step4 || this.apuStep !== 3) {
-          this.quarterStep();
-        }
 
-        // TODO: This can also be 5 steps
-        if (step4) {
-          this.apuStep = (this.apuStep + 1) % 4;
-        } else {
-          this.apuStep = (this.apuStep + 1) % 5;
+        this.apuStep++;
+
+        if (this.apuStep >= curSteps.length) {
+          this.elapsedApuCycles -= curSteps[curSteps.length - 1][0];
+          this.apuStep = 0;
         }
       }
-
 
       if (this.frameCounterDelayCycles > 0) {
         this.frameCounterDelayCycles--;
