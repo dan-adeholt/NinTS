@@ -5,7 +5,7 @@ import {
   setInterrupt,
   setZeroNegative
 } from './util';
-import { popStack, pushStack, pushStackWord, readWord } from '../memory';
+import { popStack, pushStack, pushStackWord, readByte, readWord } from '../memory';
 import EmulatorState from '../EmulatorState';
 
 /**
@@ -36,7 +36,7 @@ export const php = (state : EmulatorState) => {
 }
 
 export const rti = (state : EmulatorState) => {
-  state.dummyReadTick();
+  readByte(state, state.PC);
   state.dummyReadTick();
   state.P = popStack(state) & P_MASK_DISCARD_AFTER_PULL;
   const low = popStack(state);
@@ -45,26 +45,35 @@ export const rti = (state : EmulatorState) => {
 }
 
 export const rts = (state : EmulatorState) => {
-  state.dummyReadTick();
+  readByte(state, state.PC);
   state.dummyReadTick();
   const low = popStack(state);
   const high = popStack(state);
   state.dummyReadTick();
-  state.PC = (low | (high << 8)) + 1;
+  state.PC = ((low | (high << 8)) + 1) & 0xFFFF;
 }
 
 export const brk = (state : EmulatorState) => {
-  state.dummyReadTick();
-  pushStackWord(state, state.PC + 1);
+  readByte(state, state.PC);
+  pushStackWord(state, (state.PC + 1) & 0xFFFF);
   pushStack(state, state.P | P_REG_BREAK | P_REG_ALWAYS_1);
   setInterrupt(state, true);
   state.PC = readWord(state, 0xFFFE);
 }
 
-export const nmi = (state : EmulatorState) => {
+const interruptHandler = (state: EmulatorState, targetAddress: number) => {
   state.dummyReadTick();
-  state.dummyReadTick();
+  readByte(state, state.PC);
   pushStackWord(state, state.PC);
   pushStack(state, state.P | P_REG_ALWAYS_1);
-  state.PC = readWord(state, 0xFFFA);
+  state.PC = readWord(state, targetAddress);
+  setInterrupt(state, true);
+}
+
+export const nmi = (state : EmulatorState) => {
+  interruptHandler(state, 0xFFFA);
+}
+
+export const irq = (state : EmulatorState) => {
+  interruptHandler(state, 0xFFFE);
 }

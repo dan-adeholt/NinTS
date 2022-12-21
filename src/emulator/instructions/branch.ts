@@ -10,7 +10,7 @@ const branch = (state: EmulatorState, address: number, shouldBranch: number | bo
 
   if (shouldBranch) {
     const offsetSigned = offset > 0x7F ? offset - 256 : offset;
-    const jumpLocation = state.PC + offsetSigned;
+    const jumpLocation = (state.PC + offsetSigned) & 0xFFFF;
     state.dummyReadTick();
 
     if (!onSamePageBoundary(state.PC, jumpLocation)) {

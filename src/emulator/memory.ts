@@ -25,15 +25,15 @@ export const readWord = (state : EmulatorState, address: number) => {
 // Read address functions - these read an address and updates the PC and CYC values accordingly
 export const readImmediate = (state : EmulatorState) => {
   const address = state.PC;
-  state.PC += 1;
+  state.PC = (state.PC + 1) & 0xFFFF;
   return address;
 }
 
 export const readAbsolute = (state : EmulatorState) => {
   const lo = readByte(state, state.PC);
-  state.PC++;
+  state.PC = (state.PC + 1) & 0xFFFF;
   const hi = readByte(state, state.PC);
-  state.PC++;
+  state.PC = (state.PC + 1) & 0xFFFF;
 
   return lo + (hi << 8);
 }
@@ -49,6 +49,7 @@ export const readIndirect = (state : EmulatorState) => {
   return readByte(state, address) + (readByte(state, hi) << 8);
 }
 
+// Derived from https://www.nesdev.org/6502_cpu.txt
 const readAbsoluteWithOffset = (state : EmulatorState, offset: number, shortenCycle: boolean) => {
   let lowByte = readByte(state, state.PC);
   let highByte = readByte(state, state.PC + 1);
@@ -68,7 +69,7 @@ const readAbsoluteWithOffset = (state : EmulatorState, offset: number, shortenCy
 
   const address = (lowByte + (highByte << 8)) & 0xFFFF;
 
-  state.PC += 2;
+  state.PC = (state.PC + 2) & 0xFFFF;
 
   return address;
 }
@@ -81,7 +82,7 @@ export const readZeroPage = (state : EmulatorState) => readByte(state, state.PC+
 const readZeroPageOffset = (state : EmulatorState, offset: number) => {
   const address = (readByte(state, state.PC) + offset) % 256;
   state.dummyReadTick();
-  state.PC += 1;
+  state.PC = (state.PC + 1) & 0xFFFF;
   return address;
 }
 
@@ -96,20 +97,30 @@ export const readIndirectX = (state : EmulatorState) => {
   const addressLocation = (state.X + offset) % 256;
   const address = readByte(state, addressLocation) + (readByte(state, (addressLocation + 1) & 0xFF) << 8);
 
-  state.PC += 1;
+  state.PC = (state.PC + 1) & 0xFFFF;
 
   return address;
 }
 
 const readIndirectYHelper = (state : EmulatorState, shortenCycle: boolean) => {
   const zeroPageAddress = readByte(state, state.PC)
-  const base = readByte(state, zeroPageAddress) + (readByte(state, (zeroPageAddress + 1) & 0xFF) << 8);
-  const address = (base + state.Y) & 0xFFFF;
-  state.PC += 1;
+  let lowByte = readByte(state, zeroPageAddress);
+  let highByte = readByte(state, (zeroPageAddress + 1) & 0xFF);
 
-  if (!onSamePageBoundary(base, address) || !shortenCycle) {
-    state.dummyReadTick();
+  lowByte = (lowByte + state.Y) & 0xFF;
+  const didOverflow = lowByte < state.Y;
+
+  if (didOverflow || !shortenCycle) {
+    const possiblyInvalidAddress = (lowByte + (highByte << 8)) & 0xFFFF;
+    readByte(state, possiblyInvalidAddress);
   }
+
+  if (didOverflow) {
+    highByte = (highByte + 1) & 0xFF;
+  }
+
+  const address = (lowByte + (highByte << 8)) & 0xFFFF;
+  state.PC = (state.PC + 1) & 0xFFFF;
 
   return address;
 }

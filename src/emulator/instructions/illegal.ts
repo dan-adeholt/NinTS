@@ -19,7 +19,7 @@ const s_a = (state : EmulatorState, offset: number, register: number) => {
     state.dummyReadTick();
   }
 
-  state.PC += 2;
+  state.PC = (state.PC + 2) & 0xFFFF;
 }
 
 export const sxa = (state : EmulatorState) => s_a(state, state.Y, state.X)
@@ -60,8 +60,9 @@ export const arr = (state : EmulatorState, address: number) => {
 
 // ISB - Add one to value at memory, then subtract that value from accumulator
 export const isb = (state : EmulatorState, address: number) => {
-  const value = (readByte(state, address) + 1) & 0xFF;
-  state.dummyReadTick();
+  let value = readByte(state, address);
+  writeByte(state, address, value);
+  value = (value + 1) & 0xFF;
   writeByte(state, address, value);
   performSBC(state, value);
 }
