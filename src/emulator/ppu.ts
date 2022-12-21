@@ -270,16 +270,7 @@ class PPU {
       ret = this.oamMemory[this.oamAddress];
     } else {
       // Reading from write-only registers return the last value on the bus.
-      switch (address) {
-        case PPUCTRL:
-        case PPUMASK:
-        case OAMADDR:
-        case PPUSCROLL:
-        case PPUADDR:
-          return this.busLatch;
-        default:
-          break;
-      }
+      return this.busLatch;
     }
 
     if (!peek) {
@@ -700,9 +691,9 @@ class PPU {
     if (this.scanlineCycle === 0) {
       this.spriteZeroHit = false;
     } else if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320) {
-      this.oamAddress = 0;
-
       if (this.maskRenderingEnabled) {
+        this.oamAddress = 0;
+
         if (this.scanlineCycle === 257) {
           this.resetHorizontalScroll();
         } else if (this.scanlineCycle === 280) {
