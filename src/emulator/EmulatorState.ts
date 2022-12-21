@@ -2,7 +2,7 @@ import { hex, hex16, stateToString } from './stateLogging';
 import { OAM_DMA, opcodeMetadata, opcodeTable } from './cpu';
 
 import PPU from './ppu';
-import { nmi } from './instructions/stack';
+import { irq, nmi } from './instructions/stack';
 import parseMapper from './mappers/parseMapper';
 import _ from 'lodash';
 import APU from './apu';
@@ -11,6 +11,7 @@ import { EmptyRom, Rom, RomSettings } from "./parseROM";
 import PPUMemorySpace from "./mappers/PPUMemorySpace";
 import CPUMemorySpace from "./mappers/CPUMemorySpace";
 import Mapper from "./mappers/Mapper";
+import { P_REG_INTERRUPT } from './instructions/util';
 
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
@@ -105,6 +106,8 @@ class EmulatorState {
   breakpoints = {};
   apu: APU;
   ppu: PPU;
+  irqCounter = 0;
+  irqCounterActive = false;
   nmiCounter = 0;
   nmiCounterActive = false;
   traceLogLines: string[] = [];
@@ -120,6 +123,7 @@ class EmulatorState {
   ppuMemory: PPUMemorySpace
   cpuMemory: CPUMemorySpace
   prevNmiOccurred = false;
+  triggerBreak = false
 
   constructor() {
     const rom = EmptyRom;
@@ -264,7 +268,7 @@ class EmulatorState {
     } else if (addr === 0x4016 || addr === 0x4017) {
       return this.readControllerMem(addr, peek);
     } else if (addr >= 0x4000 && addr <= 0x4016) {
-      return this.apu.readAPURegisterMem(addr);
+      return this.apu.readAPURegisterMem(addr, peek);
     } else {
       return this.mapper.cpuMemory.read(addr);
     }
@@ -305,15 +309,20 @@ class EmulatorState {
   }
 
   setMem(address: number, value: number) {
+    // if (address === 0xF0) {
+    //   console.log('WRITE f0', value);
+    //   this.triggerBreak = true;
+    // }
+
     // TODO: Add mirroring here
     if (address === OAM_DMA) {
       this.writeDMA(address, value);
     } else if (address >= 0x2000 && address <= 0x3FFF) {
       this.ppu.setPPURegisterMem(0x2000 + (address % 8), value);
-    } else if (address === 0x4016 || address === 0x4017) {
+    } else if (address === 0x4016) {
       this.setInputMem(address, value);
     } else if (address >= 0x4000 && address <= 0x4017) {
-      this.apu.setAPURegisterMem(address, value);
+      this.apu.setAPURegisterMem(address, value, this.CYC);
     } else if (address >= 0x8000 && address < 0xFFFF) {
       this.mapper.handleROMWrite(address, value);
     } else {
@@ -343,15 +352,24 @@ class EmulatorState {
       }
 
       hitBreakpoint = this.PC in this.breakpoints;
+
+      if (this.apu.triggerBreak || this.triggerBreak) {
+        hitBreakpoint = true;
+        this.triggerBreak = false;
+        this.apu.triggerBreak = false;
+      }
+
       if (breakAfterScanlineChange) {
         hitBreakpoint = prevScanline !== this.ppu.scanline;
       }
     }
 
+
     return hitBreakpoint;
   }
 
   _updatePPUAndHandleNMI() {
+    const apuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock - this.ppuOffset);
 
@@ -368,6 +386,18 @@ class EmulatorState {
       this.nmiCounter = 1;
     } else if (this.nmiCounterActive) {
       this.nmiCounter--;
+    }
+
+    // The IRQ input is connected to a level detector. If a low level is detected on the IRQ input during φ2 of a cycle, an internal
+    // signal is raised during φ1 the following cycle, remaining high for that cycle only (or put another way, remaining high as long
+    // as the IRQ input is low during the preceding cycle's φ2).
+    //
+    // APU Frame interrupt occurred. Like with the NMI; trigger after current cycle.
+    if (apuFrameInterrupt !== this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0)) {
+      this.irqCounterActive = true;
+      this.irqCounter = 1;
+    } else if (this.irqCounterActive) {
+      this.irqCounter--;
     }
   }
 
@@ -441,6 +471,7 @@ class EmulatorState {
 
     if (this.enableTraceLogging) {
       if (this.lastNMIOccured && this.lastNMI <= this.CYC) {
+
         this.traceLogLines.push('[NMI - Cycle: ' + (this.lastNMI) + ']');
         this.lastNMIOccured = false;
       }
@@ -451,7 +482,7 @@ class EmulatorState {
     const opcode = this.readMem(this.PC);
     this.endReadTick();
 
-    this.PC++;
+    this.PC = (this.PC + 1) & 0xFFFF;
     return opcode;
   }
 
@@ -467,10 +498,20 @@ class EmulatorState {
 
     // This actually annoys me a bit, if an NMI triggers we won't get the log output from the preceding opcode.
     // But this is the way Mesen does it so we do it to stay compatible.
-    if (this.nmiCounterActive && this.nmiCounter <= 0 && this.ppu.controlGenerateNMI) {
+    if (this.nmiCounterActive && this.nmiCounter <= 0) {
       this.nmiCounterActive = false;
-      nmi(this);
+
+      if (this.ppu.controlGenerateNMI) {
+        nmi(this);
+      }
+
       this.lastNMI = this.CYC;
+      this.lastNMIOccured = true;
+    }
+
+    if (this.irqCounterActive && this.irqCounter <= 0) {
+      this.irqCounterActive = false;
+      irq(this);
     }
 
 

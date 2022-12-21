@@ -30,6 +30,9 @@ class APU {
   accumulatedCycles = 0;
   apuSampleBucket = 0;
 
+  frameCounterDelayCycles = -1;
+  pendingFrameCounterMode = 0;
+  frameCounterMode = 0;
   lastSample = 0;
   lastRawSample = 0;
   accumulatedSamplesSquare1 = 0;
@@ -39,7 +42,11 @@ class APU {
   accumulatedSamplesDmc = 0;
   logAudio = false;
   audioSamples: number[] = [];
+  frameInterrupt = false;
+  frameInterruptCycle = 0;
+  triggerIRQ = true;
   debugIndex = 0;
+  triggerBreak = false;
 
   audioSampleCallback : ((sample: number) => void) | null = null
 
@@ -47,10 +54,7 @@ class APU {
     this.audioSampleCallback = audioSampleCallback
   }
 
-  setAPURegisterMem(address: number, value: number) {
-    // const time = this.masterClock / 21477272;
-    // console.log(time.toFixed(2), hex(address, '$'), '=>', bin8(value));
-
+  setAPURegisterMem(address: number, value: number, cpuCycles: number) {
     if (address >= 0x4000 && address <= 0x4003) {
       this.square1.setRegisterMem(address, value);
     } else if (address >= 0x4004 && address <= 0x4007) {
@@ -68,13 +72,39 @@ class APU {
       this.noise.setEnabled(   (value & 0b01000) !== 0);
       this.dmc.setEnabled(     (value & 0b10000) !== 0);
     } else if (address === 0x4017) {
-      // const mode = (value & 0b10000000) >> 7;
-      // const irq = (value & 0b01000000) >> 6;
+      this.pendingFrameCounterMode = (value & 0b10000000) >> 7;
+      if (cpuCycles % 2 === 0) {
+        // If the write occurs during an APU cycle, the effects occur 3 CPU cycles after the $4017 write cycle
+        this.frameCounterDelayCycles = 3;
+      } else {
+        // If the write occurs between APU cycles, the effects occur 4 CPU cycles after the write cycle.
+        this.frameCounterDelayCycles = 4;
+      }
+      this.triggerIRQ = (value & 0b01000000) == 0;
+      if (!this.triggerIRQ) {
+        this.frameInterrupt = false;
+      }
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  readAPURegisterMem(address: number) {
+  readAPURegisterMem(address: number, peek: boolean): number {
+    if (address === 0x4015) {
+      const status =
+        (this.square1.lengthCounter.lengthCounter > 0 ?  0b00000001 : 0) |
+        (this.square2.lengthCounter.lengthCounter > 0 ?  0b00000010 : 0) |
+        (this.triangle.lengthCounter.lengthCounter > 0 ? 0b00000100 : 0) |
+        (this.noise.lengthCounter.lengthCounter > 0 ?    0b00001000 : 0) |
+        (this.frameInterrupt ?                           0b01000000 : 0);
+
+      // If an interrupt flag was set at the same moment of the read, it will read back as 1 but it will not be cleared.
+      if (!peek && this.masterClock !== this.frameInterruptCycle) {
+        this.frameInterrupt = false;
+      }
+
+
+      return status;
+    }
     return 0;
   }
 
@@ -147,10 +177,26 @@ class APU {
     return newSample;
   }
 
+  quarterStep() {
+    this.triangle.updateLinearCounter();
+    this.square1.updateEnvelope();
+    this.square2.updateEnvelope();
+    this.noise.updateEnvelope();
+  }
+
+  halfStep() {
+    this.square1.updateLengthCounterAndSweepUnit();
+    this.square2.updateLengthCounterAndSweepUnit();
+    this.triangle.updateLengthCounter();
+    this.noise.updateLengthCounter();
+  }
+
   update(targetMasterClock: number) {
     while ((this.masterClock + this.cpuDivider) < targetMasterClock) {
       // Do one iteration for each cpu cycle, but update sequencers for square waves every 2 cycles
       this.evenTick = !this.evenTick;
+
+      const step4 = this.frameCounterMode === 0;
 
       if (this.evenTick) {
         this.square1.updateSequencer();
@@ -172,7 +218,9 @@ class APU {
         }
       }
 
+
       this.triangle.updateSequencer();
+
       this.masterClock+=this.cpuDivider;
       this.elapsedApuCycles += this.cpuDivider;
 
@@ -180,22 +228,44 @@ class APU {
         // TODO: This shouldnt be float
         this.elapsedApuCycles -= APUCycleStepNTSC;
 
-        if (this.apuStep === 1 || this.apuStep === 3) {
-          this.square1.updateLengthCounterAndSweepUnit();
-          this.square2.updateLengthCounterAndSweepUnit();
-          this.triangle.updateLengthCounter();
-          this.noise.updateLengthCounter();
+        if (this.apuStep === 1 || (step4 && this.apuStep === 3) || (!step4 && this.apuStep === 4)) {
+          this.halfStep();
         }
 
         this.numTicks++;
 
-        this.triangle.updateLinearCounter();
-        this.square1.updateEnvelope();
-        this.square2.updateEnvelope();
-        this.noise.updateEnvelope();
+        if (step4 && this.apuStep === 3 && this.triggerIRQ) {
+          this.frameInterrupt = true;
+          this.frameInterruptCycle = this.masterClock;
+        }
+
+        if (step4 || this.apuStep !== 3) {
+          this.quarterStep();
+        }
 
         // TODO: This can also be 5 steps
-        this.apuStep = (this.apuStep + 1) % 4;
+        if (step4) {
+          this.apuStep = (this.apuStep + 1) % 4;
+        } else {
+          this.apuStep = (this.apuStep + 1) % 5;
+        }
+      }
+
+
+      if (this.frameCounterDelayCycles > 0) {
+        this.frameCounterDelayCycles--;
+        if (this.frameCounterDelayCycles === 0) {
+          this.frameCounterMode = this.pendingFrameCounterMode;
+          this.frameCounterDelayCycles = -1;
+          this.elapsedApuCycles = 0;
+          this.apuStep = 0;
+
+          if (this.frameCounterMode === 1) {
+            // Writing to $4017 resets the frame counter, and if bit 7 is set the quarter/half frame triggers happen simultaneously
+            this.quarterStep();
+            this.halfStep();
+          }
+        }
       }
     }
   }
