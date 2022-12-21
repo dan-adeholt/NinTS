@@ -86,7 +86,10 @@ class NoiseGenerator {
         break;
       }
       case 0x400F: { // Length counter load and timer high 3 bits
-        this.lengthCounter.init(value);
+        if (this.isEnabled) {
+          this.lengthCounter.init(value);
+        }
+
         this.envelope.envelopeStartFlag = true;
         break;
       }
@@ -98,7 +101,7 @@ class NoiseGenerator {
   setEnabled(enabled: boolean) {
     this.isEnabled = enabled;
 
-    if (enabled) {
+    if (!enabled) {
       this.lengthCounter.reset();
     }
 

@@ -141,7 +141,11 @@ export default class SquareWaveGenerator {
         this.timerSetting = (timerHigh << 8) | (this.timerSetting & 0b11111111);
         this.timerValue = this.timerSetting;
         this.generatorIndex = 0;
-        this.lengthCounter.init(value);
+
+        if (this.isEnabled) {
+          this.lengthCounter.init(value);
+        }
+
         this.envelope.envelopeStartFlag = true;
 
         // console.log('Set square', this.index, timerIndex, this.lengthCounter);

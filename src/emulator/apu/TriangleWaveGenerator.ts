@@ -62,7 +62,11 @@ class TriangleWaveGenerator {
       // console.log('0x400A timer', this.timerSetting);
     } else if (address === 0x400B) {
       const timerHigh =    (value & 0b00000111);
-      this.lengthCounter.init(value);
+
+      if (this.isEnabled) {
+        this.lengthCounter.init(value);
+      }
+
       this.timerSetting &= 0b11111111;
       this.timerSetting |= (timerHigh << 8);
       this.timerValue = this.timerSetting;
