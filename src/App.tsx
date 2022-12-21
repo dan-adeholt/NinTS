@@ -17,6 +17,7 @@ import AudioBuffer from './AudioBuffer';
 import { AUDIO_BUFFER_SIZE, SAMPLE_RATE } from './emulator/apu';
 import Toolbar from './Toolbar';
 import { DebugDialogHotkeys, getDebugDialogComponents } from './DebugDialog';
+import ErrorBoundary from './ErrorBoundary';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
 const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
@@ -94,13 +95,14 @@ function App() {
 
     const addKeyListener = useCallback((listener : KeyListener) => {
         setKeyListeners(oldListeners => {
-            oldListeners.push(listener);
-            return oldListeners;
+            return [...oldListeners, listener];
         })
     }, []);
 
     const removeKeyListener = useCallback((listener : KeyListener) => {
-        setKeyListeners(oldListeners => _.without(oldListeners, listener));
+        setKeyListeners(oldListeners => {
+            return _.without(oldListeners, listener);
+        });
     }, []);
 
     const handleKeyEvent = useCallback((e : KeyboardEvent) => {
@@ -149,7 +151,7 @@ function App() {
                 // We are missing a few samples. The emulator stops right after vblank is hit,
                 // we can try to do a few more cycles before the pre-render scanline so that the
                 // audio buffer can be filled
-                while (emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
+                while (audioRef.current && emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
                     emulator.step();
                 }
             });
@@ -262,7 +264,7 @@ function App() {
 
             if (emulator.stepFrame(false)) {
                 // Hit breakpoint
-                setRunMode(RunModeType.STOPPED);
+                _setRunMode(RunModeType.STOPPED);
                 stopped = true;
                 break;
             }
@@ -273,51 +275,52 @@ function App() {
         if (!stopped) {
             animationFrameRef.current = window.requestAnimationFrame(updateFrame);
         }
-    }, [runMode, emulator, display]);
+    }, [runMode, emulator, display, _setRunMode]);
 
     return (
-      <div>
-          <Toolbar
-            emulator={emulator}
-            toggleOpenDialog={toggleOpenDialog}
-            loadRom={loadRomFromUserInput}
-            setRunMode={_setRunMode}
-          />
+          <div>
+              <Toolbar
+                emulator={emulator}
+                toggleOpenDialog={toggleOpenDialog}
+                loadRom={loadRomFromUserInput}
+                setRunMode={_setRunMode}
+              />
+              <ErrorBoundary>
 
-          { Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (
-            <DialogComponent
-              isOpen={dialogState[type]}
-              onClose={() => toggleOpenDialog(type)}
-              emulator={emulator}
-              runMode={runMode}
-              setRunMode={_setRunMode}
-              key={type}
-              onRefresh={triggerRefresh}
-              refresh={refresh}
-              addKeyListener={addKeyListener}
-              removeKeyListener={removeKeyListener}
-            />
-          ))
-          }
-          <div className={styles.app}>
-              <h1>{ title }</h1>
-              <div className={styles.drawingArea}>
-                  <div className={styles.canvasContainer}>
-                      <div className={styles.displayContainer}>
-                          <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
-                              const context = ref?.getContext("2d");
-                              if (context != null) {
-                                  const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
-                                  const framebuffer = new Uint32Array(imageData.data.buffer);
-                                  display.current = { imageData, framebuffer, context };
-                              }
-                          }}/>
+                  { Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (
+                    <DialogComponent
+                      isOpen={dialogState[type]}
+                      onClose={() => toggleOpenDialog(type)}
+                      emulator={emulator}
+                      runMode={runMode}
+                      setRunMode={_setRunMode}
+                      key={type}
+                      onRefresh={triggerRefresh}
+                      refresh={refresh}
+                      addKeyListener={addKeyListener}
+                      removeKeyListener={removeKeyListener}
+                    />
+                  ))
+                  }
+                  <div className={styles.app}>
+                      <h1>{ title }</h1>
+                      <div className={styles.drawingArea}>
+                          <div className={styles.canvasContainer}>
+                              <div className={styles.displayContainer}>
+                                  <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
+                                      const context = ref?.getContext("2d");
+                                      if (context != null) {
+                                          const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+                                          const framebuffer = new Uint32Array(imageData.data.buffer);
+                                          display.current = { imageData, framebuffer, context };
+                                      }
+                                  }}/>
+                              </div>
+                          </div>
                       </div>
                   </div>
-              </div>
-
+              </ErrorBoundary>
           </div>
-      </div>
     );
 }
 
