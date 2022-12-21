@@ -225,3 +225,7 @@ export const testPPURomWithImage = (romFile: string, imgFile: string, numFrames 
   expect(_.isEqual(visibleBuffer, png)).toEqual(true);
 };
 
+
+export const patchROMToAllowWritableCHR = (rom: Rom) => {
+  rom.settings.chrRamSize = 0x2000;
+}
