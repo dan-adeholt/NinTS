@@ -5,11 +5,33 @@ const lengthLookup = [
 class LengthCounter {
   lengthCounter = 0;
   haltCounter = false;
+  pendingHaltCounter = false;
+  reloadValue = 0;
+  prevValue = 0;
 
   init(registerValue) {
     // Timer indices are always stored in the upper 5 bits.
     const timerIndex = (registerValue & 0b11111000) >> 3;
-    this.lengthCounter = lengthLookup[timerIndex];
+    this.reloadValue = lengthLookup[timerIndex];
+    this.prevValue = this.lengthCounter;
+  }
+
+  reload() {
+    if (this.reloadValue) {
+      // According to 11.len_reload_timing: Reload during length clock when ctr > 0 should be ignored
+      // So reload length counter only if length had not been clocked during write (i.e. the value changed)
+      if (this.lengthCounter === this.prevValue) {
+        this.lengthCounter = this.reloadValue;
+      }
+
+      this.reloadValue = 0;
+    }
+
+    this.haltCounter = this.pendingHaltCounter;
+  }
+
+  setHalt(newHalt) {
+    this.pendingHaltCounter = newHalt;
   }
 
   reset() {

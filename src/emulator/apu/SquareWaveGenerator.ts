@@ -98,7 +98,7 @@ export default class SquareWaveGenerator {
 
         this.sequence = sequences[dutyCycle];
         const haltCounterOrEnvelopeLoop = lengthCounterHalt === 1;
-        this.lengthCounter.haltCounter = haltCounterOrEnvelopeLoop;
+        this.lengthCounter.setHalt(haltCounterOrEnvelopeLoop);
         this.envelope.envelopeLoop = haltCounterOrEnvelopeLoop;
 
         this.constantVolume = constantVolume === 1;

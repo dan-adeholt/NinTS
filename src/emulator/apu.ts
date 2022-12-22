@@ -21,22 +21,22 @@ const FRAME_TYPE_HALF_AND_IRQ = 5;
 
 // Mode 0: 4-Step Sequence (bit 7 of $4017 clear) - all steps in this sequence with cycle time and event type
 const steps4 = [
-  [7457 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
-  [14913 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
-  [22371 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
-  [29828 * APU_CPU_DIVIDER, FRAME_TYPE_IRQ],
-  [29829 * APU_CPU_DIVIDER, FRAME_TYPE_HALF_AND_IRQ],
-  [29830 * APU_CPU_DIVIDER, FRAME_TYPE_IRQ]
+  [7457, FRAME_TYPE_QUARTER],
+  [14913, FRAME_TYPE_HALF],
+  [22371, FRAME_TYPE_QUARTER],
+  [29828, FRAME_TYPE_IRQ],
+  [29829, FRAME_TYPE_HALF_AND_IRQ],
+  [29830, FRAME_TYPE_IRQ]
 ];
 
 // Mode 1: 5-Step Sequence (bit 7 of $4017 set) - all steps in this sequence with cycle time and event type
 const steps5 = [
-  [7457 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
-  [14913 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
-  [22371 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
-  [29829 * APU_CPU_DIVIDER, FRAME_TYPE_IDLE],
-  [37281 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
-  [37282 * APU_CPU_DIVIDER, FRAME_TYPE_IDLE]
+  [7457, FRAME_TYPE_QUARTER],
+  [14913, FRAME_TYPE_HALF],
+  [22371, FRAME_TYPE_QUARTER],
+  [29829, FRAME_TYPE_IDLE],
+  [37281, FRAME_TYPE_HALF],
+  [37282, FRAME_TYPE_IDLE]
 ];
 
 class APU {
@@ -50,7 +50,6 @@ class APU {
   elapsedApuCycles = 0;
   apuStep = 0;
   evenTick = false;
-  frameBucket = 0;
   numTicks = 0;
   accumulatedCycles = 0;
   apuSampleBucket = 0;
@@ -222,87 +221,103 @@ class APU {
     this.noise.updateLengthCounter();
   }
 
+  tickSampleCollector() {
+    this.apuSampleBucket++;
+    this.accumulateSampleValue();
+
+    while (this.apuSampleBucket > CPU_CYCLES_PER_SAMPLE) {
+      const sample = this.readSampleValue();
+      this.audioSampleCallback?.(sample);
+      this.apuSampleBucket -= CPU_CYCLES_PER_SAMPLE;
+      if (this.logAudio) {
+        this.audioSamples.push(sample);
+      }
+    }
+  }
+
+  tickFrameCounter() {
+    const step4 = this.frameCounterMode === 0;
+
+    this.elapsedApuCycles++;
+
+    const curSteps = step4 ? steps4 : steps5;
+
+    if (this.elapsedApuCycles >= curSteps[this.apuStep][0]) {
+      const frameType = curSteps[this.apuStep][1];
+      this.numTicks++;
+
+      switch (frameType) {
+        case FRAME_TYPE_HALF:
+          this.halfStep();
+          break;
+        case FRAME_TYPE_QUARTER:
+          this.quarterStep();
+          break;
+        case FRAME_TYPE_IRQ:
+          this.irqStep();
+          break;
+        case FRAME_TYPE_HALF_AND_IRQ:
+          this.halfStep();
+          this.irqStep();
+          break;
+        default:
+        case FRAME_TYPE_IDLE:
+          break;
+      }
+
+
+      this.apuStep++;
+
+      if (this.apuStep >= curSteps.length) {
+        this.elapsedApuCycles -= curSteps[curSteps.length - 1][0];
+        this.apuStep = 0;
+      }
+    }
+
+    if (this.frameCounterDelayCycles > 0) {
+      this.frameCounterDelayCycles--;
+      if (this.frameCounterDelayCycles === 0) {
+        this.frameCounterMode = this.pendingFrameCounterMode;
+        this.frameCounterDelayCycles = -1;
+        this.elapsedApuCycles = 0;
+        this.apuStep = 0;
+
+        if (this.frameCounterMode === 1) {
+          // Writing to $4017 resets the frame counter, and if bit 7 is set the quarter/half frame triggers happen simultaneously
+          this.quarterStep();
+          this.halfStep();
+        }
+      }
+    }
+  }
+
+  tickSequencers() {
+    // Do one iteration for each cpu cycle, but update sequencers for square waves every 2 cycles
+    this.evenTick = !this.evenTick;
+
+    if (this.evenTick) {
+      this.square1.updateSequencer();
+      this.square2.updateSequencer();
+      this.noise.updateSequencer();
+    }
+
+    this.triangle.updateSequencer();
+  }
+
+  reloadLengthCounters() {
+    this.square1.lengthCounter.reload();
+    this.square2.lengthCounter.reload();
+    this.noise.lengthCounter.reload();
+    this.triangle.lengthCounter.reload();
+  }
+
   update(targetMasterClock: number) {
     while ((this.masterClock + this.cpuDivider) < targetMasterClock) {
-      // Do one iteration for each cpu cycle, but update sequencers for square waves every 2 cycles
-      this.evenTick = !this.evenTick;
-
-      const step4 = this.frameCounterMode === 0;
-
-      if (this.evenTick) {
-        this.square1.updateSequencer();
-        this.square2.updateSequencer();
-        this.noise.updateSequencer();
-      }
-
-      this.frameBucket += this.cpuDivider;
-      this.apuSampleBucket++;
-      this.accumulateSampleValue();
-
-      while (this.apuSampleBucket > CPU_CYCLES_PER_SAMPLE) {
-        const sample = this.readSampleValue();
-        this.audioSampleCallback?.(sample);
-        this.apuSampleBucket -= CPU_CYCLES_PER_SAMPLE;
-        if (this.logAudio) {
-          this.audioSamples.push(sample);
-        }
-      }
-
-
-      this.triangle.updateSequencer();
-
-      this.masterClock+=this.cpuDivider;
-      this.elapsedApuCycles += this.cpuDivider;
-
-      const curSteps = step4 ? steps4 : steps5;
-
-      if (this.elapsedApuCycles >= curSteps[this.apuStep][0]) {
-        const frameType = curSteps[this.apuStep][1];
-        this.numTicks++;
-
-        switch (frameType) {
-          case FRAME_TYPE_HALF:
-            this.halfStep();
-            break;
-          case FRAME_TYPE_QUARTER:
-            this.quarterStep();
-            break;
-          case FRAME_TYPE_IRQ:
-            this.irqStep();
-            break;
-          case FRAME_TYPE_HALF_AND_IRQ:
-            this.halfStep();
-            this.irqStep();
-            break;
-          default:
-          case FRAME_TYPE_IDLE:
-            break;
-        }
-
-
-        this.apuStep++;
-
-        if (this.apuStep >= curSteps.length) {
-          this.elapsedApuCycles -= curSteps[curSteps.length - 1][0];
-          this.apuStep = 0;
-        }
-      }
-
-      if (this.frameCounterDelayCycles > 0) {
-        this.frameCounterDelayCycles--;
-        if (this.frameCounterDelayCycles === 0) {
-          this.frameCounterMode = this.pendingFrameCounterMode;
-          this.frameCounterDelayCycles = -1;
-          this.elapsedApuCycles = 0;
-          this.apuStep = 0;
-
-          if (this.frameCounterMode === 1) {
-            // Writing to $4017 resets the frame counter, and if bit 7 is set the quarter/half frame triggers happen simultaneously
-            this.quarterStep();
-            this.halfStep();
-          }
-        }
-      }
+      this.masterClock += this.cpuDivider;
+      this.tickFrameCounter();
+      this.reloadLengthCounters();
+      this.tickSequencers();
+      this.tickSampleCollector();
     }
   }
 }

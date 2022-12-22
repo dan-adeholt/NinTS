@@ -15,7 +15,6 @@ class TriangleWaveGenerator {
   generatorIndex = 0;
   curOutputValue = 0;
   linearReloadFlag = true;
-  lengthCounterHalt = true;
 
   updateLinearCounter() {
     if (this.linearReloadFlag) {
@@ -53,7 +52,7 @@ class TriangleWaveGenerator {
   setRegisterMem(address: number, value: number) {
     if (address === 0x4008) {
       this.linearCounterHaltFlag = ((value & 0b10000000) >> 7) === 1;
-      this.lengthCounterHalt = this.linearCounterHaltFlag;
+      this.lengthCounter.setHalt(this.linearCounterHaltFlag);
       this.linearCounterReload = value & 0b01111111;
       // console.log('0x4008 Halt', this.linearCounterHaltFlag, 'Reload', this.linearCounterReload);
     } else if (address === 0x400A) {

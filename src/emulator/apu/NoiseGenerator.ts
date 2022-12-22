@@ -66,6 +66,7 @@ class NoiseGenerator {
         const volumeEnvelope = (value & 0b00001111);
 
         const haltCounterOrEnvelopeLoop = lengthCounterHalt === 1;
+        this.lengthCounter.setHalt(haltCounterOrEnvelopeLoop);
         this.lengthCounter.haltCounter = haltCounterOrEnvelopeLoop;
         this.envelope.envelopeLoop = haltCounterOrEnvelopeLoop;
 
