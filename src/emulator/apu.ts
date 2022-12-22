@@ -17,6 +17,7 @@ const FRAME_TYPE_QUARTER = 1;
 const FRAME_TYPE_HALF = 2;
 const FRAME_TYPE_IRQ = 3;
 const FRAME_TYPE_IDLE = 4;
+const FRAME_TYPE_HALF_AND_IRQ = 5;
 
 // Mode 0: 4-Step Sequence (bit 7 of $4017 clear) - all steps in this sequence with cycle time and event type
 const steps4 = [
@@ -24,7 +25,7 @@ const steps4 = [
   [14913 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
   [22371 * APU_CPU_DIVIDER, FRAME_TYPE_QUARTER],
   [29828 * APU_CPU_DIVIDER, FRAME_TYPE_IRQ],
-  [29829 * APU_CPU_DIVIDER, FRAME_TYPE_HALF],
+  [29829 * APU_CPU_DIVIDER, FRAME_TYPE_HALF_AND_IRQ],
   [29830 * APU_CPU_DIVIDER, FRAME_TYPE_IRQ]
 ];
 
@@ -69,7 +70,6 @@ class APU {
   frameInterrupt = false;
   frameInterruptCycle = 0;
   triggerIRQ = true;
-  debugIndex = 0;
   triggerBreak = false;
 
   audioSampleCallback : ((sample: number) => void) | null = null
@@ -98,11 +98,11 @@ class APU {
     } else if (address === 0x4017) {
       this.pendingFrameCounterMode = (value & 0b10000000) >> 7;
       if (cpuCycles % 2 === 0) {
-        // If the write occurs during an APU cycle, the effects occur 2 CPU cycles after the $4017 write cycle
-        this.frameCounterDelayCycles = 2;
-      } else {
-        // If the write occurs between APU cycles, the effects occur 3 CPU cycles after the write cycle.
+        // If the write occurs during an APU cycle, the effects occur 3 CPU cycles after the $4017 write cycle
         this.frameCounterDelayCycles = 3;
+      } else {
+        // If the write occurs between APU cycles, the effects occur 4 CPU cycles after the write cycle.
+        this.frameCounterDelayCycles = 4;
       }
       this.triggerIRQ = (value & 0b01000000) == 0;
       if (!this.triggerIRQ) {
@@ -125,7 +125,6 @@ class APU {
       if (!peek && this.masterClock !== this.frameInterruptCycle) {
         this.frameInterrupt = false;
       }
-
 
       return status;
     }
@@ -202,7 +201,7 @@ class APU {
   }
 
   irqStep() {
-    if (this.triggerIRQ) {
+    if (this.triggerIRQ && !this.frameInterrupt) {
       this.frameInterrupt = true;
       this.frameInterruptCycle = this.masterClock;
     }
@@ -216,6 +215,7 @@ class APU {
   }
 
   halfStep() {
+    this.quarterStep();
     this.square1.updateLengthCounterAndSweepUnit();
     this.square2.updateLengthCounterAndSweepUnit();
     this.triangle.updateLengthCounter();
@@ -256,7 +256,7 @@ class APU {
 
       const curSteps = step4 ? steps4 : steps5;
 
-      if (this.elapsedApuCycles > curSteps[this.apuStep][0]) {
+      if (this.elapsedApuCycles >= curSteps[this.apuStep][0]) {
         const frameType = curSteps[this.apuStep][1];
         this.numTicks++;
 
@@ -268,6 +268,10 @@ class APU {
             this.quarterStep();
             break;
           case FRAME_TYPE_IRQ:
+            this.irqStep();
+            break;
+          case FRAME_TYPE_HALF_AND_IRQ:
+            this.halfStep();
             this.irqStep();
             break;
           default:

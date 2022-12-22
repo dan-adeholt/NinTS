@@ -123,6 +123,7 @@ class EmulatorState {
   ppuMemory: PPUMemorySpace
   cpuMemory: CPUMemorySpace
   prevNmiOccurred = false;
+  prevApuFrameInterrupt = false;
   triggerBreak = false
 
   constructor() {
@@ -369,9 +370,8 @@ class EmulatorState {
   }
 
   _updatePPUAndHandleNMI() {
-    const apuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
-    this.apu.update(this.masterClock - this.ppuOffset);
+    this.apu.update(this.masterClock);
 
     // From NESDEV:
     // The NMI input is connected to an edge detector. This edge detector polls the status of the NMI line during φ2 of each
@@ -393,7 +393,8 @@ class EmulatorState {
     // as the IRQ input is low during the preceding cycle's φ2).
     //
     // APU Frame interrupt occurred. Like with the NMI; trigger after current cycle.
-    if (apuFrameInterrupt !== this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0)) {
+    if (this.apu.frameInterrupt && !this.prevApuFrameInterrupt && ((this.P & P_REG_INTERRUPT) === 0))
+    {
       this.irqCounterActive = true;
       this.irqCounter = 1;
     } else if (this.irqCounterActive) {
@@ -416,8 +417,9 @@ class EmulatorState {
     this.CYC++;
     this.masterClock += this.cpuHalfStep - 1;
     this.prevNmiOccurred = this.ppu.nmiOccurred;
+    this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
-    this.apu.update(this.masterClock - this.ppuOffset);
+    this.apu.update(this.masterClock);
   }
 
   endReadTick() {
@@ -429,8 +431,9 @@ class EmulatorState {
     this.CYC++;
     this.masterClock += this.cpuHalfStep + 1;
     this.prevNmiOccurred = this.ppu.nmiOccurred;
+    this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
-    this.apu.update(this.masterClock - this.ppuOffset);
+    this.apu.update(this.masterClock);
   }
 
   endWriteTick() {
