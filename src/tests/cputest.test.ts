@@ -55,9 +55,7 @@ test('CPU Timing test6', () => testPPURomWithImage('nes-test-roms/cpu_timing_tes
 }));
 
 
-
 test('InstrMisc - 01 - Abs X Wrap', () => testInstructionTestRom('nes-test-roms/instr_misc/rom_singles/01-abs_x_wrap.nes'));
 test('InstrMisc - 02 - Branch Wrap', () => testInstructionTestRom('nes-test-roms/instr_misc/rom_singles/02-branch_wrap.nes'));
 test('InstrMisc - 03 - Dummy Reads', () => testInstructionTestRom('nes-test-roms/instr_misc/rom_singles/03-dummy_reads.nes'));
-
-// test('InstrMisc - 04 - Dummy Reads APU', () => testInstructionTestRom('nes-test-roms/instr_misc/rom_singles/04-dummy_reads_apu.nes'));
+test('InstrMisc - 04 - Dummy Reads APU', () => testInstructionTestRom('nes-test-roms/instr_misc/rom_singles/04-dummy_reads_apu.nes'));
