@@ -309,8 +309,12 @@ const opcodes: OpcodeEntry[] = [
     [0x5B, "SRE*", ModeAbsoluteY,   illegal.sre, memory.readAbsoluteY],
     [0x43, "SRE*", ModeIndirectX,   illegal.sre, memory.readIndirectX],
     [0x53, "SRE*", ModeIndirectY,   illegal.sre, memory.readIndirectY],
+    [0x9B, "TAS*", ModeAbsoluteY,   illegal.tas, memory.readAbsoluteY],
+    [0xBB, "LAS*", ModeAbsoluteY,   illegal.las, memory.readAbsoluteYShortenCycle],
     [0x9E, "SXA*", ModeAbsoluteY,   illegal.sxa, null],
     [0x9C, "SYA*", ModeAbsoluteX,   illegal.sya, null],
+    [0x9F, "AXA*", ModeAbsoluteY,   illegal.axa, memory.readAbsoluteY],
+    [0x93, "AXA*", ModeIndirectY,   illegal.axa, memory.readIndirectY],
 ];
 
 type OpcodeMetadataEntry = {

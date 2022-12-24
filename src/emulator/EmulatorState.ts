@@ -125,6 +125,7 @@ class EmulatorState {
   prevNmiOccurred = false;
   prevApuFrameInterrupt = false;
   triggerBreak = false
+  addressOperand = 0
 
   constructor() {
     const rom = EmptyRom;

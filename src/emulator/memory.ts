@@ -35,7 +35,10 @@ export const readAbsolute = (state : EmulatorState) => {
   const hi = readByte(state, state.PC);
   state.PC = (state.PC + 1) & 0xFFFF;
 
-  return lo + (hi << 8);
+  const address = lo + (hi << 8);
+
+  state.addressOperand = address;
+  return address;
 }
 
 export const readIndirect = (state : EmulatorState) => {
@@ -46,6 +49,7 @@ export const readIndirect = (state : EmulatorState) => {
     hi = (address & PAGE_MASK);
   }
 
+  state.addressOperand = address;
   return readByte(state, address) + (readByte(state, hi) << 8);
 }
 
@@ -68,7 +72,7 @@ const readAbsoluteWithOffset = (state : EmulatorState, offset: number, shortenCy
   }
 
   const address = (lowByte + (highByte << 8)) & 0xFFFF;
-
+  state.addressOperand = address;
   state.PC = (state.PC + 2) & 0xFFFF;
 
   return address;
@@ -120,6 +124,7 @@ const readIndirectYHelper = (state : EmulatorState, shortenCycle: boolean) => {
   }
 
   const address = (lowByte + (highByte << 8)) & 0xFFFF;
+  state.addressOperand = address;
   state.PC = (state.PC + 1) & 0xFFFF;
 
   return address;
