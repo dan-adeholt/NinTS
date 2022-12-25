@@ -35,7 +35,6 @@ const PPUMASK_RENDER_SPRITES = 1 << 4;
 const PPUMASK_EMPHASIZE = 0b111 << 5;
 
 const PPUMASK_RENDER_ENABLED_FLAGS = PPUMASK_RENDER_BACKGROUND | PPUMASK_RENDER_SPRITES;
-const PPUMASK_RENDER_LEFT_SIDE = PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS | PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS;
 
 const PPUSTATUS_VBLANK = 1 << 7;
 const PPUSTATUS_SPRITE_ZERO_HIT = 1 << 6;
@@ -126,6 +125,11 @@ class PPU {
   busLatch = 0;
   dataBuffer = 0;
   oamAddress = 0;
+
+  showSpritesLeftSide = false
+
+  showBackgroundLeftSide = false
+
   maskRenderLeftSide = false;
   maskRenderingEnabled = false;
 
@@ -314,7 +318,9 @@ class PPU {
         this.oamAddress = value;
         break;
       case PPUMASK: {
-        this.maskRenderLeftSide = (value & PPUMASK_RENDER_LEFT_SIDE) !== 0;
+        this.showSpritesLeftSide = (value & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS) !== 0;
+        this.showBackgroundLeftSide = (value & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS) !== 0;
+
         this.pendingMaskRenderingEnabled = (value & PPUMASK_RENDER_ENABLED_FLAGS) !== 0;
         this.maskSpritesEnabled = (value & PPUMASK_RENDER_SPRITES) !== 0;
         this.maskBackgroundEnabled = (value & PPUMASK_RENDER_BACKGROUND) !== 0;
@@ -644,13 +650,17 @@ class PPU {
     const tileData = this.tileScanline[pixel + this.X];
     const backgroundColorIndex = tileData & 0b11;
     const backgroundPaletteIndex = (tileData & 0b1100) >>> 2;
+    const minSpriteCycle = this.showSpritesLeftSide ? 0 : 8;
+    const minBackgroundCycle = this.showBackgroundLeftSide ? 0 : 8;
 
-    const backgroundColor = this.maskBackgroundEnabled ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
+    const backgroundColor = (this.maskBackgroundEnabled && scanlineCycle > minBackgroundCycle) ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
 
     const spriteData = this.spriteScanline[pixel];
     const spritePatternColor = spriteData & 0b11;
 
-    if (spritePatternColor !== 0 && this.maskSpritesEnabled) {
+
+
+    if (spritePatternColor !== 0 && this.maskSpritesEnabled && scanlineCycle > minSpriteCycle) {
       const spritePalette = (spriteData >>> 3) & 0b11;
       spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
     }
@@ -682,8 +692,7 @@ class PPU {
         this.spriteZeroIsInSpriteUnits &&
         // If sprite zero is among the sprite units, it's always at sprite number 0
         spriteNumber === 0 &&
-        scanlineCycle !== 255 &&
-        ((scanlineCycle > 8) || this.maskRenderLeftSide)
+        scanlineCycle !== 255
       ) {
         this.spriteZeroHit = true;
       }
