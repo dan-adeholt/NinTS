@@ -5,6 +5,7 @@ const BANK_MASK = ~BANK_INDEX_MASK;
 
 class MemorySpace {
   banks: Uint8Array[] = []
+  mappedBanks: boolean[] = []
   length = 0;
 
   constructor(size : number) {
@@ -13,6 +14,7 @@ class MemorySpace {
 
     for (let i = 0; i < numBanks; i++) {
       this.banks.push(new Uint8Array(BANK_SIZE));
+      this.mappedBanks.push(false);
     }
   }
 
@@ -28,12 +30,17 @@ class MemorySpace {
 
     for (let i = 0; i < numBanks; i++) {
       this.banks[i + startIndex] = source.subarray(start + (i * BANK_SIZE), start + (( i+ 1) * BANK_SIZE));
+      this.mappedBanks[i + startIndex] = true;
     }
   }
 
-  read(address: number) {
+  read(address: number, openBusValue: number) {
     const subIndex = address & BANK_INDEX_MASK;
     const bankIndex = (address & BANK_MASK) >> BANK_INDEX_SIZE;
+
+    if (!this.mappedBanks[bankIndex]) {
+      return openBusValue;
+    }
 
     const ret = this.banks[bankIndex][subIndex];
 

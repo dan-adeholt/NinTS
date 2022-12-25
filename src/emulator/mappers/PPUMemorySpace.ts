@@ -34,7 +34,8 @@ class PPUMemorySpace {
   }
 
   read(address: number) {
-    return this.memory.read(address)
+    // Open bus: Video memory's data bus is multiplexed with the low byte of the address bus on pins 31 through 38. Thus a read from an address with no memory connected will usually return the low byte of the address.
+    return this.memory.read(address, address & 0xFF);
   }
 
   write(address: number, value: number) {

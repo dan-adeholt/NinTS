@@ -69,7 +69,6 @@ class APU {
   frameInterrupt = false;
   frameInterruptCycle = 0;
   triggerIRQ = true;
-  triggerBreak = false;
 
   audioSampleCallback : ((sample: number) => void) | null = null
 

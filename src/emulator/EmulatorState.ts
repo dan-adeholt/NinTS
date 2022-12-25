@@ -1,4 +1,4 @@
-import { hex, hex16, stateToString } from './stateLogging';
+import { hex, stateToString } from './stateLogging';
 import { OAM_DMA, opcodeMetadata, opcodeTable } from './cpu';
 
 import PPU from './ppu';
@@ -12,6 +12,7 @@ import PPUMemorySpace from "./mappers/PPUMemorySpace";
 import CPUMemorySpace from "./mappers/CPUMemorySpace";
 import Mapper from "./mappers/Mapper";
 import { P_REG_INTERRUPT } from './instructions/util';
+import EmulatorBreak from './EmulatorBreak';
 
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
@@ -124,7 +125,6 @@ class EmulatorState {
   cpuMemory: CPUMemorySpace
   prevNmiOccurred = false;
   prevApuFrameInterrupt = false;
-  triggerBreak = false
   addressOperand = 0
 
   constructor() {
@@ -232,11 +232,11 @@ class EmulatorState {
   }
 
   readControllerMem(addr: number, peek: boolean) {
-    let openBus = 0x40;
-
     // TODO: Mesen peeks 0 value but returns open bus bits
+    let _openBus = this.cpuMemory.getOpenBus();
+
     if (peek) {
-      openBus = 0;
+      _openBus = 0;
     }
 
     let value;
@@ -254,25 +254,31 @@ class EmulatorState {
       }
     }
 
-    return openBus | value;
+    return _openBus | value;
   }
 
   readMem (addr: number, peek = false): number {
     if (addr >= 0x2000 && addr <= 0x3FFF) {
       const modAddr = 0x2000 + (addr & 0b111);
-      const ret = this.ppu.readPPURegisterMem(modAddr, peek);
-
-      if (ret == null) {
-        console.log('Attempted to read from', hex16(modAddr));
-      }
+      // PPU has internal open bus implementation for register reads
+      return this.ppu.readPPURegisterMem(modAddr, peek);
+    } else if (addr === 0x4016 || addr === 0x4017) {
+      const ret = this.readControllerMem(addr, peek);
+      this.cpuMemory.setOpenBus(ret, peek);
 
       return ret;
-    } else if (addr === 0x4016 || addr === 0x4017) {
-      return this.readControllerMem(addr, peek);
-    } else if (addr >= 0x4000 && addr <= 0x4016) {
-      return this.apu.readAPURegisterMem(addr, peek);
+    } else if (addr == 0x4015) {
+      const ret = this.apu.readAPURegisterMem(addr, peek);
+      this.cpuMemory.setOpenBus(ret, peek);
+
+      return ret;
+    } else if (addr >= 0x4000 && addr <= 0x401F) {
+      return this.cpuMemory.getOpenBus();
     } else {
-      return this.mapper.cpuMemory.read(addr);
+      const ret = this.mapper.cpuMemory.read(addr);
+      this.cpuMemory.setOpenBus(ret, peek);
+
+      return ret;
     }
   }
 
@@ -313,7 +319,6 @@ class EmulatorState {
   setMem(address: number, value: number) {
     // if (address === 0xF0) {
     //   console.log('WRITE f0', value);
-    //   this.triggerBreak = true;
     // }
 
     // TODO: Add mirroring here
@@ -355,10 +360,9 @@ class EmulatorState {
 
       hitBreakpoint = this.PC in this.breakpoints;
 
-      if (this.apu.triggerBreak || this.triggerBreak) {
+      if (EmulatorBreak.break) {
         hitBreakpoint = true;
-        this.triggerBreak = false;
-        this.apu.triggerBreak = false;
+        EmulatorBreak.break = false;
       }
 
       if (breakAfterScanlineChange) {

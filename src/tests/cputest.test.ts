@@ -49,6 +49,7 @@ test('Forward branch', () => testPPURomWithImage('nes-test-roms/branch_timing_te
 
 // We don't run the APU exec space test. Very esoteric, APU open bus is not well documented and we are not done with APU yet.
 test('CPU exec space PPUIO', () => testPPURomWithImage('nes-test-roms/cpu_exec_space/test_cpu_exec_space_ppuio.nes', 'nes-test-images/test_cpu_exec_space_ppuio.nes.png', 45));
+test('CPU exec space PPUIO', () => testPPURomWithImage('nes-test-roms/cpu_exec_space/test_cpu_exec_space_apu.nes', 'nes-test-images/test_cpu_exec_space_apu.nes.png', 280));
 
 test('CPU Timing test6', () => testPPURomWithImage('nes-test-roms/cpu_timing_test6/cpu_timing_test.nes', 'nes-test-images/cpu_timing_test.nes.png', 60 * 16, rom => {
   rom.settings.chrRamSize = 0x2000
