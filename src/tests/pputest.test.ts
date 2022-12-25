@@ -43,3 +43,5 @@ test('PPU VBL NMI - Set time', () => testInstructionTestRom('nes-test-roms/ppu_v
 test('PPU VBL NMI - Clear time', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/03-vbl_clear_time.nes'));
 test('PPU VBL NMI - NMI Control', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/04-nmi_control.nes'));
 test('PPU VBL NMI - NMI Timing', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes'));
+test('PPU VBL NMI - Suppression', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/06-suppression.nes'));
+test('PPU VBL NMI - NMI On Timing', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/07-nmi_on_timing.nes'));
