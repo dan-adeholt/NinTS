@@ -128,6 +128,9 @@ class PPU {
   oamAddress = 0;
   maskRenderLeftSide = false;
   maskRenderingEnabled = false;
+
+  pendingMaskRenderingEnabled = false;
+
   maskSpritesEnabled = false;
   maskBackgroundEnabled = false;
   colors = COLOR_TABLE[0];
@@ -148,6 +151,7 @@ class PPU {
   disabled = false;
   mapper: Mapper;
   scanlineLogger = new Logger();
+  triggerDelayedStateUpdate = false
 
   constructor(settings: RomSettings, mapper: Mapper) {
     // Boot palette values are the same as Mesens in order to be compatible with value peeking
@@ -311,9 +315,13 @@ class PPU {
         break;
       case PPUMASK: {
         this.maskRenderLeftSide = (value & PPUMASK_RENDER_LEFT_SIDE) !== 0;
-        this.maskRenderingEnabled = (value & PPUMASK_RENDER_ENABLED_FLAGS) !== 0;
+        this.pendingMaskRenderingEnabled = (value & PPUMASK_RENDER_ENABLED_FLAGS) !== 0;
         this.maskSpritesEnabled = (value & PPUMASK_RENDER_SPRITES) !== 0;
         this.maskBackgroundEnabled = (value & PPUMASK_RENDER_BACKGROUND) !== 0;
+
+        if (this.pendingMaskRenderingEnabled !== this.maskRenderingEnabled) {
+          this.triggerDelayedStateUpdate = true;
+        }
 
         const emphasis = (value & PPUMASK_EMPHASIZE) >> 5;
         this.colors = COLOR_TABLE[emphasis];
@@ -749,6 +757,10 @@ class PPU {
     this.scanlineCycle = scanlineCycle;
   }
 
+  updateDelayedState() {
+    this.maskRenderingEnabled = this.pendingMaskRenderingEnabled;
+  }
+
   updatePPU(targetMasterClock: number) {
     if (this.disabled) {
       return;
@@ -764,6 +776,12 @@ class PPU {
       } else if (this.scanline === PRE_RENDER_SCANLINE) {
         this.handlePrerenderScanline();
       }
+
+      if (this.triggerDelayedStateUpdate) {
+        this.updateDelayedState();
+        this.triggerDelayedStateUpdate = false;
+      }
+
 
       this.cycle++;
       this.masterClock += this.ppuDivider;
