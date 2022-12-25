@@ -692,7 +692,7 @@ class PPU {
         this.spriteZeroIsInSpriteUnits &&
         // If sprite zero is among the sprite units, it's always at sprite number 0
         spriteNumber === 0 &&
-        scanlineCycle !== 255
+        scanlineCycle !== 256
       ) {
         this.spriteZeroHit = true;
       }
