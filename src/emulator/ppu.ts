@@ -130,6 +130,7 @@ class PPU {
   maskSpritesEnabled = false;
   maskBackgroundEnabled = false;
   colors = COLOR_TABLE[0];
+  muteVerticalBlank = false;
 
   oamMemory = (new Uint8Array(256)).fill(0xFF);
   secondaryOamMemory = new Uint8Array(32);
@@ -238,6 +239,10 @@ class PPU {
         }
       }
 
+      if (!peek && this.scanline === VBLANK_SCANLINE && this.scanlineCycle === 0) {
+        this.muteVerticalBlank = true;
+      }
+
       if (this.spriteZeroHit) {
         ret |= PPUSTATUS_SPRITE_ZERO_HIT;
       }
@@ -314,7 +319,7 @@ class PPU {
 
         break;
       }
-      case PPUCTRL:
+      case PPUCTRL: {
         this.controlBaseNameTable =         (value & 0b00000011);
         this.controlVramIncrement =         (value & 0b00000100) >>> 2;
         this.controlSpritePatternAddress =  (value & 0b00001000) >>> 3;
@@ -327,6 +332,7 @@ class PPU {
         this.T = this.T & 0b111001111111111;
         this.T = this.T | (this.controlBaseNameTable << 10);
         break;
+      }
       case PPUSCROLL:
         if (this.W === 0) {
           // First write
@@ -669,8 +675,12 @@ class PPU {
   handleVblankScanline() {
     if (this.scanlineCycle === 1) {
       // Generate vblank interrupt
-      this.nmiOccurred = true;
 
+      if (!this.muteVerticalBlank) {
+        this.nmiOccurred = true;
+      }
+
+      this.muteVerticalBlank = false;
       this.vblankCount++;
     }
   }
@@ -680,7 +690,7 @@ class PPU {
       this.updateBackgroundRegisters();
     }
 
-    if (this.scanlineCycle === 0) {
+    if (this.scanlineCycle === 1) {
       this.nmiOccurred = false;
     }
 
