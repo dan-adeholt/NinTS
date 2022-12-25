@@ -508,10 +508,7 @@ class EmulatorState {
     // But this is the way Mesen does it so we do it to stay compatible.
     if (this.nmiCounterActive && this.nmiCounter <= 0) {
       this.nmiCounterActive = false;
-
-      if (this.ppu.controlGenerateNMI) {
-        nmi(this);
-      }
+      nmi(this);
 
       this.lastNMI = this.CYC;
       this.lastNMIOccured = true;

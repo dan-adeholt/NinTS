@@ -2,13 +2,12 @@ import { patchROMToAllowWritableCHR, testInstructionTestRom, testPPURom, testPPU
 import { COLORS } from '../emulator/constants';
 import _ from 'lodash';
 import { expect, test } from 'vitest'
-import EmulatorState from '../emulator/EmulatorState';
 
 const romRootPath = 'src/tests/roms/ppu-tests/';
 
 test('01 - Background', () => testPPURom(
   romRootPath + '01-background/01-background',
-  (emulator: EmulatorState) => {
+  (emulator) => {
     emulator.stepFrame(false);
 
     for (let colorIndex = 0; colorIndex < COLORS.length; colorIndex++) {
@@ -45,3 +44,5 @@ test('PPU VBL NMI - NMI Control', () => testInstructionTestRom('nes-test-roms/pp
 test('PPU VBL NMI - NMI Timing', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/05-nmi_timing.nes'));
 test('PPU VBL NMI - Suppression', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/06-suppression.nes'));
 test('PPU VBL NMI - NMI On Timing', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/07-nmi_on_timing.nes'));
+
+test('PPU VBL NMI - NMI Off Timing', () => testInstructionTestRom('nes-test-roms/ppu_vbl_nmi/rom_singles/08-nmi_off_timing.nes'));
