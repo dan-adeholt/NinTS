@@ -56,3 +56,4 @@ test('Sprite hit tests - Corners', () => testPPURomWithImage(spriteHitRoot + '03
 test('Sprite hit tests - Flip', () => testPPURomWithImage(spriteHitRoot + '04.flip.nes', 'nes-test-images/sprite_hit_tests-04.flip.nes.png', 35, patchROMToAllowWritableCHR));
 test('Sprite hit tests - Left clip', () => testPPURomWithImage(spriteHitRoot + '05.left_clip.nes', 'nes-test-images/sprite_hit_tests-05.left_clip.nes.png', 35, patchROMToAllowWritableCHR));
 test('Sprite hit tests - Right edge', () => testPPURomWithImage(spriteHitRoot + '06.right_edge.nes', 'nes-test-images/sprite_hit_tests-06.right_edge.nes.png', 35, patchROMToAllowWritableCHR));
+test('Sprite hit tests - Screen bottom', () => testPPURomWithImage(spriteHitRoot + '07.screen_bottom.nes', 'nes-test-images/sprite_hit_tests-07.screen_bottom.nes.png', 35, patchROMToAllowWritableCHR));

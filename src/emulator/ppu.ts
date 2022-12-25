@@ -659,8 +659,8 @@ class PPU {
     const spritePatternColor = spriteData & 0b11;
 
 
-
-    if (spritePatternColor !== 0 && this.maskSpritesEnabled && scanlineCycle > minSpriteCycle) {
+    // No sprites are rendered on the first scanline
+    if (this.scanline > 0 && spritePatternColor !== 0 && this.maskSpritesEnabled && scanlineCycle > minSpriteCycle) {
       const spritePalette = (spriteData >>> 3) & 0b11;
       spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
     }
