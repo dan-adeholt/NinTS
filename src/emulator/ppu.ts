@@ -122,6 +122,7 @@ class PPU {
   controlSpriteSize = 0;
   controlPpuMasterSlave = 0;
   controlGenerateNMI = 0;
+  nmiFlag = false;
   busLatch = 0;
   dataBuffer = 0;
   oamAddress = 0;
@@ -236,6 +237,7 @@ class PPU {
 
         if (!peek) {
           this.nmiOccurred = false;
+          this.nmiFlag = false;
         }
       }
 
@@ -328,7 +330,9 @@ class PPU {
         this.controlPpuMasterSlave =        (value & 0b01000000) >>> 6;
         this.controlGenerateNMI =           (value & 0b10000000) >>> 7;
 
-        // Copy base name table data to T register at bits 11 and 12
+        this.updateNMIFlag();
+
+          // Copy base name table data to T register at bits 11 and 12
         this.T = this.T & 0b111001111111111;
         this.T = this.T | (this.controlBaseNameTable << 10);
         break;
@@ -379,6 +383,14 @@ class PPU {
         break;
       }
       default:
+    }
+  }
+
+  updateNMIFlag() {
+    if (this.controlGenerateNMI && this.nmiOccurred) {
+      this.nmiFlag = true;
+    } else {
+      this.nmiFlag = false;
     }
   }
 
@@ -678,6 +690,7 @@ class PPU {
 
       if (!this.muteVerticalBlank) {
         this.nmiOccurred = true;
+        this.updateNMIFlag();
       }
 
       this.muteVerticalBlank = false;
@@ -692,6 +705,7 @@ class PPU {
 
     if (this.scanlineCycle === 1) {
       this.nmiOccurred = false;
+      this.updateNMIFlag();
     }
 
     if (isSteppingScanline) {

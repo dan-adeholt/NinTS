@@ -123,7 +123,7 @@ class EmulatorState {
   audioSampleCallback: ((sample: number) => void) | null
   ppuMemory: PPUMemorySpace
   cpuMemory: CPUMemorySpace
-  prevNmiOccurred = false;
+  prevNmiFlag = false;
   prevApuFrameInterrupt = false;
   addressOperand = 0
 
@@ -386,7 +386,7 @@ class EmulatorState {
     // This basically means that we detected the NMI this cycle, but we should not trigger the actual NMI until the next cycle.
     // Set an internal counter that will tick down each cycle until reaching zero. nmiCounter === 0 means that the emulator should
     // handle the NMI after the current opcode has completed execution.
-    if (this.ppu.nmiOccurred && !this.prevNmiOccurred && this.ppu.controlGenerateNMI) {
+    if (this.ppu.nmiFlag && !this.prevNmiFlag) {
       this.nmiCounterActive = true;
       this.nmiCounter = 1;
     } else if (this.nmiCounterActive) {
@@ -421,7 +421,7 @@ class EmulatorState {
   startReadTick() {
     this.CYC++;
     this.masterClock += this.cpuHalfStep - 1;
-    this.prevNmiOccurred = this.ppu.nmiOccurred;
+    this.prevNmiFlag = this.ppu.nmiFlag;
     this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock);
@@ -435,7 +435,7 @@ class EmulatorState {
   startWriteTick() {
     this.CYC++;
     this.masterClock += this.cpuHalfStep + 1;
-    this.prevNmiOccurred = this.ppu.nmiOccurred;
+    this.prevNmiFlag = this.ppu.nmiFlag;
     this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock);
