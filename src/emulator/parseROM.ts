@@ -52,7 +52,9 @@ export const parseROM = (buffer: Uint8Array) => {
 
   const inesMirroring = (flags[0] & 0b1) === 1 ? 'V' : 'H';
 
-  const [region, type, mapper, submapper, mirroring, battery, prgRamSize, prgNVRamSize, chrRamSize, chrNVRamSize] = (databaseSettings ?? [0,0,inesMapper,0,inesMirroring,false,0,0,0,0]);
+  // The iNES format implies 8 KiB of PRG RAM at $6000-$7FFF, which may or may not be battery backed, even for discrete boards such as NROM and UxROM that never actually had RAM there.
+  // That is why we specify 0x2000 for prgRamSize for ROM:s that have no database entry.
+  const [region, type, mapper, submapper, mirroring, battery, prgRamSize, prgNVRamSize, chrRamSize, chrNVRamSize] = (databaseSettings ?? [0,0,inesMapper,0,inesMirroring,false,0x2000,0,0,0]);
 
   const settings = {
     mirroringVertical: mirroring === 'V',
