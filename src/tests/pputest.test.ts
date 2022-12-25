@@ -57,3 +57,7 @@ test('Sprite hit tests - Flip', () => testPPURomWithImage(spriteHitRoot + '04.fl
 test('Sprite hit tests - Left clip', () => testPPURomWithImage(spriteHitRoot + '05.left_clip.nes', 'nes-test-images/sprite_hit_tests-05.left_clip.nes.png', 35, patchROMToAllowWritableCHR));
 test('Sprite hit tests - Right edge', () => testPPURomWithImage(spriteHitRoot + '06.right_edge.nes', 'nes-test-images/sprite_hit_tests-06.right_edge.nes.png', 35, patchROMToAllowWritableCHR));
 test('Sprite hit tests - Screen bottom', () => testPPURomWithImage(spriteHitRoot + '07.screen_bottom.nes', 'nes-test-images/sprite_hit_tests-07.screen_bottom.nes.png', 35, patchROMToAllowWritableCHR));
+test('Sprite hit tests - Double height', () => testPPURomWithImage(spriteHitRoot + '08.double_height.nes', 'nes-test-images/sprite_hit_tests-08.double_height.nes.png', 35, patchROMToAllowWritableCHR));
+test('Sprite hit tests - Timing basics', () => testPPURomWithImage(spriteHitRoot + '09.timing_basics.nes', 'nes-test-images/sprite_hit_tests-09.timing_basics.nes.png', 65, patchROMToAllowWritableCHR));
+test('Sprite hit tests - Timing order', () => testPPURomWithImage(spriteHitRoot + '10.timing_order.nes', 'nes-test-images/sprite_hit_tests-10.timing_order.nes.png', 65, patchROMToAllowWritableCHR));
+test('Sprite hit tests - Edge timing', () => testPPURomWithImage(spriteHitRoot + '11.edge_timing.nes', 'nes-test-images/sprite_hit_tests-11.edge_timing.nes.png', 75, patchROMToAllowWritableCHR));
