@@ -61,3 +61,13 @@ test('Sprite hit tests - Double height', () => testPPURomWithImage(spriteHitRoot
 test('Sprite hit tests - Timing basics', () => testPPURomWithImage(spriteHitRoot + '09.timing_basics.nes', 'nes-test-images/sprite_hit_tests-09.timing_basics.nes.png', 65, patchROMToAllowWritableCHR));
 test('Sprite hit tests - Timing order', () => testPPURomWithImage(spriteHitRoot + '10.timing_order.nes', 'nes-test-images/sprite_hit_tests-10.timing_order.nes.png', 65, patchROMToAllowWritableCHR));
 test('Sprite hit tests - Edge timing', () => testPPURomWithImage(spriteHitRoot + '11.edge_timing.nes', 'nes-test-images/sprite_hit_tests-11.edge_timing.nes.png', 75, patchROMToAllowWritableCHR));
+
+const vblNMITimingRoot = 'nes-test-roms/vbl_nmi_timing/';
+
+test('VBL NMI Timing - Frame basics', () => testPPURomWithImage(vblNMITimingRoot + '1.frame_basics.nes', 'nes-test-images/vbl_nmi_timing-1.frame_basics.nes.png', 178, patchROMToAllowWritableCHR));
+test('VBL NMI Timing - VBL Timing', () => testPPURomWithImage(vblNMITimingRoot + '2.vbl_timing.nes', 'nes-test-images/vbl_nmi_timing-2.vbl_timing.nes.png', 155, patchROMToAllowWritableCHR));
+test('VBL NMI Timing - Even/Odd frames', () => testPPURomWithImage(vblNMITimingRoot + '3.even_odd_frames.nes', 'nes-test-images/vbl_nmi_timing-3.even_odd_frames.nes.png', 95, patchROMToAllowWritableCHR));
+test('VBL NMI Timing - VBL Clear Timing', () => testPPURomWithImage(vblNMITimingRoot + '4.vbl_clear_timing.nes', 'nes-test-images/vbl_nmi_timing-4.vbl_clear_timing.nes.png', 125, patchROMToAllowWritableCHR));
+test('VBL NMI Timing - NMI Suppression', () => testPPURomWithImage(vblNMITimingRoot + '5.nmi_suppression.nes', 'nes-test-images/vbl_nmi_timing-5.nmi_suppression.nes.png', 185, patchROMToAllowWritableCHR));
+test('VBL NMI Timing - NMI Disable', () => testPPURomWithImage(vblNMITimingRoot + '6.nmi_disable.nes', 'nes-test-images/vbl_nmi_timing-6.nmi_disable.nes.png', 105, patchROMToAllowWritableCHR));
+test('VBL NMI Timing - NMI Timing', () => testPPURomWithImage(vblNMITimingRoot + '7.nmi_timing.nes', 'nes-test-images/vbl_nmi_timing-7.nmi_timing.nes.png', 105, patchROMToAllowWritableCHR));
