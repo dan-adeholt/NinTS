@@ -15,7 +15,7 @@ const parseMapper = (rom: Rom, cpuMemory: CPUMemorySpace, ppuMemory: PPUMemorySp
     case 3:
       return new CNROMMapper(rom, cpuMemory, ppuMemory);
     default:
-      throw new Error('Invalid mapper specified, returning NROM');
+      throw new Error('Unsupported mapper specified: ' + rom.settings.mapper);
   }
 }
 
