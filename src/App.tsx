@@ -66,7 +66,7 @@ function App() {
     // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
-
+    const [error, setError] = useState<string | null>(null);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     const [title, setTitle] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string) ?? "No file selected");
     const audioBuffer = useMemo(() => new AudioBuffer(), []);
@@ -83,7 +83,15 @@ function App() {
         if (lastRomArray != null){
             const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
             const rom = parseROM(romBuffer);
-            _emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+            try {
+                _emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+            } catch (e) {
+                if (typeof e === "string") {
+                    setError(e);
+                } else if (e instanceof Error) {
+                    setError(e.message);
+                }
+            }
         }
 
         return _emulator;
@@ -166,7 +174,17 @@ function App() {
 
     const loadRom = useCallback((romBuffer : Uint8Array, filename: string) => {
         const rom = parseROM(romBuffer);
-        emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+        setError(null);
+        try {
+            emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+        } catch (e) {
+            if (typeof e === "string") {
+                setError(e);
+            } else if (e instanceof Error) {
+                setError(e.message);
+            }
+        }
+
         setTitle(filename);
         triggerRefresh();
     }, [audioBuffer, emulator, triggerRefresh]);
@@ -306,16 +324,19 @@ function App() {
                       <h1>{ title }</h1>
                       <div className={styles.drawingArea}>
                           <div className={styles.canvasContainer}>
-                              <div className={styles.displayContainer}>
-                                  <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
-                                      const context = ref?.getContext("2d");
-                                      if (context != null) {
-                                          const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
-                                          const framebuffer = new Uint32Array(imageData.data.buffer);
-                                          display.current = { imageData, framebuffer, context };
-                                      }
-                                  }}/>
-                              </div>
+                              { error }
+                              { !error && (
+                                  <div className={styles.displayContainer}>
+                                      <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
+                                          const context = ref?.getContext("2d");
+                                          if (context != null) {
+                                              const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+                                              const framebuffer = new Uint32Array(imageData.data.buffer);
+                                              display.current = { imageData, framebuffer, context };
+                                          }
+                                      }}/>
+                                  </div>
+                              ) }
                           </div>
                       </div>
                   </div>
