@@ -59,6 +59,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode } : ToolbarPr
       <div className={classNames(styles.buttonRow, styles.item)}>
         <button onClick={() => setRunMode(RunModeType.RUNNING)}><FontAwesomeIcon icon={faPlay}/></button>
         <button onClick={() => setRunMode(RunModeType.STOPPED)}><FontAwesomeIcon icon={faPause}/></button>
+        <button onClick={() => emulator.reset()}><FontAwesomeIcon icon={faRefresh}/></button>
         <button onClick={() => emulator.reboot()}><FontAwesomeIcon icon={faPowerOff}/></button>
       </div>
       <div className={styles.item}>
