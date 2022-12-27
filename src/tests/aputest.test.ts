@@ -1,5 +1,5 @@
 import { test } from 'vitest'
-import { testPPURomWithImage } from './testutil';
+import { testInstructionTestRom, testPPURomWithImage } from './testutil';
 
 test('blargg - 01 - Length Control', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/01.len_ctr.nes', 'nes-test-images/ok_blargg_apu.png', 25));
 test('blargg - 02 - Length Table', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/02.len_table.nes', 'nes-test-images/ok_blargg_apu.png', 25));
@@ -11,4 +11,16 @@ test('blargg - 07 - IRQ flag timing', () => testPPURomWithImage('nes-test-roms/b
 test('blargg - 08 - IRQ timing', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/08.irq_timing.nes', 'nes-test-images/ok_blargg_apu.png', 25));
 test('blargg - 09 - Reset timing', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/09.reset_timing.nes', 'nes-test-images/ok_blargg_apu.png', 25));
 test('blargg - 10 - Length halt timing', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/10.len_halt_timing.nes', 'nes-test-images/ok_blargg_apu.png', 25));
-test('blargg - 11 - Length reload timing', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/10.len_halt_timing.nes', 'nes-test-images/ok_blargg_apu.png', 25));
+test('blargg - 11 - Length reload timing', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/11.len_reload_timing.nes', 'nes-test-images/ok_blargg_apu.png', 25));
+
+
+const apuTestRoot = 'nes-test-roms/apu_test/rom_singles/';
+
+test('apu_test - Length Control', () => testInstructionTestRom(apuTestRoot + '1-len_ctr.nes'));
+test('apu_test - Length Table', () => testInstructionTestRom(apuTestRoot + '2-len_table.nes'));
+test('apu_test - IRQ Flag', () => testInstructionTestRom(apuTestRoot + '3-irq_flag.nes'));
+test('apu_test - Jitter', () => testInstructionTestRom(apuTestRoot + '4-jitter.nes'));
+test('apu_test - Length timing', () => testInstructionTestRom(apuTestRoot + '5-len_timing.nes'));
+test('apu_test - IRQ Flag Timing', () => testInstructionTestRom(apuTestRoot + '6-irq_flag_timing.nes'));
+// test('apu_test - DMC Basics', () => testInstructionTestRom(apuTestRoot + '7-dmc_basics.nes'));
+// test('apu_test - DMC Rates', () => testInstructionTestRom(apuTestRoot + '8-dmc_rates.nes'));
