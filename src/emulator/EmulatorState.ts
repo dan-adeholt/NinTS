@@ -11,7 +11,7 @@ import { EmptyRom, Rom, RomSettings } from "./parseROM";
 import PPUMemorySpace from "./mappers/PPUMemorySpace";
 import CPUMemorySpace from "./mappers/CPUMemorySpace";
 import Mapper from "./mappers/Mapper";
-import { P_REG_INTERRUPT } from './instructions/util';
+import { P_REG_INTERRUPT, setInterrupt } from './instructions/util';
 import EmulatorBreak from './EmulatorBreak';
 
 export const INPUT_A        = 0b00000001;
@@ -223,7 +223,6 @@ class EmulatorState {
 
   setInputController(button: number, isDown: boolean) {
     const mask = ~button;
-
     this.controller1 &= mask;
 
     if (isDown) {
@@ -283,7 +282,7 @@ class EmulatorState {
   }
 
   setInputMem(addr: number, value: number) {
-    if (value === 1) {
+    if (value & 0b1) {
       if (addr === 0x4016) {
         this.controller1Latch = this.controller1;
       } else {
@@ -344,6 +343,12 @@ class EmulatorState {
   }
 
   reset() {
+    setInterrupt(this, true);
+    this.SP -= 3;
+    if (this.SP < 0) {
+      this.SP += 0xFF;
+    }
+
     this.PC = this.getResetVectorAddress();
   }
 
