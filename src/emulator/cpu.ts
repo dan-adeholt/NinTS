@@ -315,6 +315,7 @@ const opcodes: OpcodeEntry[] = [
     [0x9C, "SYA*", ModeAbsoluteX,   illegal.sya, null],
     [0x9F, "AXA*", ModeAbsoluteY,   illegal.axa, memory.readAbsoluteY],
     [0x93, "AXA*", ModeIndirectY,   illegal.axa, memory.readIndirectY],
+    [0x8b, "ANE*", ModeImmediate,   illegal.empty, memory.readImmediate]
 ];
 
 type OpcodeMetadataEntry = {

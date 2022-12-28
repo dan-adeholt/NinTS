@@ -1,6 +1,6 @@
 import { readByte, writeByte } from '../memory';
 import { performADC, performAND, performEOR, performORA, performSBC } from './arithmetic';
-import { asl, dec, lsr, performLSR, performRMWA, rol, ror } from './readmodifywrite';
+import { asl, dec, lsr, performLSR, rol, ror } from './readmodifywrite';
 import { BIT_7_MASK, isNegative, P_REG_CARRY, setCarry, setOverflowValue, setZeroNegative } from './util';
 import { performCompare } from './compare';
 import EmulatorState from '../EmulatorState';
@@ -23,6 +23,9 @@ const s_a = (state : EmulatorState, offset: number, register: number) => {
     writeByte(state, address, register & highInc);
   }
 
+  const address = (lowByte + (highByte << 8)) & 0xFFFF;
+  readByte(state, address);
+
   state.PC = (state.PC + 2) & 0xFFFF;
 }
 
@@ -42,7 +45,10 @@ export const rla = (state : EmulatorState, address: number) => performAND(state,
 export const rra = (state : EmulatorState, address: number) => performADC(state, ror(state, address));
 
 // ASR - AND byte with accumulator then shift bits right one bit in accumulator.
-export const asr = (state : EmulatorState, address: number) => performRMWA(state, performLSR(state, performAND(state, readByte(state, address))));
+export const asr = (state : EmulatorState, address: number) => {
+  state.A = performLSR(state, performAND(state, readByte(state, address)));
+  setZeroNegative(state, state.A);
+}
 
 /**
  * This opcode ANDs the A and X registers (without modifying either register)
@@ -134,3 +140,8 @@ export const dcp = (state : EmulatorState, address: number) => performCompare(st
 
 // SLO - Shift left one bit of memory value, then OR accumulator with that value
 export const slo = (state : EmulatorState, address: number) => performORA(state, asl(state, address));
+
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export const empty = (state : EmulatorState, value: number) => {
+  readByte(state, value);
+}
