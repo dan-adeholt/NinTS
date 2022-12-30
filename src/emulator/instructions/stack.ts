@@ -66,8 +66,8 @@ const interruptHandler = (state: EmulatorState, targetAddress: number) => {
   readByte(state, state.PC);
   pushStackWord(state, state.PC);
   pushStack(state, state.P | P_REG_ALWAYS_1);
-  state.PC = readWord(state, targetAddress);
   setInterrupt(state, true);
+  state.PC = readWord(state, targetAddress);
 }
 
 export const nmi = (state : EmulatorState) => {

@@ -12,13 +12,14 @@ import EmulatorState from '../EmulatorState';
 
 const setFlags = (state : EmulatorState, p : number) => {
   state.startReadTick();
-  state.P = p;
   state.endReadTick();
+  state.P = p;
 }
 
 export const clc = (state : EmulatorState) => setFlags(state, state.P & P_MASK_CARRY);
 export const cld = (state : EmulatorState) => setFlags(state, state.P & P_MASK_DECIMAL);
 export const cli = (state : EmulatorState) => setFlags(state, state.P & P_MASK_INTERRUPT);
+
 export const clv = (state : EmulatorState) => setFlags(state, state.P & P_MASK_OVERFLOW)
 export const sed = (state : EmulatorState) => setFlags(state, state.P | P_REG_DECIMAL);
 export const sei = (state : EmulatorState) => setFlags(state, state.P | P_REG_INTERRUPT);

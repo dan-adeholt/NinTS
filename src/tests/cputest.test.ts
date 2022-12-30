@@ -42,7 +42,7 @@ test('Backward Branch', () => testPPURomWithImage('nes-test-roms/branch_timing_t
   rom.settings.chrRamSize = 0x2000
 }));
 
-test('Forward branch', () => testPPURomWithImage('nes-test-roms/branch_timing_tests/3.Forward_Branch.nes', 'nes-test-images/3.Forward_Branch.nes.png', 15, rom => {
+test('Forward branch', () => testPPURomWithImage('nes-test-roms/branch_timing_tests/3.Forward_Branch.nes', 'nes-test-images/3.Forward_Branch.nes.png', 16, rom => {
   rom.settings.chrRamSize = 0x2000
 }));
 
@@ -63,3 +63,5 @@ test('InstrMisc - 04 - Dummy Reads APU', () => testInstructionTestRom('nes-test-
 
 test('Instruction Timing - Instructions', () => testInstructionTestRom('nes-test-roms/instr_timing/rom_singles/1-instr_timing.nes'));
 test('Instruction Timing - Branch', () => testInstructionTestRom('nes-test-roms/instr_timing/rom_singles/2-branch_timing.nes'));
+
+test('CPU Interrupts V2 - CLI Latency', () => testInstructionTestRom('nes-test-roms/cpu_interrupts_v2/rom_singles/1-cli_latency.nes'));

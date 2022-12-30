@@ -86,6 +86,22 @@ const dumpObjectState = (state : any, prefix = '') => {
   return dumpedState;
 }
 
+
+class DelayedFlag {
+  value = false
+  pendingValue = false
+
+  update(newValue: boolean) {
+    this.value = this.pendingValue
+    this.pendingValue = newValue
+  }
+
+  reset() {
+    this.value = false;
+    this.pendingValue = false;
+  }
+}
+
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 class EmulatorState {
@@ -124,6 +140,9 @@ class EmulatorState {
   ppuMemory: PPUMemorySpace
   cpuMemory: CPUMemorySpace
   prevNmiFlag = false;
+
+  irqFlag = new DelayedFlag();
+
   prevApuFrameInterrupt = false;
   addressOperand = 0
 
@@ -152,6 +171,8 @@ class EmulatorState {
 
     // Reset vector
     const startingLocation = this.mapper.cpuMemory.read(0xFFFC) + (this.mapper.cpuMemory.read(0xFFFD) << 8);
+
+    this.irqFlag.reset();
 
     this.apu = new APU(audioSampleCallback);
     this.A = 0;
@@ -403,13 +424,15 @@ class EmulatorState {
     // as the IRQ input is low during the preceding cycle's φ2).
     //
     // APU Frame interrupt occurred. Like with the NMI; trigger after current cycle.
-    if (this.apu.frameInterrupt && !this.prevApuFrameInterrupt && ((this.P & P_REG_INTERRUPT) === 0))
-    {
-      this.irqCounterActive = true;
-      this.irqCounter = 1;
-    } else if (this.irqCounterActive) {
-      this.irqCounter--;
-    }
+    this.irqFlag.update(this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0));
+    // if (!this.irqCounterActive && this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0))
+    // {
+    //   console.log('Setting IRQ counter', this.CYC);
+    //   this.irqCounterActive = true;
+    //   this.irqCounter = 1;
+    // } else if (this.irqCounterActive) {
+    //   this.irqCounter--;
+    // }
   }
 
   /**
@@ -479,6 +502,8 @@ class EmulatorState {
    * to memory accesses.
    *
    */
+
+
   readOpcode() {
     this.startReadTick();
 
@@ -493,6 +518,7 @@ class EmulatorState {
     }
 
     const opcode = this.readMem(this.PC);
+
     this.endReadTick();
 
     this.PC = (this.PC + 1) & 0xFFFF;
@@ -517,13 +543,9 @@ class EmulatorState {
 
       this.lastNMI = this.CYC;
       this.lastNMIOccured = true;
-    }
-
-    if (this.irqCounterActive && this.irqCounter <= 0) {
-      this.irqCounterActive = false;
+    } else if (this.irqFlag.value) {
       irq(this);
     }
-
 
     return true;
   }
