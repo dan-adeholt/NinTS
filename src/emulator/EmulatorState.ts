@@ -149,8 +149,11 @@ class EmulatorState {
 
   nmiDelayedFlag = new DelayedFlag();
 
-  prevApuFrameInterrupt = false;
   addressOperand = 0
+
+  transferSpriteDMA = false
+
+  addressSpriteDMA = 0
 
   constructor() {
     const rom = EmptyRom;
@@ -178,6 +181,7 @@ class EmulatorState {
     // Reset vector
     const startingLocation = this.mapper.cpuMemory.read(0xFFFC) + (this.mapper.cpuMemory.read(0xFFFD) << 8);
 
+    this.nmiDelayedFlag.reset();
     this.irqDelayedFlag.reset();
 
     this.apu = new APU(audioSampleCallback);
@@ -204,6 +208,9 @@ class EmulatorState {
     this.lastNMI = 0;
     this.lastNMIOccured = false;
     this.audioSampleCallback = audioSampleCallback;
+    this.addressOperand = 0
+    this.transferSpriteDMA = false
+    this.addressSpriteDMA = 0
 
     // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
     for (let i = 0; i < 8; i++) {
@@ -316,15 +323,12 @@ class EmulatorState {
     }
   }
 
-  writeDMA(address: number, value: number) {
-    // The actual write really takes place AFTER the write tick has been completed.
-    // Thus whether or not the cycle is odd is determined based on the following tick.
-    // That's why we add 1 here. TODO: Do actual DMA transfer after tick instead
-    const onOddCycle = (this.CYC + 1) % 2 === 1;
+  writeSpriteDMA(value: number) {
+    const onOddCycle = (this.CYC) % 2 === 1;
 
     this.dummyReadTick(); // One wait this.cycle while waiting for writes to complete
 
-    if (onOddCycle) { // One additional wait this.if we were on an odd cycle
+    if (onOddCycle) { // One additional read if we were on an odd cycle
       this.dummyReadTick();
     }
 
@@ -347,7 +351,8 @@ class EmulatorState {
 
     // TODO: Add mirroring here
     if (address === OAM_DMA) {
-      this.writeDMA(address, value);
+      this.transferSpriteDMA = true;
+      this.addressSpriteDMA = value;
     } else if (address >= 0x2000 && address <= 0x3FFF) {
       this.ppu.setPPURegisterMem(0x2000 + (address % 8), value);
     } else if (address === 0x4016) {
@@ -446,9 +451,14 @@ class EmulatorState {
   startReadTick() {
     this.CYC++;
     this.masterClock += this.cpuHalfStep - 1;
-    this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock);
+
+    if (this.transferSpriteDMA) {
+      this.transferSpriteDMA = false;
+      this.writeSpriteDMA(this.addressSpriteDMA);
+      this.addressSpriteDMA = 0;
+    }
   }
 
   endReadTick() {
@@ -459,7 +469,6 @@ class EmulatorState {
   startWriteTick() {
     this.CYC++;
     this.masterClock += this.cpuHalfStep + 1;
-    this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock);
   }
