@@ -73,19 +73,36 @@ export const brk = (state : EmulatorState) => {
   state.nmiDelayedFlag.resetActiveValue();
 }
 
-const interruptHandler = (state: EmulatorState, targetAddress: number) => {
-  state.dummyReadTick();
-  readByte(state, state.PC);
-  pushStackWord(state, state.PC);
+const innerInterruptHandler = (state: EmulatorState, targetAddress: number) => {
   pushStack(state, state.P | P_REG_ALWAYS_1);
   setInterrupt(state, true);
   state.PC = readWord(state, targetAddress);
 }
 
-export const nmi = (state : EmulatorState) => {
-  interruptHandler(state, 0xFFFA);
-}
+/**
+ * Shared interrupt handler for NMI and IRQ. Needs to be interleaved with each other
+ * because the read and write operations at the top can influence whether NMI will override
+ * the IRQ interrupt.
+ */
+export const interruptHandler = (state: EmulatorState) => {
+  state.dummyReadTick();
+  state.dummyReadTick();
 
-export const irq = (state : EmulatorState) => {
-  interruptHandler(state, 0xFFFE);
+  pushStackWord(state, state.PC);
+
+  // Note that we inspect the pending value here, not value. I am not sure why, it'd
+  // make more sense to use the value as it has had time to store. But it is the only way
+  // to make the timings correct for cpu_interrupts_v2: nmi_and_irq
+  if (state.nmiDelayedFlag.pendingValue) {
+    state.nmiDelayedFlag.updateWithNewValue(false);
+    innerInterruptHandler(state, 0xFFFA);
+
+    state.lastNMI = state.CYC;
+    state.lastNMIOccured = true;
+  } else {
+    // Note that we do not check the IRQ flag here, in fact it might have been
+    // set to false by now. That condition was checked before calling this function,
+    // we are really only interested in if NMI has precedence.
+    innerInterruptHandler(state, 0xFFFE);
+  }
 }

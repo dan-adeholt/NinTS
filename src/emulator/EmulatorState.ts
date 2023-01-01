@@ -2,7 +2,7 @@ import { hex, stateToString } from './stateLogging';
 import { OAM_DMA, opcodeMetadata, opcodeTable } from './cpu';
 
 import PPU from './ppu';
-import { irq, nmi } from './instructions/stack';
+import { interruptHandler } from './instructions/stack';
 import parseMapper from './mappers/parseMapper';
 import _ from 'lodash';
 import APU from './apu';
@@ -532,14 +532,8 @@ class EmulatorState {
 
     // This actually annoys me a bit, if an NMI triggers we won't get the log output from the preceding opcode.
     // But this is the way Mesen does it so we do it to stay compatible.
-    if (this.nmiDelayedFlag.value) {
-      this.nmiDelayedFlag.updateWithNewValue(false);
-      nmi(this);
-
-      this.lastNMI = this.CYC;
-      this.lastNMIOccured = true;
-    } else if (this.irqDelayedFlag.value) {
-      irq(this);
+    if (this.nmiDelayedFlag.value || this.irqDelayedFlag.value) {
+      interruptHandler(this);
     }
 
     return true;
