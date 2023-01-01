@@ -91,14 +91,22 @@ class DelayedFlag {
   value = false
   pendingValue = false
 
-  update(newValue: boolean) {
+  updateWithNewValue(newValue: boolean) {
     this.value = this.pendingValue
     this.pendingValue = newValue
+  }
+
+  update() {
+    this.value = this.pendingValue;
   }
 
   reset() {
     this.value = false;
     this.pendingValue = false;
+  }
+
+  resetActiveValue() {
+    this.value = false;
   }
 }
 
@@ -123,10 +131,6 @@ class EmulatorState {
   breakpoints = {};
   apu: APU;
   ppu: PPU;
-  irqCounter = 0;
-  irqCounterActive = false;
-  nmiCounter = 0;
-  nmiCounterActive = false;
   traceLogLines: string[] = [];
   controller1 = 0;
   controller2 = 0;
@@ -141,7 +145,9 @@ class EmulatorState {
   cpuMemory: CPUMemorySpace
   prevNmiFlag = false;
 
-  irqFlag = new DelayedFlag();
+  irqDelayedFlag = new DelayedFlag();
+
+  nmiDelayedFlag = new DelayedFlag();
 
   prevApuFrameInterrupt = false;
   addressOperand = 0
@@ -172,7 +178,7 @@ class EmulatorState {
     // Reset vector
     const startingLocation = this.mapper.cpuMemory.read(0xFFFC) + (this.mapper.cpuMemory.read(0xFFFD) << 8);
 
-    this.irqFlag.reset();
+    this.irqDelayedFlag.reset();
 
     this.apu = new APU(audioSampleCallback);
     this.A = 0;
@@ -188,8 +194,6 @@ class EmulatorState {
     this.CYC = -1;
     this.settings = rom.settings;
     this.breakpoints = {};
-    this.nmiCounter = 0;
-    this.nmiCounterActive = false;
     this.traceLogLines = [];
     this.controller1 = 0;
     this.controller2 = 0;
@@ -410,29 +414,22 @@ class EmulatorState {
     // during one cycle to being low during the next. The internal signal goes high during φ1 of the cycle that follows the one
     // where the edge is detected, and stays high until the NMI has been handled.
     // This basically means that we detected the NMI this cycle, but we should not trigger the actual NMI until the next cycle.
-    // Set an internal counter that will tick down each cycle until reaching zero. nmiCounter === 0 means that the emulator should
-    // handle the NMI after the current opcode has completed execution.
+    // Use a delayed flag to accomplish this.
     if (this.ppu.nmiFlag && !this.prevNmiFlag) {
-      this.nmiCounterActive = true;
-      this.nmiCounter = 1;
-    } else if (this.nmiCounterActive) {
-      this.nmiCounter--;
+      this.nmiDelayedFlag.updateWithNewValue(true);
+    } else {
+      this.nmiDelayedFlag.update();
     }
+
+    this.prevNmiFlag = this.ppu.nmiFlag;
 
     // The IRQ input is connected to a level detector. If a low level is detected on the IRQ input during φ2 of a cycle, an internal
     // signal is raised during φ1 the following cycle, remaining high for that cycle only (or put another way, remaining high as long
     // as the IRQ input is low during the preceding cycle's φ2).
     //
-    // APU Frame interrupt occurred. Like with the NMI; trigger after current cycle.
-    this.irqFlag.update(this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0));
-    // if (!this.irqCounterActive && this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0))
-    // {
-    //   console.log('Setting IRQ counter', this.CYC);
-    //   this.irqCounterActive = true;
-    //   this.irqCounter = 1;
-    // } else if (this.irqCounterActive) {
-    //   this.irqCounter--;
-    // }
+    // APU Frame interrupt occurred. Like with the NMI; trigger after current cycle, but keep feeding values even if there
+    // is no state transition
+    this.irqDelayedFlag.updateWithNewValue(this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0));
   }
 
   /**
@@ -449,7 +446,6 @@ class EmulatorState {
   startReadTick() {
     this.CYC++;
     this.masterClock += this.cpuHalfStep - 1;
-    this.prevNmiFlag = this.ppu.nmiFlag;
     this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock);
@@ -463,7 +459,6 @@ class EmulatorState {
   startWriteTick() {
     this.CYC++;
     this.masterClock += this.cpuHalfStep + 1;
-    this.prevNmiFlag = this.ppu.nmiFlag;
     this.prevApuFrameInterrupt = this.apu.frameInterrupt;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock);
@@ -537,13 +532,13 @@ class EmulatorState {
 
     // This actually annoys me a bit, if an NMI triggers we won't get the log output from the preceding opcode.
     // But this is the way Mesen does it so we do it to stay compatible.
-    if (this.nmiCounterActive && this.nmiCounter <= 0) {
-      this.nmiCounterActive = false;
+    if (this.nmiDelayedFlag.value) {
+      this.nmiDelayedFlag.updateWithNewValue(false);
       nmi(this);
 
       this.lastNMI = this.CYC;
       this.lastNMIOccured = true;
-    } else if (this.irqFlag.value) {
+    } else if (this.irqDelayedFlag.value) {
       irq(this);
     }
 
