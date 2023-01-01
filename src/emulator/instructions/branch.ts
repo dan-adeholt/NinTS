@@ -11,6 +11,13 @@ const branch = (state: EmulatorState, address: number, shouldBranch: number | bo
   if (shouldBranch) {
     const offsetSigned = offset > 0x7F ? offset - 256 : offset;
     const jumpLocation = (state.PC + offsetSigned) & 0xFFFF;
+
+    // Taken branch delays interrupt: https://archive.nes.science/nesdev-forums/f2/t6510.xhtml
+    // "A taken non-page-crossing branch ignores IRQ/NMI during its last clock, so that next instruction executes before the IRQ."
+    if (state.irqDelayedFlag.pendingValue && !state.irqDelayedFlag.value) {
+      state.irqDelayedFlag.reset();
+    }
+
     state.dummyReadTick();
 
     if (!onSamePageBoundary(state.PC, jumpLocation)) {
