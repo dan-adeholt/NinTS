@@ -65,3 +65,4 @@ test('Instruction Timing - Instructions', () => testInstructionTestRom('nes-test
 test('Instruction Timing - Branch', () => testInstructionTestRom('nes-test-roms/instr_timing/rom_singles/2-branch_timing.nes'));
 
 test('CPU Interrupts V2 - CLI Latency', () => testInstructionTestRom('nes-test-roms/cpu_interrupts_v2/rom_singles/1-cli_latency.nes'));
+test('CPU Interrupts V2 - NMI and BRK', () => testInstructionTestRom('nes-test-roms/cpu_interrupts_v2/rom_singles/2-nmi_and_brk.nes'));

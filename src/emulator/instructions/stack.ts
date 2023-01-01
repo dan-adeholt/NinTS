@@ -58,7 +58,19 @@ export const brk = (state : EmulatorState) => {
   pushStackWord(state, (state.PC + 1) & 0xFFFF);
   pushStack(state, state.P | P_REG_BREAK | P_REG_ALWAYS_1);
   setInterrupt(state, true);
-  state.PC = readWord(state, 0xFFFE);
+
+  // NMI Hijacks BRK instruction:
+
+  // "But the MOS 6502 and by extension the 2A03/2A07 has a quirk that can cause an interrupt to use the wrong vector if two different interrupts occur very close to one another.
+  // For example, if NMI is asserted during the first four ticks of a BRK instruction, the BRK instruction will execute normally at first (PC increments will occur and the status word will be pushed with the B flag set), but execution will branch to the NMI vector instead of the IRQ/BRK vector:
+  if (state.nmiDelayedFlag.value) {
+    state.PC = readWord(state, 0xFFFA);
+  } else {
+    state.PC = readWord(state, 0xFFFE);
+  }
+
+  // Do not trigger NMI immediately after, wait 1 cycle to propagate
+  state.nmiDelayedFlag.resetActiveValue();
 }
 
 const interruptHandler = (state: EmulatorState, targetAddress: number) => {
