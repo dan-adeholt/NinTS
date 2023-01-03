@@ -29,6 +29,28 @@ type DumpingState = {
 
 const LOCAL_STORAGE_KEY_LAST_COMPARE_URL = 'last-compare-url';
 
+type PhaseConstant = 'idle' | 'loading' | 'comparing' | 'success' | 'error'
+
+type Phase = {
+  phase: PhaseConstant
+  data: string | ErrorType | null
+}
+
+function phaseToString(phase: Phase) {
+  switch (phase.phase) {
+    case 'idle':
+      return '';
+    case 'loading':
+      return 'Loading...';
+    case 'comparing':
+      return 'Comparing...';
+    case 'error':
+      return 'Error';
+    case 'success':
+      return 'Successful, no difference'
+  }
+}
+
 const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDialogProps) => {
   const [fileUrl, setFileUrl] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL) as string) ?? '');
 
@@ -37,7 +59,11 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
     localStorage.setItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL, newUrl);
   }
 
-  const [error, setError] = useState<ErrorType | null>(null);
+  const [phase, setPhase] = useState<Phase>({
+    phase: 'idle',
+    data: null
+  });
+
   const [mutedLocations, setMutedLocations] = useState<number[]>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? '[]') ?? []);
 
   const dumpingState = useRef<DumpingState>({
@@ -46,12 +72,14 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
     lines: []
   });
 
-  const [loading, setLoading] = useState(false);
-
   const compare = useCallback(async () => {
     let text = null;
     if (dumpingState.current.lines.length === 0) {
-      setLoading(true);
+      setPhase({
+        phase: 'loading',
+        data: null
+      });
+
       try {
         text = await fetch(fileUrl)
           .then(res => {
@@ -63,21 +91,28 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
 
         dumpingState.current.lines = text.split('\r\n');
       } catch(err) {
-        setError({
-          expected: '',
-          found: 'Failed to load file',
-          prevLines: [],
-          debug: [
-            {
-              name: 'busLatch',
-              value: 0
-            }
-          ]
-        })
-        setLoading(false);
+        setPhase({
+          phase: 'error',
+          data: {
+            expected: '',
+            found: 'Failed to load file',
+            prevLines: [],
+            debug: [
+              {
+                name: 'busLatch',
+                value: 0
+              }
+            ]
+          }
+        });
+
         return;
       }
-      setLoading(false);
+
+      setPhase({
+        phase: 'comparing',
+        data: null
+      });
     }
 
     const lines = dumpingState.current.lines;
@@ -88,30 +123,40 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
       emulator.initMachine(emulator.rom, true, null);
     }
 
+    let success = true;
+
     while (lineIndex < lines.length) {
       if (lineIndex >= emulator.traceLogLines.length) {
         emulator.step();
       }
       const stateString = emulator.traceLogLines[lineIndex];
 
+      if (lines[lineIndex] === '') {
+        // End of file
+        break;
+      }
+
       if (stateString !== lines[lineIndex] && !mutedLocations.includes(emulator.PC)) {
         const prevStart = Math.max(lineIndex - 20, 0);
         const prevEnd = Math.max(lineIndex, 0);
         const prevLines = lines.slice(prevStart, prevEnd);
 
+        success = false,
         onRefresh();
-
-        setError({
-          expected: prefixLine(lineIndex, lines[lineIndex]),
-          found: prefixLine(lineIndex, stateString),
-          prevLines: prevLines.map((line, j) => prefixLine(prevStart + j, line)),
-          debug: [
-            {
-              name: 'busLatch',
-              value: emulator.ppu.busLatch
-            }
-          ]
-        });
+        setPhase({
+          phase: 'error',
+          data: {
+            expected: prefixLine(lineIndex, lines[lineIndex]),
+            found: prefixLine(lineIndex, stateString),
+            prevLines: prevLines.map((line, j) => prefixLine(prevStart + j, line)),
+            debug: [
+              {
+                name: 'busLatch',
+                value: emulator.ppu.busLatch
+              }
+            ]
+          }
+        })
 
         lineIndex++;
         break;
@@ -119,6 +164,13 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
 
 
       lineIndex++;
+    }
+    
+    if (success) {
+      setPhase({
+        phase: 'success',
+        data: null
+      })
     }
 
     dumpingState.current.lineIndex = lineIndex;
@@ -135,23 +187,26 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
     localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS, JSON.stringify([]));
   }, []);
 
+  const errorDetails = phase.phase === 'error' ? phase.data as ErrorType : null
+  const isLoadingOrComparing = phase.phase === 'loading' || phase.phase === 'comparing';
+
   return (
     <Dialog onClose={onClose} isOpen={isOpen} title="Compare trace debugger">
       <div className={styles.inputRow}>
         <input value={fileUrl} onChange={e => _setFileUrl(e.target.value)}/>
-        <button disabled={loading} onClick={compare}>Compare</button>
-        <button disabled={loading} onClick={mute}>Mute</button>
-        <button disabled={loading} onClick={clearMuted}>Clear muted</button>
+        <button disabled={isLoadingOrComparing} onClick={compare}>Compare</button>
+        <button disabled={isLoadingOrComparing} onClick={mute}>Mute</button>
+        <button disabled={isLoadingOrComparing} onClick={clearMuted}>Clear muted</button>
       </div>
       <div className={classNames(styles.monospace, styles.compareTraceDebugger)}>
-        { loading && 'Loading..' }
-        { error && (
+        { phaseToString(phase) }
+        { errorDetails && (
           <>
-            { error.prevLines.map(prevLine => prevLine + '\n')}
-            <span className={styles.expected}>{ error.expected } </span><br/>
-            <span className={styles.found}>{ error.found}</span>
+            { errorDetails.prevLines.map(prevLine => prevLine + '\n')}
+            <span className={styles.expected}>{ errorDetails.expected } </span><br/>
+            <span className={styles.found}>{ errorDetails.found}</span>
             <br/>
-            { error.debug.map(debugInfo => debugInfo.name + ' = ' + hex(debugInfo.value) + '\n') }
+            { errorDetails.debug.map(debugInfo => debugInfo.name + ' = ' + hex(debugInfo.value) + '\n') }
           </>
         ) }
       </div>
