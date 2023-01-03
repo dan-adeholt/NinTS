@@ -312,7 +312,7 @@ function App() {
                       emulator={emulator}
                       runMode={runMode}
                       setRunMode={_setRunMode}
-                      key={type}
+                      key={type + emulator.rom?.romSHA}
                       onRefresh={triggerRefresh}
                       refresh={refresh}
                       addKeyListener={addKeyListener}

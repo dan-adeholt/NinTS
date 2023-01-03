@@ -52,11 +52,11 @@ function phaseToString(phase: Phase) {
 }
 
 const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDialogProps) => {
-  const [fileUrl, setFileUrl] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL) as string) ?? '');
+  const fileUrl = (localStorage.getItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL + '-' + emulator.rom?.romSHA) as string) ?? '';
 
   const _setFileUrl = (newUrl: string) => {
-    setFileUrl(newUrl);
-    localStorage.setItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL, newUrl);
+    localStorage.setItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL + '-' + emulator.rom?.romSHA, newUrl);
+    onRefresh();
   }
 
   const [phase, setPhase] = useState<Phase>({
@@ -74,6 +74,16 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
 
   const compare = useCallback(async () => {
     let text = null;
+
+    if (dumpingState.current.lineIndex === dumpingState.current.lines.length) {
+      dumpingState.current.lineIndex = 0;
+      dumpingState.current.initialized = false;
+      setPhase({
+        phase: 'comparing',
+        data: null
+      });
+    }
+
     if (dumpingState.current.lines.length === 0) {
       setPhase({
         phase: 'loading',
@@ -133,6 +143,7 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
 
       if (lines[lineIndex] === '') {
         // End of file
+        lineIndex++;
         break;
       }
 
@@ -162,10 +173,9 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
         break;
       }
 
-
       lineIndex++;
     }
-    
+
     if (success) {
       setPhase({
         phase: 'success',
