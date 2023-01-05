@@ -92,7 +92,7 @@ class APU {
       this.square2.setEnabled( (value & 0b00010) !== 0);
       this.triangle.setEnabled((value & 0b00100) !== 0);
       this.noise.setEnabled(   (value & 0b01000) !== 0);
-      this.dmc.setEnabled(     (value & 0b10000) !== 0);
+      this.dmc.setEnabled(     (value & 0b10000) !== 0, cpuCycles % 2 === 0);
     } else if (address === 0x4017) {
       this.pendingFrameCounterMode = (value & 0b10000000) >> 7;
       if (cpuCycles % 2 === 0) {
@@ -117,7 +117,9 @@ class APU {
         (this.square2.lengthCounter.lengthCounter > 0 ?  0b00000010 : 0) |
         (this.triangle.lengthCounter.lengthCounter > 0 ? 0b00000100 : 0) |
         (this.noise.lengthCounter.lengthCounter > 0 ?    0b00001000 : 0) |
-        (this.frameInterrupt ?                           0b01000000 : 0);
+        (this.dmc.remainingBytes > 0 ?                   0b00010000 : 0) |
+        (this.frameInterrupt ?                           0b01000000 : 0) |
+        (this.dmc.interrupt ?                            0b10000000 : 0);
 
       // If an interrupt flag was set at the same moment of the read, it will read back as 1 but it will not be cleared.
       if (!peek && this.masterClock !== this.frameInterruptCycle) {
@@ -298,6 +300,7 @@ class APU {
       this.square1.updateSequencer();
       this.square2.updateSequencer();
       this.noise.updateSequencer();
+      this.dmc.updateSequencer();
     }
 
     this.triangle.updateSequencer();
