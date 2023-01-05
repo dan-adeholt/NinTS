@@ -153,6 +153,8 @@ class EmulatorState {
 
   transferSpriteDMA = false
 
+  transferDMCDMA = false
+
   addressSpriteDMA = 0
 
   constructor() {
@@ -323,24 +325,39 @@ class EmulatorState {
     }
   }
 
-  writeSpriteDMA(value: number) {
-    const onOddCycle = (this.CYC) % 2 === 1;
-
-    this.dummyReadTick(); // One wait this.cycle while waiting for writes to complete
-
-    if (onOddCycle) { // One additional read if we were on an odd cycle
-      this.dummyReadTick();
-    }
+  handleDMA(value: number) {
+    this.dummyReadTick();
 
     const baseAddress = value << 8;
 
-    for (let i = 0; i < 256; i++) {
-      const address = baseAddress + i;
-      this.startReadTick();
-      const value = this.readMem(address);
-      this.endReadTick();
-      this.dummyReadTick();
-      this.ppu.pushOAMValue(value);
+    let writeDMA = true;
+    let lastValue = 0;
+    let dmaAddress = baseAddress;
+    let writtenSpriteDMABytes = 0;
+
+    while (writeDMA) {
+      const isReadCycle = this.CYC % 2 === 0;
+      if (isReadCycle) {
+        // Read cycle
+
+        if (writeDMA) {
+          this.startReadTick();
+          lastValue = this.readMem(dmaAddress++);
+          this.endReadTick();
+          writtenSpriteDMABytes++;
+        }
+      } else {
+        if (writeDMA && writtenSpriteDMABytes > 0) {
+          this.dummyReadTick();
+          this.ppu.pushOAMValue(lastValue);
+          if (writtenSpriteDMABytes === 256) {
+            writeDMA = false;
+          }
+        } else if (writeDMA) {
+          // One wait cycle while waiting for writes to complete
+          this.dummyReadTick();
+        }
+      }
     }
   }
 
@@ -359,7 +376,7 @@ class EmulatorState {
       this.setInputMem(address, value);
     } else if (address >= 0x4000 && address <= 0x4017) {
       this.apu.setAPURegisterMem(address, value, this.CYC);
-    } else if (address >= 0x8000 && address < 0xFFFF) {
+    } else if (address >= 0x8000 && address <= 0xFFFF) {
       this.mapper.handleROMWrite(address, value);
     } else {
       this.mapper.cpuMemory.write(address, value);
@@ -449,16 +466,16 @@ class EmulatorState {
   }
 
   startReadTick() {
+    if (this.transferSpriteDMA || this.transferDMCDMA) {
+      this.transferSpriteDMA = false;
+      this.handleDMA(this.addressSpriteDMA);
+      this.addressSpriteDMA = 0;
+    }
+
     this.CYC++;
     this.masterClock += this.cpuHalfStep - 1;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
     this.apu.update(this.masterClock);
-
-    if (this.transferSpriteDMA) {
-      this.transferSpriteDMA = false;
-      this.writeSpriteDMA(this.addressSpriteDMA);
-      this.addressSpriteDMA = 0;
-    }
   }
 
   endReadTick() {
