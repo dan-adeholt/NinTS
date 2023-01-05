@@ -148,7 +148,7 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
       }
 
       if (stateString !== lines[lineIndex] && !mutedLocations.includes(emulator.PC)) {
-        const prevStart = Math.max(lineIndex - 20, 0);
+        const prevStart = Math.max(lineIndex - 19, 0);
         const prevEnd = Math.max(lineIndex, 0);
         const prevLines = lines.slice(prevStart, prevEnd);
 
@@ -209,7 +209,7 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
         <button disabled={isLoadingOrComparing} onClick={clearMuted}>Clear muted</button>
       </div>
       <div className={classNames(styles.monospace, styles.compareTraceDebugger)}>
-        { phaseToString(phase) }
+        { phaseToString(phase) }<br/>
         { errorDetails && (
           <>
             { errorDetails.prevLines.map(prevLine => prevLine + '\n')}
