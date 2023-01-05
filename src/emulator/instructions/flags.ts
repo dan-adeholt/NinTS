@@ -11,8 +11,7 @@ import {
 import EmulatorState from '../EmulatorState';
 
 const setFlags = (state : EmulatorState, p : number) => {
-  state.startReadTick();
-  state.endReadTick();
+  state.dummyReadTick();
   state.P = p;
 }
 

@@ -13,6 +13,7 @@ import CPUMemorySpace from "./mappers/CPUMemorySpace";
 import Mapper from "./mappers/Mapper";
 import { P_REG_INTERRUPT, setInterrupt } from './instructions/util';
 import EmulatorBreak from './EmulatorBreak';
+import { readByte } from './memory';
 
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
@@ -325,8 +326,12 @@ class EmulatorState {
     }
   }
 
-  handleDMA(value: number) {
-    this.dummyReadTick();
+  handleDMA(address: number, value: number) {
+    // From: https://forums.nesdev.org/viewtopic.php?t=14120:
+    // "If this cycle is a read, hijack the read, discard the value, and prevent all other actions that occur on this cycle (PC not incremented, etc).
+    // Presumably, side-effects from performing the read still occur.  Proceed to step 2"
+    // This is why DMA can corrupt polling for PPUSTATUS etc, since it can cause a double read.
+    readByte(this, address);
 
     const baseAddress = value << 8;
 
@@ -341,9 +346,7 @@ class EmulatorState {
         // Read cycle
 
         if (writeDMA) {
-          this.startReadTick();
-          lastValue = this.readMem(dmaAddress++);
-          this.endReadTick();
+          lastValue = readByte(this, dmaAddress++);
           writtenSpriteDMABytes++;
         }
       } else {
@@ -454,21 +457,19 @@ class EmulatorState {
     this.irqDelayedFlag.updateWithNewValue(this.apu.frameInterrupt && ((this.P & P_REG_INTERRUPT) === 0));
   }
 
+  dummyReadTick() {
+    readByte(this, this.PC);
+  }
+
   /**
    * Mesen compatible ways of ticking, split the cycle updating into two phases
    * and update the PPU in both instances. Perhaps helps with accuracy in some way I
    * do not understand yet.
    */
-
-  dummyReadTick() {
-    this.startReadTick();
-    this.endReadTick();
-  }
-
-  startReadTick() {
+  startReadTick(address: number) {
     if (this.transferSpriteDMA || this.transferDMCDMA) {
       this.transferSpriteDMA = false;
-      this.handleDMA(this.addressSpriteDMA);
+      this.handleDMA(address, this.addressSpriteDMA);
       this.addressSpriteDMA = 0;
     }
 
@@ -526,7 +527,7 @@ class EmulatorState {
 
 
   readOpcode() {
-    this.startReadTick();
+    this.startReadTick(this.PC);
 
     if (this.enableTraceLogging) {
       if (this.lastNMIOccured && this.lastNMI <= this.CYC) {

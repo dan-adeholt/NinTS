@@ -12,7 +12,7 @@ export const writeByte = (state : EmulatorState, address: number, value: number)
 }
 
 export const readByte = (state : EmulatorState, address: number) => {
-  state.startReadTick();
+  state.startReadTick(address);
   const ret = state.readMem(address);
   state.endReadTick();
   return ret;
