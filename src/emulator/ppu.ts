@@ -249,6 +249,11 @@ class PPU {
         }
       }
 
+      // I think this is a bug in Mesen, but we do this to align anyways.
+      if (peek && this.scanline === VBLANK_SCANLINE && this.scanlineCycle < 3) {
+        ret &= 0b1111111;
+      }
+
       if (!peek && this.scanline === VBLANK_SCANLINE && this.scanlineCycle === 0) {
         this.muteVerticalBlank = true;
       }
