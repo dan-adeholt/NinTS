@@ -341,6 +341,7 @@ class EmulatorState {
     let lastValue = 0;
     let dmaAddress = baseAddress;
     let writtenSpriteDMABytes = 0;
+    let writtenDMCBytes = 0;
 
     while (this.transferSpriteDMA) {
       // Even cycles are read cycles
@@ -351,17 +352,25 @@ class EmulatorState {
         if (this.transferSpriteDMA) {
           lastValue = readByte(this, dmaAddress++);
           writtenSpriteDMABytes++;
+        } else if (this.transferDMCDMA) {
+          lastValue = readByte(this, this.apu.dmc.sampleAddress);
+          this.apu.dmc.setDMAValue(lastValue);
+          writtenDMCBytes++;
         }
       } else {
-        if (this.transferSpriteDMA && writtenSpriteDMABytes > 0) {
+        if (this.transferSpriteDMA && writtenSpriteDMABytes > 0 && writtenDMCBytes === 0) {
           this.dummyReadTick();
           this.ppu.pushOAMValue(lastValue);
           if (writtenSpriteDMABytes === 256) {
             this.transferSpriteDMA = false;
           }
-        } else if (this.transferSpriteDMA) {
+        } else if (this.transferSpriteDMA || this.transferDMCDMA) {
           // One wait cycle while waiting for writes to complete
           this.dummyReadTick();
+          if (writtenDMCBytes > 0) {
+            writtenDMCBytes = 0;
+            this.transferDMCDMA = false;
+          }
         }
       }
     }

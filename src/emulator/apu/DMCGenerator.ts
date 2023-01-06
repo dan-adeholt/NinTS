@@ -36,6 +36,11 @@ class DMCGenerator {
     }
   }
 
+  setDMAValue(value: number) {
+    this.counter = value;
+    this.sampleAddress = (this.sampleAddress + 1) % 0xFFFF;
+  }
+
   checkRestart() {
     if (!this.isEnabled) {
       return;
