@@ -154,6 +154,8 @@ class EmulatorState {
 
   transferSpriteDMA = false
 
+  handlingDMA = false
+
   transferDMCDMA = false
 
   addressSpriteDMA = 0
@@ -327,41 +329,44 @@ class EmulatorState {
   }
 
   handleDMA(address: number, value: number) {
+    this.handlingDMA = true;
     // From: https://forums.nesdev.org/viewtopic.php?t=14120:
     // "If this cycle is a read, hijack the read, discard the value, and prevent all other actions that occur on this cycle (PC not incremented, etc).
     // Presumably, side-effects from performing the read still occur.  Proceed to step 2"
-    // This is why DMA can corrupt polling for PPUSTATUS etc, since it can cause a double read.
+    // This is why DMA can corrupt polling for NMI in PPUSTATUS since it can cause a double read.
     readByte(this, address);
 
     const baseAddress = value << 8;
 
-    let writeDMA = true;
     let lastValue = 0;
     let dmaAddress = baseAddress;
     let writtenSpriteDMABytes = 0;
 
-    while (writeDMA) {
+    while (this.transferSpriteDMA) {
+      // Even cycles are read cycles
       const isReadCycle = this.CYC % 2 === 0;
       if (isReadCycle) {
         // Read cycle
 
-        if (writeDMA) {
+        if (this.transferSpriteDMA) {
           lastValue = readByte(this, dmaAddress++);
           writtenSpriteDMABytes++;
         }
       } else {
-        if (writeDMA && writtenSpriteDMABytes > 0) {
+        if (this.transferSpriteDMA && writtenSpriteDMABytes > 0) {
           this.dummyReadTick();
           this.ppu.pushOAMValue(lastValue);
           if (writtenSpriteDMABytes === 256) {
-            writeDMA = false;
+            this.transferSpriteDMA = false;
           }
-        } else if (writeDMA) {
+        } else if (this.transferSpriteDMA) {
           // One wait cycle while waiting for writes to complete
           this.dummyReadTick();
         }
       }
     }
+
+    this.handlingDMA = false;
   }
 
   setMem(address: number, value: number) {
@@ -467,8 +472,7 @@ class EmulatorState {
    * do not understand yet.
    */
   startReadTick(address: number) {
-    if (this.transferSpriteDMA || this.transferDMCDMA) {
-      this.transferSpriteDMA = false;
+    if (!this.handlingDMA && (this.transferSpriteDMA || this.transferDMCDMA)) {
       this.handleDMA(address, this.addressSpriteDMA);
       this.addressSpriteDMA = 0;
     }
