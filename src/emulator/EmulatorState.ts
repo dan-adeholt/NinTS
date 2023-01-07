@@ -160,6 +160,8 @@ class EmulatorState {
 
   addressSpriteDMA = 0
 
+  waitCyclesDMC = 0
+
   constructor() {
     const rom = EmptyRom;
     this.ppuMemory = new PPUMemorySpace(EmptyRom);
@@ -216,6 +218,8 @@ class EmulatorState {
     this.addressOperand = 0
     this.transferSpriteDMA = false
     this.addressSpriteDMA = 0
+    this.transferDMCDMA = false
+    this.waitCyclesDMC = 0
 
     // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
     for (let i = 0; i < 8; i++) {
@@ -328,6 +332,13 @@ class EmulatorState {
     }
   }
 
+  tickDMCWaitCycle() {
+    if (this.waitCyclesDMC > 0) {
+      this.waitCyclesDMC--;
+    }
+  }
+
+  // This method is aligned with Mesens implementation in order to pass all tests.
   handleDMA(address: number, value: number) {
     this.handlingDMA = true;
     // From: https://forums.nesdev.org/viewtopic.php?t=14120:
@@ -336,46 +347,71 @@ class EmulatorState {
     // This is why DMA can corrupt polling for NMI in PPUSTATUS since it can cause a double read.
     readByte(this, address);
 
-    const baseAddress = value << 8;
-
-    let lastValue = 0;
-    let dmaAddress = baseAddress;
+    let dmaAddress = value << 8;
     let writtenSpriteDMABytes = 0;
-    let writtenDMCBytes = 0;
+    let wroteDMCByte = false;
 
-    while (this.transferSpriteDMA) {
-      // Even cycles are read cycles
-      const isReadCycle = this.CYC % 2 === 0;
-      if (isReadCycle) {
-        // Read cycle
+    this.tickDMCWaitCycle();
 
-        if (this.transferSpriteDMA) {
-          lastValue = readByte(this, dmaAddress++);
-          writtenSpriteDMABytes++;
-        } else if (this.transferDMCDMA) {
-          lastValue = readByte(this, this.apu.dmc.sampleAddress);
-          this.apu.dmc.setDMAValue(lastValue);
-          writtenDMCBytes++;
-        }
+    if (this.CYC % 2 === 1) {
+      // Currently on a write cycle, consume one byte to start at a read cycle
+      this.dummyReadTick();
+      this.tickDMCWaitCycle();
+    }
+
+    // Note that transferDMCDMA might become true during this while loop due to
+    // the APU executing during memory accesses. What happens then is that the
+    // DMC DMA overrides the OAM DMA, but only after a certain number of wait
+    // cycles have occurred. During those wait cycles, OAM DMA proceeds as it normally does.
+    while (this.transferSpriteDMA || this.transferDMCDMA) {
+      let spriteByte = 0;
+
+      // Start with a read cycle
+      if (this.transferDMCDMA && this.waitCyclesDMC === 0) {
+        this.apu.dmc.setDMAValue(readByte(this, this.apu.dmc.sampleAddress));
+        this.transferDMCDMA = false;
+        wroteDMCByte = true;
+      } else if (this.transferSpriteDMA) {
+        spriteByte = readByte(this, dmaAddress++);
+        writtenSpriteDMABytes++;
+        this.tickDMCWaitCycle();
       } else {
-        if (this.transferSpriteDMA && writtenSpriteDMABytes > 0 && writtenDMCBytes === 0) {
-          this.dummyReadTick();
-          this.ppu.pushOAMValue(lastValue);
-          if (writtenSpriteDMABytes === 256) {
-            this.transferSpriteDMA = false;
-          }
-        } else if (this.transferSpriteDMA || this.transferDMCDMA) {
-          // One wait cycle while waiting for writes to complete
-          this.dummyReadTick();
-          if (writtenDMCBytes > 0) {
-            writtenDMCBytes = 0;
-            this.transferDMCDMA = false;
-          }
-        }
+        // DMC is running, but not yet ready. Do a dummy read, and decrement DMA wait counter.
+        readByte(this, address);
+        this.tickDMCWaitCycle();
       }
+
+      // DMC DMA exits before making a write cycle.
+      if (!this.transferSpriteDMA && !this.transferDMCDMA) {
+        break;
+      }
+
+      // Then do a write cycle
+      this.dummyReadTick();
+      this.tickDMCWaitCycle();
+
+      if (this.transferSpriteDMA && writtenSpriteDMABytes > 0 && !wroteDMCByte) {
+        this.ppu.pushOAMValue(spriteByte);
+      }
+
+      if (writtenSpriteDMABytes === 256) {
+        this.transferSpriteDMA = false;
+      }
+
+      wroteDMCByte = false;
     }
 
     this.handlingDMA = false;
+  }
+
+  initDMCDMA() {
+    this.transferDMCDMA = true
+    this.waitCyclesDMC = 2
+  }
+
+  initSpriteDMA(addressSpriteDMA: number)  {
+    this.transferSpriteDMA = true;
+    this.addressSpriteDMA = addressSpriteDMA;
   }
 
   setMem(address: number, value: number) {
@@ -385,8 +421,7 @@ class EmulatorState {
 
     // TODO: Add mirroring here
     if (address === OAM_DMA) {
-      this.transferSpriteDMA = true;
-      this.addressSpriteDMA = value;
+      this.initSpriteDMA(value);
     } else if (address >= 0x2000 && address <= 0x3FFF) {
       this.ppu.setPPURegisterMem(0x2000 + (address % 8), value);
     } else if (address === 0x4016) {
@@ -481,7 +516,7 @@ class EmulatorState {
    * do not understand yet.
    */
   startReadTick(address: number) {
-    if (!this.handlingDMA && (this.transferSpriteDMA || this.transferDMCDMA)) {
+    if (!this.handlingDMA && (this.transferDMCDMA || this.transferSpriteDMA)) {
       this.handleDMA(address, this.addressSpriteDMA);
       this.addressSpriteDMA = 0;
     }
