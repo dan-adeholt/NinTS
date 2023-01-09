@@ -45,12 +45,13 @@ class DMCGenerator {
 
   setRegisterMem(address: number, value: number) {
     if (address === 0x4010) {
-      this.settings.irqEnabled = (value & 0b01000000) != 0;
+      this.settings.irqEnabled = (value & 0b10000000) != 0;
+
       if (!this.settings.irqEnabled) {
         this.irq.interrupt = false;
       }
 
-      this.settings.loop = (value & 0b00100000) != 0;
+      this.settings.loop = (value & 0b01000000) != 0;
       this.clock.period = NTSCRates[value & 0b1111];
     } else if (address === 0x4011) {
       this.output.counter = value & 0b01111111;
@@ -58,6 +59,10 @@ class DMCGenerator {
       this.settings.sampleAddress = 0xC000 + (value * 64);
     } else if (address === 0x4013) {
       this.settings.sampleLength = (value * 16) + 1;
+
+      // if (value === 0) {
+      //   EmulatorBreakState.break = true;
+      // }
     }
   }
 
@@ -82,14 +87,16 @@ class DMCGenerator {
     }
   }
 
-  updateSequencer() {
+  updatePendingDMC() {
     if (this.reader.dmcCountdown > 0) {
       this.reader.dmcCountdown--;
       if (this.reader.dmcCountdown === 0) {
         this.triggerDMATransfer();
       }
     }
+  }
 
+  updateSequencer() {
     this.clock.timer++;
 
     if (this.clock.timer < this.clock.period) {
@@ -144,7 +151,6 @@ class DMCGenerator {
   setEnabled(enabled: boolean, onEvenCycle: boolean) {
     this.irq.interrupt = false
     this.settings.isEnabled = enabled;
-    this.reader.remainingBytes = 0;
 
     if (!this.settings.isEnabled) {
       this.reader.remainingBytes = 0;

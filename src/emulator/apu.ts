@@ -110,7 +110,6 @@ class APU {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   readAPURegisterMem(address: number, peek: boolean): number {
     if (address === 0x4015) {
       const status =
@@ -296,6 +295,8 @@ class APU {
   tickSequencers() {
     // Do one iteration for each cpu cycle, but update sequencers for square waves every 2 cycles
     this.evenTick = !this.evenTick;
+
+    this.dmc.updatePendingDMC();
 
     if (this.evenTick) {
       this.square1.updateSequencer();
