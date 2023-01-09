@@ -162,13 +162,18 @@ class EmulatorState {
 
   waitCyclesDMC = 0
 
+  dmcDmaCallback = () => {
+    this.transferDMCDMA = true
+    this.waitCyclesDMC = 2
+  }
+
   constructor() {
     const rom = EmptyRom;
     this.ppuMemory = new PPUMemorySpace(EmptyRom);
     this.cpuMemory = new CPUMemorySpace(EmptyRom);
     this.mapper = new NROMMapper(rom, this.cpuMemory, this.ppuMemory);
     this.ppu = new PPU(EmptyRom.settings, this.mapper);
-    this.apu = new APU(null);
+    this.apu = new APU(null, this.dmcDmaCallback);
     this.audioSampleCallback = null;
     this.rom = EmptyRom;
     this.settings = EmptyRom.settings;
@@ -191,7 +196,7 @@ class EmulatorState {
     this.nmiDelayedFlag.reset();
     this.irqDelayedFlag.reset();
 
-    this.apu = new APU(audioSampleCallback);
+    this.apu = new APU(audioSampleCallback, this.dmcDmaCallback);
     this.A = 0;
     this.X = 0;
     this.Y = 0;
@@ -368,7 +373,7 @@ class EmulatorState {
 
       // Start with a read cycle
       if (this.transferDMCDMA && this.waitCyclesDMC === 0) {
-        this.apu.dmc.setDMAValue(readByte(this, this.apu.dmc.sampleAddress));
+        this.apu.dmc.setDMAValue(readByte(this, this.apu.dmc.reader.currentAddress));
         this.transferDMCDMA = false;
         wroteDMCByte = true;
       } else if (this.transferSpriteDMA) {
@@ -402,11 +407,6 @@ class EmulatorState {
     }
 
     this.handlingDMA = false;
-  }
-
-  initDMCDMA() {
-    this.transferDMCDMA = true
-    this.waitCyclesDMC = 2
   }
 
   initSpriteDMA(addressSpriteDMA: number)  {

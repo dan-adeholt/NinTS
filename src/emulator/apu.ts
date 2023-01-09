@@ -72,8 +72,9 @@ class APU {
 
   audioSampleCallback : ((sample: number) => void) | null = null
 
-  constructor(audioSampleCallback : ((sample: number) => void) | null) {
+  constructor(audioSampleCallback : ((sample: number) => void) | null, triggerDMACallback: (() => void) | null = null) {
     this.audioSampleCallback = audioSampleCallback
+    this.dmc.reader.triggerDMACallback = triggerDMACallback
   }
 
   setAPURegisterMem(address: number, value: number, cpuCycles: number) {
@@ -137,7 +138,7 @@ class APU {
     this.accumulatedSamplesSquare2 += this.square2.curOutputValue;
     this.accumulatedSamplesTriangle += this.triangle.curOutputValue;
     this.accumulatedSamplesNoise += this.noise.curOutputValue;
-    this.accumulatedSamplesDmc += this.dmc.counter;
+    this.accumulatedSamplesDmc += this.dmc.output.counter;
   }
 
   readSampleValue() {
@@ -145,7 +146,7 @@ class APU {
     let sq2 = this.square2.curOutputValue;
     let tri = this.triangle.curOutputValue;
     let noise = this.noise.curOutputValue;
-    let dmc = this.dmc.counter;
+    let dmc = this.dmc.output.counter;
 
     // sq1 = 0;
     // sq2 = 0;
