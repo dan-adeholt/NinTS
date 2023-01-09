@@ -11,6 +11,6 @@ test('Mapping works correctly', () => {
   memorySpace.map(sourceBuf, 0x0000, 0, 2048);
 
   for (let i = 0; i < sourceBuf.length; i++) {
-    expect(memorySpace.read(i)).toEqual(sourceBuf[i]);
+    expect(memorySpace.read(i, 0)).toEqual(sourceBuf[i]);
   }
 })

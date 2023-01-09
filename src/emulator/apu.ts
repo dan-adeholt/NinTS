@@ -118,9 +118,9 @@ class APU {
         (this.square2.lengthCounter.lengthCounter > 0 ?  0b00000010 : 0) |
         (this.triangle.lengthCounter.lengthCounter > 0 ? 0b00000100 : 0) |
         (this.noise.lengthCounter.lengthCounter > 0 ?    0b00001000 : 0) |
-        (this.dmc.remainingBytes > 0 ?                   0b00010000 : 0) |
+        (this.dmc.reader.remainingBytes > 0 ?            0b00010000 : 0) |
         (this.frameInterrupt ?                           0b01000000 : 0) |
-        (this.dmc.interrupt ?                            0b10000000 : 0);
+        (this.dmc.irq.interrupt ?                        0b10000000 : 0);
 
       // If an interrupt flag was set at the same moment of the read, it will read back as 1 but it will not be cleared.
       if (!peek && this.masterClock !== this.frameInterruptCycle) {
