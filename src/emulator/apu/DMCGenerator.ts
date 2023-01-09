@@ -1,4 +1,4 @@
-const NTSCRates = [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54];
+const NTSCRates = [214, 190, 170, 160, 143, 127, 113, 107,  95,  80,  71,  64, 53,  42,  36,  27];
 
 type DMCReaderState = {
   dmcCountdown: number
@@ -51,7 +51,7 @@ class DMCGenerator {
       }
 
       this.settings.loop = (value & 0b00100000) != 0;
-      this.clock.period = NTSCRates[value & 0b1111] / 2;
+      this.clock.period = NTSCRates[value & 0b1111];
     } else if (address === 0x4011) {
       this.output.counter = value & 0b01111111;
     } else if (address === 0x4012) {
