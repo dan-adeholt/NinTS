@@ -14,7 +14,7 @@ class DMCGenerator {
     shiftRegister: 0,
     counter: 0,
     bitsRemaining: 8,
-    silenceFlag: false
+    silenceFlag: true
   }
 
   reader: DMCReaderState = {
@@ -30,8 +30,8 @@ class DMCGenerator {
     irqEnabled: false,
     loop: false,
     isEnabled: true,
-    sampleAddress: 0,
-    sampleLength: 0
+    sampleAddress: 0xC000,
+    sampleLength: 1
   }
 
   irq = {
@@ -39,8 +39,8 @@ class DMCGenerator {
   }
 
   clock = {
-    period: 0,
-    timer: 0
+    period: NTSCRates[0] - 1,
+    timer: NTSCRates[0]
   }
 
   setRegisterMem(address: number, value: number) {
@@ -59,10 +59,6 @@ class DMCGenerator {
       this.settings.sampleAddress = 0xC000 + (value * 64);
     } else if (address === 0x4013) {
       this.settings.sampleLength = (value * 16) + 1;
-
-      // if (value === 0) {
-      //   EmulatorBreakState.break = true;
-      // }
     }
   }
 
@@ -97,46 +93,45 @@ class DMCGenerator {
   }
 
   updateSequencer() {
-    this.clock.timer++;
+    this.clock.timer--;
 
-    if (this.clock.timer < this.clock.period) {
-      return
-    }
+    
+    if (this.clock.timer === 0) {
+      this.clock.timer = this.clock.period;
 
-    this.clock.timer = 0;
-
-    if (!this.output.silenceFlag) {
-      if ((this.output.shiftRegister & 0b1) === 1) {
-        if (this.output.counter <= 125) {
-          this.output.counter += 2;
-        }
-      } else {
-        if (this.output.counter >= 2) {
-          this.output.counter -= 2;
+      if (!this.output.silenceFlag) {
+        if ((this.output.shiftRegister & 0b1) === 1) {
+          if (this.output.counter <= 125) {
+            this.output.counter += 2;
+          }
+        } else {
+          if (this.output.counter >= 2) {
+            this.output.counter -= 2;
+          }
         }
       }
-    }
 
 
-    this.output.shiftRegister >>= 1;
-    this.output.bitsRemaining--;
+      this.output.shiftRegister >>= 1;
+      this.output.bitsRemaining--;
 
-    if (this.output.bitsRemaining === 0) {
-      this.output.bitsRemaining = 8;
+      if (this.output.bitsRemaining === 0) {
+        this.output.bitsRemaining = 8;
 
-      if (this.reader.bufferEmpty) {
-        this.output.silenceFlag = true;
-      } else {
-        this.output.silenceFlag = false;
-        this.reader.bufferEmpty = true;
-        this.output.shiftRegister = this.reader.buffer;
-        this.triggerDMATransfer()
+        if (this.reader.bufferEmpty) {
+          this.output.silenceFlag = true;
+        } else {
+          this.output.silenceFlag = false;
+          this.output.shiftRegister = this.reader.buffer;
+          this.reader.bufferEmpty = true;
+          this.triggerDMATransfer()
+        }
       }
     }
   }
 
   triggerDMATransfer() {
-    if (this.reader.remainingBytes > 0) {
+    if (this.reader.bufferEmpty && this.reader.remainingBytes > 0) {
       this.reader.triggerDMACallback?.()
     } else {
       this.output.silenceFlag = true;

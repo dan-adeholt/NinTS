@@ -22,5 +22,13 @@ test('apu_test - IRQ Flag', () => testInstructionTestRom(apuTestRoot + '3-irq_fl
 test('apu_test - Jitter', () => testInstructionTestRom(apuTestRoot + '4-jitter.nes'));
 test('apu_test - Length timing', () => testInstructionTestRom(apuTestRoot + '5-len_timing.nes'));
 test('apu_test - IRQ Flag Timing', () => testInstructionTestRom(apuTestRoot + '6-irq_flag_timing.nes'));
-// test('apu_test - DMC Basics', () => testInstructionTestRom(apuTestRoot + '7-dmc_basics.nes'));
-// test('apu_test - DMC Rates', () => testInstructionTestRom(apuTestRoot + '8-dmc_rates.nes'));
+test('apu_test - DMC Basics', () => testInstructionTestRom(apuTestRoot + '7-dmc_basics.nes'));
+test('apu_test - DMC Rates', () => testInstructionTestRom(apuTestRoot + '8-dmc_rates.nes'));
+
+
+const dmcDmaDuringReadTestRoot = 'nes-test-roms/dmc_dma_during_read4/';
+
+// Checksum OK according to https://tasvideos.org/EmulatorResources/NESAccuracyTests/TestCriteria
+test('DMC DMA During Read4 - dma_2007 read', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/dma_2007_read.nes', 'nes-test-images/dmc_dma_during_read4_dma_2007_read.nes.png', 25));
+test('DMC DMA During Read4 - dma_2007 write', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/dma_2007_write.nes', 'nes-test-images/dmc_dma_during_read4_dma_2007_write.nes.png', 35));
+test('DMC DMA During Read4 - dma_2007 readwrite', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/read_write_2007.nes', 'nes-test-images/dmc_dma_during_read4_read_write_2007.nes.png', 35));

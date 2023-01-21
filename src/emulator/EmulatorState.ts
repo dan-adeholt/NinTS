@@ -12,8 +12,8 @@ import PPUMemorySpace from "./mappers/PPUMemorySpace";
 import CPUMemorySpace from "./mappers/CPUMemorySpace";
 import Mapper from "./mappers/Mapper";
 import { P_REG_INTERRUPT, setInterrupt } from './instructions/util';
-import EmulatorBreak from './EmulatorBreak';
 import { readByte } from './memory';
+import EmulatorBreakState from './EmulatorBreakState';
 
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
@@ -129,7 +129,7 @@ class EmulatorState {
   // set it to match.
   CYC = -1;
   settings: RomSettings;
-  breakpoints = {};
+  breakpoints: Record<number, boolean> = {};
   apu: APU;
   ppu: PPU;
   traceLogLines: string[] = [];
@@ -351,16 +351,16 @@ class EmulatorState {
     // Presumably, side-effects from performing the read still occur.  Proceed to step 2"
     // This is why DMA can corrupt polling for NMI in PPUSTATUS since it can cause a double read.
     readByte(this, address);
+    this.tickDMCWaitCycle();
 
     let dmaAddress = value << 8;
     let writtenSpriteDMABytes = 0;
     let wroteDMCByte = false;
 
-    this.tickDMCWaitCycle();
-
     if (this.CYC % 2 === 1) {
       // Currently on a write cycle, consume one byte to start at a read cycle
-      this.dummyReadTick();
+      this.startWriteTick();
+      this.endWriteTick();
       this.tickDMCWaitCycle();
     }
 
@@ -392,7 +392,8 @@ class EmulatorState {
       }
 
       // Then do a write cycle
-      this.dummyReadTick();
+      this.startWriteTick();
+      this.endWriteTick();
       this.tickDMCWaitCycle();
 
       if (this.transferSpriteDMA && writtenSpriteDMABytes > 0 && !wroteDMCByte) {
@@ -462,11 +463,11 @@ class EmulatorState {
         break;
       }
 
-      hitBreakpoint = this.PC in this.breakpoints;
+      hitBreakpoint = this.breakpoints[this.PC];
 
-      if (EmulatorBreak.break) {
+      if (EmulatorBreakState.break) {
         hitBreakpoint = true;
-        EmulatorBreak.break = false;
+        EmulatorBreakState.break = false;
       }
 
       if (breakAfterScanlineChange) {
@@ -480,7 +481,6 @@ class EmulatorState {
 
   _updatePPUAndHandleNMI() {
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
-    this.apu.update(this.masterClock);
 
     // From NESDEV:
     // The NMI input is connected to an edge detector. This edge detector polls the status of the NMI line during φ2 of each
@@ -510,21 +510,24 @@ class EmulatorState {
     readByte(this, this.PC);
   }
 
+  checkDMA(address: number) {
+    if (!this.handlingDMA && (this.transferDMCDMA || this.transferSpriteDMA)) {
+      this.handleDMA(address, this.addressSpriteDMA);
+      this.addressSpriteDMA = 0;
+    }
+  }
+
   /**
    * Mesen compatible ways of ticking, split the cycle updating into two phases
    * and update the PPU in both instances. Perhaps helps with accuracy in some way I
    * do not understand yet.
    */
   startReadTick(address: number) {
-    if (!this.handlingDMA && (this.transferDMCDMA || this.transferSpriteDMA)) {
-      this.handleDMA(address, this.addressSpriteDMA);
-      this.addressSpriteDMA = 0;
-    }
-
+    this.checkDMA(address)
     this.CYC++;
     this.masterClock += this.cpuHalfStep - 1;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
-    this.apu.update(this.masterClock);
+    this.apu.tick();
   }
 
   endReadTick() {
@@ -536,7 +539,7 @@ class EmulatorState {
     this.CYC++;
     this.masterClock += this.cpuHalfStep + 1;
     this.ppu.updatePPU(this.masterClock - this.ppuOffset);
-    this.apu.update(this.masterClock);
+    this.apu.tick();
   }
 
   endWriteTick() {

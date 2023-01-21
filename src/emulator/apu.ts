@@ -49,7 +49,7 @@ class APU {
   cpuDivider = APU_CPU_DIVIDER;
   elapsedApuCycles = 0;
   apuStep = 0;
-  evenTick = false;
+  evenTick = true;
   numTicks = 0;
   accumulatedCycles = 0;
   apuSampleBucket = 0;
@@ -315,14 +315,12 @@ class APU {
     this.triangle.lengthCounter.reload();
   }
 
-  update(targetMasterClock: number) {
-    while ((this.masterClock + this.cpuDivider) < targetMasterClock) {
-      this.masterClock += this.cpuDivider;
-      this.tickFrameCounter();
-      this.reloadLengthCounters();
-      this.tickSequencers();
-      this.tickSampleCollector();
-    }
+  tick() {
+    this.masterClock += this.cpuDivider;
+    this.tickFrameCounter();
+    this.reloadLengthCounters();
+    this.tickSequencers();
+    this.tickSampleCollector();
   }
 }
 

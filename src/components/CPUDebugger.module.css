@@ -15,6 +15,9 @@
     border-radius: 0;
     border-left: 1px solid silver;
     border-top: 1px solid silver;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .debugArea button:first-child {

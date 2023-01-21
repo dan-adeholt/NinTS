@@ -11,6 +11,7 @@ import styles from './CPUDebugger.module.css';
 import EmulatorState from '../emulator/EmulatorState';
 import { DebugDialogProps } from '../DebugDialog';
 import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import EmulatorBreakState from '../emulator/EmulatorBreakState';
 
 export const BREAKPOINTS_KEY = 'Breakpoints';
 
@@ -190,12 +191,25 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
           </div>
           ))
         }
-
+        
         <div className={styles.addBreakpoint}>
           <input type={"text"} value={newBreakpointAddress} onChange={e => {
             setNewBreakpointAddress(e.target.value)
           }}/>
           <button onClick={addBreakpoint}>Add</button>
+        </div>
+
+        <div>
+          <input
+            type="checkbox"
+            id="debugLog"
+            checked={EmulatorBreakState.enableLogs}
+            onChange={e => {
+              EmulatorBreakState.enableLogs = e.target.checked;
+              onRefresh();
+            }}
+          /> 
+          <label htmlFor="debugLog" >Enable debug logs</label>
         </div>
       </div>),
       title: 'Breakpoints'
@@ -231,6 +245,14 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
               { registerCell('Y', emulator.Y) }
               { registerCell('P', emulator.P) }
               { registerCell('SP', emulator.SP) }
+            </tr>
+            <tr>
+              { registerCell('N', (emulator.P & 0b10000000) >> 7) }
+              { registerCell('V', (emulator.P & 0b01000000) >> 6) }
+              { registerCell('D', (emulator.P & 0b00001000) >> 3) }
+              { registerCell('I', (emulator.P & 0b00000100) >> 2) }
+              { registerCell('Z', (emulator.P & 0b00000010) >> 1) }
+              { registerCell('C', (emulator.P & 0b00000001) >> 0) }
             </tr>
             <tr>
               { registerCell('PC', emulator.PC) }

@@ -1,5 +1,6 @@
 const EmulatorBreakState = {
-  break: false
+  break: false,
+  enableLogs: false
 };
 
 export default EmulatorBreakState;
