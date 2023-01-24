@@ -126,6 +126,7 @@ class PPU {
   dataBuffer = 0;
   oamAddress = 0;
 
+  vramReadDisableCounter = 0
   showSpritesLeftSide = false
 
   showBackgroundLeftSide = false
@@ -271,7 +272,12 @@ class PPU {
       const ppuAddress = this.V & 0x3FFF;
       // TODO: Handle palette reading here (V > 0x3EFF)
 
-      if (ppuAddress >= 0x3F00) {
+      // Double read of $2007 sometimes ignores extra read, and puts odd things into buffer.
+      // Do this to fix double_2007_read.nes - if re-reading 2007 within 2 CPU cycles, return 
+      // open bus.
+      if (this.vramReadDisableCounter > 0) {
+        return this.busLatch;
+      } else if (ppuAddress >= 0x3F00) {
         ret = this.readPPUMem(ppuAddress);
         if (!peek) {
           // From: https://wiki.nesdev.com/w/index.php/PPU_registers#Data_.28.242007.29_.3C.3E_read.2Fwrite
@@ -285,6 +291,11 @@ class PPU {
           this.dataBuffer = this.readPPUMem(ppuAddress);
           this.incrementVRAMAddress();
         }
+      }
+
+      // Disable reads for PPUData for 2 CPU cycles = 6 PPU cycles
+      if (!peek) {  
+        this.vramReadDisableCounter = 6;
       }
     } else if (address === OAMDATA) {
       ret = this.oamMemory[this.oamAddress];
@@ -313,7 +324,9 @@ class PPU {
   }
 
   setPPURegisterMem(address: number, value: number) {
-    this.busLatch = value;
+    if (address !== 0x4014) {
+      this.busLatch = value;
+    }
 
     switch (address) {
       case OAMDATA:
@@ -781,6 +794,10 @@ class PPU {
     }
 
     while (this.masterClock + this.ppuDivider <= targetMasterClock) {
+      if (this.vramReadDisableCounter > 0) {
+        this.vramReadDisableCounter--;
+      }
+  
       this.incrementDot();
 
       if (this.scanline < SCREEN_HEIGHT) {

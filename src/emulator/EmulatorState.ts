@@ -137,6 +137,9 @@ class EmulatorState {
   controller2 = 0;
   controller1Latch = 0;
   controller2Latch =  0;
+  controller1NumReadBits = 0;
+  controller2NumReadBits = 0;
+
   enableTraceLogging = false;
   rom: Rom
   lastNMI = 0;
@@ -215,6 +218,9 @@ class EmulatorState {
     this.controller2 = 0;
     this.controller1Latch = 0;
     this.controller2Latch = 0;
+    this.controller1NumReadBits = 0;
+    this.controller2NumReadBits = 0;
+  
     this.enableTraceLogging = enableTraceLogging;
     this.rom = rom;
     this.lastNMI = 0;
@@ -287,15 +293,26 @@ class EmulatorState {
     let value;
 
     if (addr === 0x4016) {
-      value = this.controller1Latch & 0x1;
+      if (this.controller1NumReadBits >= 8) {
+        value = 1;
+      } else {
+        value = this.controller1Latch & 0x1;
+      }
+      
       if (!peek) {
         this.controller1Latch >>= 1;
+        this.controller1NumReadBits++;
       }
     } else {
-      value = this.controller2Latch & 0x1;
+      if (this.controller2NumReadBits >= 8) {
+        value = 1;
+      } else {
+        value = this.controller2Latch & 0x1;
+      }
 
       if (!peek) {
         this.controller2Latch >>= 1;
+        this.controller2NumReadBits++;
       }
     }
 
@@ -331,8 +348,10 @@ class EmulatorState {
     if (value & 0b1) {
       if (addr === 0x4016) {
         this.controller1Latch = this.controller1;
+        this.controller1NumReadBits = 0;
       } else {
         this.controller2Latch = this.controller2;
+        this.controller2NumReadBits = 0;
       }
     }
   }
@@ -357,13 +376,23 @@ class EmulatorState {
     let writtenSpriteDMABytes = 0;
     let wroteDMCByte = false;
 
-    if (this.CYC % 2 === 1) {
-      // Currently on a write cycle, consume one byte to start at a read cycle
-      this.startWriteTick();
-      this.endWriteTick();
-      this.tickDMCWaitCycle();
+    const skipDummyReads = (address === 0x4016 || address === 0x4017);
+
+    const dummyRead = () => {
+      if (skipDummyReads) {
+        this.startReadTick(address);
+        this.endReadTick();
+      } else {
+        readByte(this, address);
+      }
     }
 
+    if (this.CYC % 2 === 1) {
+      // Currently on a write cycle, consume one byte to start at a read cycle
+      dummyRead();
+      this.tickDMCWaitCycle();
+    }
+    
     // Note that transferDMCDMA might become true during this while loop due to
     // the APU executing during memory accesses. What happens then is that the
     // DMC DMA overrides the OAM DMA, but only after a certain number of wait
@@ -382,7 +411,7 @@ class EmulatorState {
         this.tickDMCWaitCycle();
       } else {
         // DMC is running, but not yet ready. Do a dummy read, and decrement DMA wait counter.
-        readByte(this, address);
+        dummyRead();
         this.tickDMCWaitCycle();
       }
 
@@ -392,13 +421,15 @@ class EmulatorState {
       }
 
       // Then do a write cycle
-      this.startWriteTick();
-      this.endWriteTick();
-      this.tickDMCWaitCycle();
-
       if (this.transferSpriteDMA && writtenSpriteDMABytes > 0 && !wroteDMCByte) {
+        this.startWriteTick();
         this.ppu.pushOAMValue(spriteByte);
+        this.endWriteTick();  
+      } else {
+        dummyRead();
       }
+
+      this.tickDMCWaitCycle();
 
       if (writtenSpriteDMABytes === 256) {
         this.transferSpriteDMA = false;

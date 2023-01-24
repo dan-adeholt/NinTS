@@ -32,3 +32,5 @@ const dmcDmaDuringReadTestRoot = 'nes-test-roms/dmc_dma_during_read4/';
 test('DMC DMA During Read4 - dma_2007 read', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/dma_2007_read.nes', 'nes-test-images/dmc_dma_during_read4_dma_2007_read.nes.png', 25));
 test('DMC DMA During Read4 - dma_2007 write', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/dma_2007_write.nes', 'nes-test-images/dmc_dma_during_read4_dma_2007_write.nes.png', 35));
 test('DMC DMA During Read4 - dma_2007 readwrite', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/read_write_2007.nes', 'nes-test-images/dmc_dma_during_read4_read_write_2007.nes.png', 35));
+test('DMC DMA During Read4 - double 2007 read', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/double_2007_read.nes', 'nes-test-images/dmc_dma_during_read4_double_2007_read.nes.png', 35));
+test('DMC DMA During Read4 - dma 4016 read', () => testPPURomWithImage(dmcDmaDuringReadTestRoot + '/dma_4016_read.nes', 'nes-test-images/dmc_dma_during_read4_dma_4016_read.nes.png', 25));
