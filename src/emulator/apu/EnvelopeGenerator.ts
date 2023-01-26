@@ -13,7 +13,7 @@ class EnvelopeGenerator {
     } else {
       this.envelopeDividerPeriod--;
 
-      if (this.envelopeDividerPeriod === 0) {
+      if (this.envelopeDividerPeriod <= 0) {
         this.envelopeDividerPeriod = this.envelopePeriod;
 
         if (this.decayLevelCounter > 0) {
