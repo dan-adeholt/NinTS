@@ -27,7 +27,7 @@ class NoiseGenerator {
   }
 
   updateSampleValue() {
-    if (!this.isEnabled || this.lengthCounter.lengthCounter === 0) {
+    if (this.lengthCounter.lengthCounter === 0) {
       this.curOutputValue = 0;
     } else {
       if ((this.shiftRegister & 0b1) === 0) {
@@ -37,7 +37,7 @@ class NoiseGenerator {
       } else {
         this.curOutputValue = this.envelope.decayLevelCounter;
       }
-    }
+    }  
   }
 
   updateSequencer() {
@@ -64,7 +64,7 @@ class NoiseGenerator {
         const lengthCounterHalt = (value & 0b00100000) >> 5;
         const constantVolume = (value & 0b00010000) >> 4;
         const volumeEnvelope = (value & 0b00001111);
-
+        
         const haltCounterOrEnvelopeLoop = lengthCounterHalt === 1;
         this.lengthCounter.setHalt(haltCounterOrEnvelopeLoop);
         this.lengthCounter.haltCounter = haltCounterOrEnvelopeLoop;
@@ -81,8 +81,6 @@ class NoiseGenerator {
 
         this.mode = mode >> 7;
         this.timerSetting = NTSCEntryTable[periodIndex];
-        this.timerValue = this.timerSetting;
-
         this.shiftRegister = NTSCEntryTable[periodIndex];
         break;
       }
