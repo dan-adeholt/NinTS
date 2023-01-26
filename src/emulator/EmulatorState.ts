@@ -139,6 +139,7 @@ class EmulatorState {
   controller2Latch =  0;
   controller1NumReadBits = 0;
   controller2NumReadBits = 0;
+  controllerStrobe = false;
 
   enableTraceLogging = false;
   rom: Rom
@@ -220,6 +221,7 @@ class EmulatorState {
     this.controller2Latch = 0;
     this.controller1NumReadBits = 0;
     this.controller2NumReadBits = 0;
+    this.controllerStrobe = false;
   
     this.enableTraceLogging = enableTraceLogging;
     this.rom = rom;
@@ -299,7 +301,7 @@ class EmulatorState {
         value = this.controller1Latch & 0x1;
       }
       
-      if (!peek) {
+      if (!peek && !this.controllerStrobe) {
         this.controller1Latch >>= 1;
         this.controller1NumReadBits++;
       }
@@ -310,7 +312,7 @@ class EmulatorState {
         value = this.controller2Latch & 0x1;
       }
 
-      if (!peek) {
+      if (!peek && !this.controllerStrobe) {
         this.controller2Latch >>= 1;
         this.controller2NumReadBits++;
       }
@@ -345,15 +347,18 @@ class EmulatorState {
   }
 
   setInputMem(addr: number, value: number) {
+    this.controllerStrobe = (value & 0b1) === 0b1;
+
     if (value & 0b1) {
       if (addr === 0x4016) {
         this.controller1Latch = this.controller1;
-        this.controller1NumReadBits = 0;
       } else {
         this.controller2Latch = this.controller2;
-        this.controller2NumReadBits = 0;
       }
     }
+
+    this.controller1NumReadBits = 0;
+    this.controller2NumReadBits = 0;
   }
 
   tickDMCWaitCycle() {
