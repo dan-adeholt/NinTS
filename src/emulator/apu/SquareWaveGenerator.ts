@@ -60,7 +60,7 @@ export default class SquareWaveGenerator {
       this.timerSetting = targetPeriod;
     }
 
-    if (this.sweepReloadFlag || this.sweepDivider === 0) {
+    if (this.sweepReloadFlag || this.sweepDivider <= 0) {
 
       this.sweepDivider = this.sweepPeriod;
       this.sweepReloadFlag = false;
