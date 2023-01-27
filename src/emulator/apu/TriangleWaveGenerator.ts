@@ -13,7 +13,7 @@ class TriangleWaveGenerator {
   lengthCounter = new LengthCounter();
   linearCounter = 0;
   generatorIndex = 0;
-  curOutputValue = 0;
+  curOutputValue = sequence[0];
   linearReloadFlag = true;
 
   updateLinearCounter() {
@@ -34,7 +34,6 @@ class TriangleWaveGenerator {
 
   updateSequencer() {
     if (!this.isEnabled) {
-      this.curOutputValue = 0;
       return;
     }
 
