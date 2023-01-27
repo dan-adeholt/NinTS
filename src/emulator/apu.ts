@@ -58,7 +58,7 @@ class APU {
   pendingFrameCounterMode = 0;
   frameCounterMode = 0;
   lastSample = 0;
-  lastRawSample = 0;
+  lastRawSample = -0.5;
   accumulatedSamplesSquare1 = 0;
   accumulatedSamplesSquare2 = 0;
   accumulatedSamplesTriangle = 0;
