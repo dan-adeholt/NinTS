@@ -3,7 +3,6 @@ import { DebugDialogProps } from '../DebugDialog';
 import Dialog from '../Dialog';
 import EmulatorState from '../emulator/EmulatorState';
 import { EmptyRom, parseROM } from '../emulator/parseROM';
-import { NTSC_CPU_CYCLES_PER_SECOND } from '../emulator/apu';
 import PPUMemorySpace from '../emulator/mappers/PPUMemorySpace';
 import CPUMemorySpace from '../emulator/mappers/CPUMemorySpace';
 import parseMapper from '../emulator/mappers/parseMapper';
@@ -16,22 +15,23 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
   const [perfStr, setPerfStr] = useState<string | null>(null);
 
   const profileAPU = useCallback(() => {
-    let numSamples = 0;
-    const onSample = () => {
-      numSamples++;
-    };
-
     const testEmulator = new EmulatorState();
-    testEmulator.initMachine(EmptyRom, false, onSample);
-    testEmulator.CYC = 0;
+    testEmulator.initMachine(EmptyRom, false, null);
 
-    const numSeconds = 20;
+    const numCycles = 200000000;
+    const t0 = performance.now();
 
-    while(testEmulator.CYC < (NTSC_CPU_CYCLES_PER_SECOND * numSeconds)) {
-      testEmulator.stepFrame(false);
+    // Enable all channels
+    testEmulator.apu.setAPURegisterMem(0x4015, 0b11111, 0);
+    
+    for (let i = 0; i < numCycles; i++) {
+      testEmulator.apu.tick();
     }
 
-    setPerfStr('Num samples: ' + numSamples / numSeconds);
+    const diffMs = (performance.now() - t0);
+    const clockSpeed = ((numCycles) / (diffMs * 1000));
+    testEmulator.CYC = 0;
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz');
   }, []);
 
 
@@ -51,7 +51,7 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
     const ntscPpuClockSpeed = 21.477272 / 3.0;
     const clockSpeed = ((ppu.cycle - startCycle) / (diffMs * 1000));
     const ratio = (clockSpeed / ntscPpuClockSpeed).toFixed(2);
-    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz: ' + ratio);
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + ratio + 'MHz');
   }, []);
 
   const profileCPU = useCallback(async () => {
@@ -82,15 +82,19 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
         const rom = parseROM(new Uint8Array(arrayBuf));
         const em = new EmulatorState();
         em.initMachine(rom, false, null);
+        em.ppu.disabled = true;
+        em.apu.disabled = true;
         return em;
       }));
 
     const emulators = await Promise.all(promises);
     const t0 = performance.now();
+    let totalNumCycles = 0;
 
     for (const emulator of emulators) {
       let testIsRunning = false;
       let testIsDone = false;
+      const startCycle = emulator.CYC;
 
       while (!testIsDone) {
         const emulatorStatus = emulator.step();
@@ -115,6 +119,7 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
               console.error('Failed with status: ', hex(status) + ' - ' + testText);
             }
             testIsDone = true;
+            totalNumCycles += (emulator.CYC - startCycle);
           }
         } else if (!testIsRunning) {
           testIsRunning = status === 0x80;
@@ -123,7 +128,9 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
     }
 
     const diffMs = (performance.now() - t0);
-    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms');
+    const clockSpeed = ((totalNumCycles) / (diffMs * 1000));
+
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz');
   }, [emulator]);
 
   return (
