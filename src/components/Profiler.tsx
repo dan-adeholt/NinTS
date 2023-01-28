@@ -36,16 +36,16 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
 
 
   const profilePPU = useCallback(() => {
-    const t0 = performance.now();
-    const startCycle = emulator.ppu.cycle;
     const ppuMemory = new PPUMemorySpace(EmptyRom);
     const cpuMemory = new CPUMemorySpace(EmptyRom);
     const mapper = parseMapper(EmptyRom, cpuMemory, ppuMemory);
     const ppu = new PPU(EmptyRom.settings, mapper);
+    const startCycle = ppu.cycle;
     ppu.maskRenderingEnabled = true;
     ppu.maskBackgroundEnabled = true;
     ppu.maskRenderLeftSide = true;
     ppu.maskSpritesEnabled = true;
+    const t0 = performance.now();
     ppu.updatePPU(ppu.masterClock + 800000000);
     const diffMs = (performance.now() - t0);
     const ntscPpuClockSpeed = 21.477272 / 3.0;
@@ -55,7 +55,7 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
   }, []);
 
   const profileCPU = useCallback(async () => {
-    const romRootPath = 'http://localhost:5173/src/tests/roms/';
+    const romRootPath = 'http://localhost:4004/';
 
     const romPaths = [
       'instr-test/01-basics.nes',
