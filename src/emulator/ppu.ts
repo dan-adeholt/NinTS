@@ -151,7 +151,7 @@ class PPU {
   tileScanlineIndex = 0;
   tileScanline = new Uint32Array(SCREEN_WIDTH + 8);
   framebuffer = new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT);
-  paletteRAM = new Uint8Array(32)
+  paletteRAM = new Uint32Array(32)
   slack = 0;
   disabled = false;
   mapper: Mapper;
@@ -170,18 +170,13 @@ class PPU {
 
 
   paletteIndexedColor(indexedColor: number, paletteIndex: number, baseOffset: number) {
-    let paletteAddress = baseOffset + paletteIndex * 4;
-
-    const p1Color = this.colors[this.readPPUMem(paletteAddress++)];
-    const p2Color = this.colors[this.readPPUMem(paletteAddress++)];
-    const p3Color = this.colors[this.readPPUMem(paletteAddress++)];
-
+    // Shortcut: We know we are always in palette RAM here, read from there directly.    
     if (indexedColor === 1) {
-      return p1Color;
+      return this.colors[this.paletteRAM[(baseOffset + (paletteIndex * 4)) & 0x1F]];
     } else if (indexedColor === 2) {
-      return p2Color;
+      return this.colors[this.paletteRAM[(baseOffset + (paletteIndex * 4) + 1) & 0x1F]];
     } else if (indexedColor === 3) {
-      return p3Color;
+      return this.colors[this.paletteRAM[(baseOffset + (paletteIndex * 4) + 2) & 0x1F]];
     }
 
     return 0;
@@ -219,6 +214,10 @@ class PPU {
     }
   }
 
+  readDirectPPUMem(ppuAddress: number) {  
+    return this.mapper.ppuMemory.read(ppuAddress);
+  }
+  
   readPPUMem(ppuAddress: number) {
     if (isPPUPaletteAddress(ppuAddress)) {
       return this.paletteRAM[ppuAddress & 0x1F];
@@ -572,7 +571,7 @@ class PPU {
   updateBackgroundRegisters() {
     const scanlineCycle = this.scanlineCycle;
 
-    if (scanlineCycle < 2 || (scanlineCycle > 257 && scanlineCycle < 322) || scanlineCycle > 337) {
+    if (scanlineCycle > 257 && scanlineCycle < 322 || scanlineCycle > 337 || scanlineCycle < 2) {
       return;
     }
 
@@ -589,8 +588,7 @@ class PPU {
       const x = ((this.V >>> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
 
       const attributeAddress = 0x23C0 | nametable | y | x;
-      let tileIndex = this.readPPUMem(0x2000 | (this.V & 0x0FFF));
-      tileIndex = (this.controlBgPatternAddress << 8) | tileIndex;
+      const tileIndex = (this.controlBgPatternAddress << 8) | this.readPPUMem(0x2000 | (this.V & 0x0FFF));
       const attribute = this.readPPUMem(attributeAddress);
       const palette = getPaletteFromByte(this.V, attribute);
 
@@ -815,7 +813,7 @@ class PPU {
 
 
       this.cycle++;
-      this.masterClock += this.ppuDivider;
+        this.masterClock += this.ppuDivider;
     }
 
     this.slack = targetMasterClock - this.masterClock;
