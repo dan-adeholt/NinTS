@@ -69,6 +69,7 @@ class APU {
   frameInterrupt = false;
   frameInterruptCycle = 0;
   triggerIRQ = true;
+  disabled = false;
 
   audioSampleCallback : ((sample: number) => void) | null = null
 
@@ -316,6 +317,10 @@ class APU {
   }
 
   tick() {
+    if (this.disabled) {
+      return
+    }
+
     this.masterClock += this.cpuDivider;
     this.tickFrameCounter();
     this.reloadLengthCounters();
