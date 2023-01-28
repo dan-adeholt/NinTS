@@ -10,7 +10,8 @@ import {
   ModeZeroPage,
   ModeZeroPageX,
   ModeZeroPageY,
-  opcodeMetadata
+  opcodeMetadata,
+  MaxInstructionSize
 } from './cpu';
 
 import {
@@ -22,7 +23,6 @@ import {
   P_REG_ZERO,
 } from './instructions/util';
 import { onSamePageBoundary, PAGE_MASK } from './memory';
-import _ from 'lodash';
 import EmulatorState from "./EmulatorState";
 
 export const peekMem = (state : EmulatorState, address: number) => {
@@ -198,8 +198,6 @@ export const stateToString = (state : EmulatorState) => {
   return str;
 }
 
-const maxInstructionSize = _.max(_.map(opcodeMetadata, 'instructionSize'));
-
 export const disassembleLine = (state : EmulatorState, address: number): string[] => {
   const opcode = peekMem(state, address);
   const line = ['0x' + hex16(address)];
@@ -216,7 +214,7 @@ export const disassembleLine = (state : EmulatorState, address: number): string[
       line.push(hex(peekMem(state, address + i)));
     }
 
-    for (let i = instructionSize; i < maxInstructionSize; i++) {
+    for (let i = instructionSize; i < MaxInstructionSize; i++) {
       line.push('--');
     }
 

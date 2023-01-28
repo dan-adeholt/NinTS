@@ -4,7 +4,6 @@ import { OAM_DMA, opcodeMetadata, opcodeTable } from './cpu';
 import PPU from './ppu';
 import { interruptHandler } from './instructions/stack';
 import parseMapper from './mappers/parseMapper';
-import _ from 'lodash';
 import APU from './apu';
 import NROMMapper from "./mappers/NROMMapper";
 import { EmptyRom, Rom, RomSettings } from "./parseROM";
@@ -42,16 +41,17 @@ const ignoredKeys = [
   'rom'
 ];
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */ 
 const readObjectState = (state : any, data: any) => {
-  _.forOwn(state, (value, key) => {
+  const entries = Object.entries(state);
+  entries.forEach(([key, value]) => {
     const storedValue = data[key];
 
     if (storedValue === undefined) {
       return;
     }
 
-    if (!_.isArray(value) && _.isObject(value)) {
+    if (!Array.isArray(value) && value instanceof Object) {
       if (value.constructor === Uint8Array) {
         state[key].set(Uint8Array.from(storedValue));
       } else if (value.constructor === Uint32Array) {
@@ -68,12 +68,13 @@ const readObjectState = (state : any, data: any) => {
 const dumpObjectState = (state : any, prefix = '') => {
   const dumpedState: any = {};
 
-  _.forOwn(state, (value, key) => {
-    if (ignoredKeys.includes(prefix + key) || _.isFunction(value)) {
+  const entries = Object.entries(state);
+  entries.forEach(([key, value]) => {
+    if (ignoredKeys.includes(prefix + key) || typeof value === 'function') {
       return;
     }
 
-    if (!_.isArray(value) && _.isObject(value)) {
+    if (!Array.isArray(value) && value instanceof Object) {
       if (value.constructor === Uint8Array || value.constructor === Uint32Array) {
         dumpedState[key] = Array.from(value);
       } else {

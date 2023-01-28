@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import _ from 'lodash';
 import {
   SPRITE_ATTRIB_FLIP_HORIZONTAL,
   SPRITE_ATTRIB_FLIP_VERTICAL,
@@ -25,7 +24,6 @@ type OAMLine = {
 
 const PPUOAMDebugger = ({ refresh, emulator, isOpen, onClose } : DebugDialogProps) => {
   const lines = useMemo<OAMLine[]>(() => {
-    _.noop(refresh);
     if (emulator === null) {
       return [];
     }

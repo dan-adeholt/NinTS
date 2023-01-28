@@ -1,6 +1,5 @@
 import { testInstructionTestRom, testPPURom, testPPURomWithImage } from './testutil';
 import { COLORS } from '../emulator/constants';
-import _ from 'lodash';
 import { expect, test } from 'vitest'
 
 const romRootPath = 'src/tests/roms/ppu-tests/';
@@ -12,7 +11,7 @@ test('01 - Background', () => testPPURom(
 
     for (let colorIndex = 0; colorIndex < COLORS.length; colorIndex++) {
       const expectedColor = COLORS[colorIndex];
-      expect(_.every(emulator.ppu.framebuffer, renderedColor => renderedColor === expectedColor)).toEqual(true);
+      expect(emulator.ppu.framebuffer.every(renderedColor => renderedColor === expectedColor)).toEqual(true);
       emulator.stepFrame(false);
     }
   })

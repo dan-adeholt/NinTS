@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import * as branch from './instructions/branch';
 import * as stack from './instructions/stack';
 import * as readmodifywrite from './instructions/readmodifywrite';
@@ -29,6 +28,8 @@ export const ModeRelative = 10;
 export const ModeZeroPage = 11;
 export const ModeZeroPageX = 12;
 export const ModeZeroPageY = 13;
+
+export const MaxInstructionSize = 3;
 
 export const getInstructionSize = (mode : number) => {
     switch (mode) {
@@ -326,7 +327,7 @@ type OpcodeMetadataEntry = {
 export const opcodeMetadata: (Record<number, OpcodeMetadataEntry>) = {};
 export const opcodeTable = new Array(256);
 
-_.forEach(opcodes, (entry) => {
+opcodes.forEach(entry => {
     const [opcode, name, mode, implementation, readFunction] = entry;
 
     opcodeMetadata[opcode] = { name, mode };

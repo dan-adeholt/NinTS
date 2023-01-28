@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import _ from 'lodash';
 import styles from './PPUDebugging.module.css';
 import { DebugDialogProps } from '../DebugDialog';
 import Dialog, { DialogHorizontalPosition } from '../Dialog';
@@ -7,7 +6,6 @@ import classNames from 'classnames';
 
 const PPUScanlineDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
   const lines = useMemo(() => {
-    _.noop(refresh);
     const lines = emulator.ppu.scanlineLogger.getLines();
 
     let ret = '';

@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretSquareRight, faPause, faPlay, faStepForward } from '@fortawesome/free-solid-svg-icons'
 import { disassemble, DisassembledLine, disassembleLine, hex, hex16 } from '../emulator/stateLogging';
 import classNames from 'classnames';
-import _ from 'lodash';
 import { opcodeMetadata } from '../emulator/cpu';
 import { RunModeType } from '../App';
 import SegmentControl from './SegmentControl';
@@ -15,12 +14,12 @@ import EmulatorBreakState from '../emulator/EmulatorBreakState';
 
 export const BREAKPOINTS_KEY = 'Breakpoints';
 
-const allOpcodeNames = _.uniq(_.map(opcodeMetadata, 'name'));
+const allOpcodeNames = new Set(Object.values(opcodeMetadata).map(opcode => opcode.name));
 
 const getComponentStyle = (component : string) => {
   if (component.startsWith('0x')) {
     return styles.addressComponent;
-  } else if (allOpcodeNames.includes(component)) {
+  } else if (allOpcodeNames.has(component)) {
     return styles.opcodeComponent;
   }
   return '';
@@ -95,7 +94,7 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
   }, []);
 
   const addBreakpoint = useCallback(() => {
-    const address = _.parseInt(newBreakpointAddress.replace('$', '0x'), 16);
+    const address = parseInt(newBreakpointAddress.replace('$', '0x'), 16);
     setNewBreakpointAddress('');
     toggleBreakpoint('' + address);
   }, [newBreakpointAddress, toggleBreakpoint]);
@@ -183,12 +182,13 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
     },
     {
       view: (<div className={styles.breakpointContainer}>
-        { _.map(breakpoints, (breakpointState, breakpointAddress) => (
-          <div key={breakpointAddress}>
-            <input type="checkbox" onChange={() => toggleBreakpoint(breakpointAddress)} checked={breakpointState}/>
-            { hex(_.parseInt(breakpointAddress, 10)) }
-            <button onClick={() => removeBreakpoint(breakpointAddress)}>Remove</button>
-          </div>
+        {
+          Object.entries(breakpoints).map(([breakpointAddress, breakpointState]) => (
+            <div key={breakpointAddress}>
+              <input type="checkbox" onChange={() => toggleBreakpoint(breakpointAddress)} checked={breakpointState}/>
+              0x{ hex(parseInt(breakpointAddress, 10)) }
+              <button onClick={() => removeBreakpoint(breakpointAddress)}>Remove</button>
+            </div>
           ))
         }
         
@@ -258,8 +258,8 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
               { registerCell('PC', emulator.PC) }
               { registerCell('V', emulator.ppu?.V ?? '', hex16) }
               { registerCell('T', emulator.ppu.T, hex16) }
-              { registerCell('CYC', emulator.ppu.scanlineCycle, _.identity) }
-              { registerCell('CPU CYC', emulator.CYC, _.identity) }
+              { registerCell('CYC', emulator.ppu.scanlineCycle, c => c.toString()) }
+              { registerCell('CPU CYC', emulator.CYC, c => c.toString()) }
             </tr>
             </tbody>
           </table>

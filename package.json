@@ -21,7 +21,6 @@
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-react": "^7.31.10",
     "js-sha1": "^0.6.0",
-    "lodash": "^4.17.20",
     "pngjs": "^6.0.0",
     "pre-commit": "^1.2.2",
     "react": "^18.2.0",

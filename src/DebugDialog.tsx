@@ -4,7 +4,6 @@ import { BaseDialogProps } from './Dialog';
 import EmulatorState from './emulator/EmulatorState';
 import { KeyListener, RunModeType } from './App';
 import CPUDebugger from './components/CPUDebugger';
-import _ from 'lodash';
 import PPUNameTableDebugger from './components/PPUNameTableDebugger';
 import PPUSpritesDebugger from './components/PPUSpritesDebugger';
 import PPUOAMDebugger from './components/PPUOAMDebugger';
@@ -24,7 +23,6 @@ export enum DebugDialog {
   CompareTrace = 'CompareTrace',
   Profiler = 'Profiler'
 }
-
 
 export type DebugDialogProps = BaseDialogProps & {
   emulator: EmulatorState
@@ -50,16 +48,20 @@ export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<
   [DebugDialog.Profiler]: Profiler
 });
 
-export const DebugDialogHotkeys : Record<string, DebugDialog> = {
-  'F1': DebugDialog.CPUDebugger,
-  'F2': DebugDialog.APUDebugger,
-  'F3': DebugDialog.PPUNametables,
-  'F4': DebugDialog.PPUSprites,
-  'F5': DebugDialog.PPUOAM,
-  'F6': DebugDialog.VRAMDebugger,
-  'F8': DebugDialog.PPUScanlines,
-  'F9': DebugDialog.CompareTrace,
-  'F12': DebugDialog.Profiler,
+export const DebugDialogToHotkey : Record<DebugDialog, string> = {
+  [DebugDialog.CPUDebugger]: 'F1',
+  [DebugDialog.APUDebugger]: 'F2',
+  [DebugDialog.PPUNametables]: 'F3',
+  [DebugDialog.PPUSprites]: 'F4',
+  [DebugDialog.PPUOAM]: 'F5',
+  [DebugDialog.VRAMDebugger]: 'F6',
+  [DebugDialog.PPUScanlines]: 'F8',
+  [DebugDialog.CompareTrace]: 'F9',
+  [DebugDialog.Profiler]: 'F12',
 }
 
-export const DebugDialogHotkeysComponents = _.invert(DebugDialogHotkeys);
+export const HotkeyToDebugDialog: Record<string, DebugDialog> = {};
+
+Object.entries(DebugDialogToHotkey).forEach(([key, value]) => {
+  HotkeyToDebugDialog[value] = key as DebugDialog; // Object.entries loses key
+})

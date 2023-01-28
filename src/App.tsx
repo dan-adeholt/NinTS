@@ -12,11 +12,10 @@ import EmulatorState, {
 } from './emulator/EmulatorState';
 import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import { BREAKPOINTS_KEY } from './components/CPUDebugger';
-import _ from 'lodash';
 import AudioBuffer from './AudioBuffer';
 import { AUDIO_BUFFER_SIZE, SAMPLE_RATE } from './emulator/apu';
 import Toolbar from './Toolbar';
-import { DebugDialogHotkeys, getDebugDialogComponents } from './DebugDialog';
+import { HotkeyToDebugDialog, getDebugDialogComponents } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
@@ -109,7 +108,7 @@ function App() {
 
     const removeKeyListener = useCallback((listener : KeyListener) => {
         setKeyListeners(oldListeners => {
-            return _.without(oldListeners, listener);
+            return oldListeners.filter(oldListener => oldListener !== listener);
         });
     }, []);
 
@@ -118,8 +117,8 @@ function App() {
             return;
         }
 
-        if (e.type === 'keydown' && e.key in DebugDialogHotkeys) {
-            toggleOpenDialog(DebugDialogHotkeys[e.key]);
+        if (e.type === 'keydown' && e.key in HotkeyToDebugDialog) {
+            toggleOpenDialog(HotkeyToDebugDialog[e.key]);
         }
 
         if (e.key in KeyTable) {
@@ -140,7 +139,6 @@ function App() {
 
     const stopAudioContext = useCallback(() => {
         if (audioRef.current) {
-            console.log('Stop audio context');
             audioRef.current.scriptProcessor.disconnect(audioRef.current.audioContext.destination);
             audioRef.current = null;
         }
@@ -233,9 +231,7 @@ function App() {
 
 
     const handleFocus = useCallback(() => {
-        console.log('Inside handle focus');
         if (document.visibilityState === 'hidden') {
-            console.log('Stopping');
             _setRunMode(RunModeType.STOPPED);
         }
     }, [_setRunMode]);

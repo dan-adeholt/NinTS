@@ -1,14 +1,11 @@
 import React, { useMemo } from 'react';
 import { hex, hex16 } from '../emulator/stateLogging';
-import _ from 'lodash';
 import styles from './PPUDebugging.module.css';
 import Dialog, { DialogHorizontalPosition } from '../Dialog';
 import { DebugDialogProps } from '../DebugDialog';
 
 const PPUVRAMDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
   const lines = useMemo<string[]>(() => {
-    _.noop(refresh);
-
     const ret: string[] = [];
     for (let i = 0; i < 1024; i++) {
       let line = hex16(i * 16) + ' | ';

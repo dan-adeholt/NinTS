@@ -1,7 +1,6 @@
 import fs from 'fs';
 import { parseROM } from './parseROM';
 import EmulatorState  from './EmulatorState';
-import _ from 'lodash';
 import { expect, test } from 'vitest'
 
 test('Save state', () => {
@@ -21,5 +20,5 @@ test('Save state', () => {
     const json2 = emulator2.saveEmulator();
     fs.writeFileSync('/tmp/output.json', JSON.stringify(json, null, 2));
     fs.writeFileSync('/tmp/output2.json', JSON.stringify(json2, null, 2));
-    expect(_.isEqual(json, json2)).toBeTruthy();
+    expect(JSON.stringify(json)).toEqual(JSON.stringify(json2));
 })

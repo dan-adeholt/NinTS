@@ -2,7 +2,6 @@ import { parseROM, Rom } from '../emulator/parseROM';
 import EmulatorState from '../emulator/EmulatorState';
 import { hex, procFlagsToString, stateToString } from '../emulator/stateLogging';
 import { PNG } from 'pngjs';
-import _ from 'lodash';
 import fs from 'fs';
 import path from 'path';
 import { expect } from 'vitest'
@@ -195,6 +194,20 @@ export const dumpFramebuffer = (visibleBuffer32: Uint32Array, path = '/tmp/out.p
   fs.writeFileSync(path, PNG.sync.write(outPNG, {}));
 }
 
+const compareBuffers = (buf1: Uint32Array, buf2: Uint32Array) => {
+  if (buf1.length !== buf2.length) {
+    return false;
+  }
+
+  for (let i = 0; i < buf1.length; i++) {
+    if (buf1[i] !== buf2[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export const testPPURomWithImage = (romFile: string, imgFile: string, numFrames = 5, patchRom?: (rom: Rom) => void) => {
   const data = fs.readFileSync(romFile);
 
@@ -222,5 +235,5 @@ export const testPPURomWithImage = (romFile: string, imgFile: string, numFrames 
     }
   }
 
-  expect(_.isEqual(visibleBuffer, png)).toEqual(true);
+  expect(compareBuffers(visibleBuffer, png)).toEqual(true);
 };

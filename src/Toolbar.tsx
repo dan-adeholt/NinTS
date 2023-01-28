@@ -3,7 +3,7 @@ import styles from './Toolbar.module.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPowerOff, faFileAlt, faFile, faPause, faPlay, faRefresh, faSave, faTools } from '@fortawesome/free-solid-svg-icons'
 import Dropdown from './Dropdown';
-import { DebugDialog, DebugDialogHotkeysComponents } from './DebugDialog';
+import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
 import classNames from 'classnames';
 import EmulatorState, { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './emulator/EmulatorState';
@@ -89,7 +89,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode } : ToolbarPr
             <button onClick={() => {
               toggleOpen(DropdownMenu.Settings);
               toggleOpenDialog(dialog);
-            }} key={dialog}>{ dialog } <div className={styles.buttonSpace}/> { DebugDialogHotkeysComponents[dialog] } </button>
+            }} key={dialog}>{ dialog } <div className={styles.buttonSpace}/> { DebugDialogToHotkey[dialog] } </button>
           ))}
         </Dropdown>
       </div>
