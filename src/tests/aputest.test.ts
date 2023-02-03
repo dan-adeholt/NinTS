@@ -39,4 +39,5 @@ const apuResetRoot = 'nes-test-roms/apu_reset/';
 test('apu_reset - 4015_cleared.nes', () => testPPURomWithImageAndResetImage(apuResetRoot + '/4015_cleared.nes', 'nes-test-images/reset_image.png', 30, 'nes-test-images/apu_reset_4015_cleared.nes.png', 30));
 test('apu_reset - 4017_timing.nes', () => testPPURomWithImageAndResetImage(apuResetRoot + '/4017_timing.nes', 'nes-test-images/reset_image_4017_timing.nes.png', 30, 'nes-test-images/apu_reset_4017_timing.nes.png', 30));
 test('apu_reset - 4017_written.nes', () => testPPURomWithImageAndResetImageTwice(apuResetRoot + '/4017_written.nes', 'nes-test-images/reset_image.png', 'nes-test-images/reset_image_again.png', 30, 'nes-test-images/apu_reset_4017_written.nes.png', 30));
+test('apu_reset - irq_flag_cleared.nes', () => testPPURomWithImageAndResetImage(apuResetRoot + '/irq_flag_cleared.nes', 'nes-test-images/reset_image.png', 30, 'nes-test-images/apu_reset_irq_flag_cleared.nes.png', 30));
 // test(, () => testInstructionTestRom(apuResetRoot + '4015_cleared.nes'));
