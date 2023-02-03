@@ -43,9 +43,19 @@ class DMCGenerator {
     timer: NTSCRates[0]
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   reset() {
-
+    this.output.counter = 0;
+    this.irq.interrupt = false;
+    this.settings.irqEnabled = false;
+    this.settings.loop = false;
+    this.reader.buffer = 0;    
+    this.reader.remainingBytes = 0;    
+    this.reader.currentAddress = 0;
+    this.output.shiftRegister = 0;
+    // this.output.bitsRemaining = 0; // Commented out to make works_immediately.nes work
+    this.output.silenceFlag = true;
+    this.clock.period = NTSCRates[0] - 1
+    this.clock.timer = NTSCRates[0]
   }
 
   setRegisterMem(address: number, value: number) {
