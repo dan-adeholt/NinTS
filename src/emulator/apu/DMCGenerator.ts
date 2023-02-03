@@ -43,6 +43,11 @@ class DMCGenerator {
     timer: NTSCRates[0]
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  reset() {
+
+  }
+
   setRegisterMem(address: number, value: number) {
     if (address === 0x4010) {
       this.settings.irqEnabled = (value & 0b10000000) != 0;

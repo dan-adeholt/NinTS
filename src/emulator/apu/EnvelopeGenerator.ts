@@ -5,6 +5,14 @@ class EnvelopeGenerator {
   envelopePeriod = 0;
   envelopeLoop = false;
 
+  reset()   {
+    this.envelopeStartFlag = false;
+    this.envelopeDividerPeriod = 0;
+    this.decayLevelCounter = 15;
+    this.envelopePeriod = 0;
+    this.envelopeLoop = false;
+  }
+
   update() {
     if (this.envelopeStartFlag) {
       this.envelopeStartFlag = false;

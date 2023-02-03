@@ -70,6 +70,7 @@ class APU {
   frameInterruptCycle = 0;
   triggerIRQ = true;
   disabled = false;
+  lastValue4017 = 0;
 
   audioSampleCallback : ((sample: number) => void) | null = null
 
@@ -96,6 +97,7 @@ class APU {
       this.noise.setEnabled(   (value & 0b01000) !== 0);
       this.dmc.setEnabled(     (value & 0b10000) !== 0, cpuCycles % 2 === 0);
     } else if (address === 0x4017) {
+      this.lastValue4017 = value;  
       this.pendingFrameCounterMode = (value & 0b10000000) >> 7;
       if (cpuCycles % 2 === 0) {
         // If the write occurs during an APU cycle, the effects occur 3 CPU cycles after the $4017 write cycle
@@ -326,6 +328,21 @@ class APU {
     this.reloadLengthCounters();
     this.tickSequencers();
     this.tickSampleCollector();
+  }
+
+  reset() {
+    // Also reset frame counter  
+    this.frameInterrupt = false;
+    this.frameInterruptCycle = 0;
+    this.triggerIRQ = true;
+    this.disabled = false;
+
+    this.square1.reset();
+    this.square2.reset();
+    this.triangle.reset();
+    this.noise.reset();
+    this.dmc.reset();
+    this.setAPURegisterMem(0x4017, this.lastValue4017, 0);
   }
 }
 

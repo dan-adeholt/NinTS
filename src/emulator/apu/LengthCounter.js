@@ -35,6 +35,15 @@ class LengthCounter {
   }
 
   reset() {
+    this.clear();
+    this.lengthCounter = 0;
+    this.haltCounter = false;
+    this.pendingHaltCounter = false;
+    this.reloadValue = 0;
+    this.prevValue = 0;
+  }
+
+  clear() {
     this.lengthCounter = 0;
   }
 

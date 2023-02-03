@@ -208,22 +208,12 @@ const compareBuffers = (buf1: Uint32Array, buf2: Uint32Array) => {
   return true;
 }
 
-export const testPPURomWithImage = (romFile: string, imgFile: string, numFrames = 5, patchRom?: (rom: Rom) => void) => {
-  const data = fs.readFileSync(romFile);
-
-  const rom = parseROM(data);
-  patchRom?.(rom);
-  const state = new EmulatorState();
-  state.initMachine(rom, false, null);
-
-  for (let i = 0; i < numFrames; i++) {
-    state.stepFrame(false);
-  }
-
+const validatePPURomImage = (state: EmulatorState, romFileName: string, imgFileName: string) => {
   const visibleBuffer = convertBufferToVisibleArea(state.ppu.framebuffer);
-  dumpFramebuffer(visibleBuffer, '/tmp/' + path.basename(romFile) + '.png');
+  
+  dumpFramebuffer(visibleBuffer, '/tmp/' + path.basename(romFileName) + '.png');
 
-  const imgData = fs.readFileSync(imgFile);
+  const imgData = fs.readFileSync(imgFileName);
 
   const png8 = PNG.sync.read(imgData);
   const png = new Uint32Array(png8.data.buffer);
@@ -236,4 +226,41 @@ export const testPPURomWithImage = (romFile: string, imgFile: string, numFrames 
   }
 
   expect(compareBuffers(visibleBuffer, png)).toEqual(true);
+}
+
+export const testPPURomWithImage = (romFile: string, imgFile: string, numFrames = 5, patchRom?: (rom: Rom) => void) => {
+  const data = fs.readFileSync(romFile);
+
+  const rom = parseROM(data);
+  patchRom?.(rom);
+  const state = new EmulatorState();
+  state.initMachine(rom, false, null);
+
+  for (let i = 0; i < numFrames; i++) {
+    state.stepFrame(false);
+  }
+
+  validatePPURomImage(state, romFile, imgFile);
+};
+
+export const testPPURomWithImageAndResetImage = (romFile: string, resetImgFile: string, numFramesBeforeReset: number, imgFile: string, numFrames: number) => {
+  const data = fs.readFileSync(romFile);
+
+  const rom = parseROM(data);
+  const state = new EmulatorState();
+  state.initMachine(rom, false, null);
+
+  for (let i = 0; i < numFramesBeforeReset; i++) {
+    state.stepFrame(false);
+  }
+
+  validatePPURomImage(state, romFile, resetImgFile);
+
+  state.reset();
+
+  for (let i = 0; i < numFrames; i++) {
+    state.stepFrame(false);
+  }
+
+  validatePPURomImage(state, romFile, imgFile);
 };

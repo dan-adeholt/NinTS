@@ -260,6 +260,7 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
               { registerCell('T', emulator.ppu.T, hex16) }
               { registerCell('CYC', emulator.ppu.scanlineCycle, c => c.toString()) }
               { registerCell('CPU CYC', emulator.CYC, c => c.toString()) }
+              { registerCell('PREV PC', emulator.prevOpcodePC, hex16) }
             </tr>
             </tbody>
           </table>

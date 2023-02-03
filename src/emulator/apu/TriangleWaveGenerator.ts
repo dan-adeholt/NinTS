@@ -16,6 +16,19 @@ class TriangleWaveGenerator {
   curOutputValue = sequence[0];
   linearReloadFlag = true;
 
+  reset() {
+    this.lengthCounter.reset();
+    this.isEnabled = false;
+    this.linearCounterHaltFlag = false;
+    this.linearCounterReload = 0;
+    this.timerSetting = 0;
+    this.timerValue = 0;
+    this.linearCounter = 0;
+    this.generatorIndex = 0;
+    this.curOutputValue = sequence[0];
+    this.linearReloadFlag = true;
+  }
+
   updateLinearCounter() {
     if (this.linearReloadFlag) {
       this.linearCounter = this.linearCounterReload;
@@ -76,7 +89,7 @@ class TriangleWaveGenerator {
   setEnabled(isEnabled: boolean) {
     this.isEnabled = isEnabled;
     if (!isEnabled) {
-      this.lengthCounter.reset();
+      this.lengthCounter.clear();
     }
   }
 }

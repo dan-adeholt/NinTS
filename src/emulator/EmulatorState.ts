@@ -167,6 +167,8 @@ class EmulatorState {
 
   waitCyclesDMC = 0
 
+  prevOpcodePC = 0
+
   dmcDmaCallback = () => {
     this.transferDMCDMA = true
     this.waitCyclesDMC = 2
@@ -487,6 +489,23 @@ class EmulatorState {
     }
 
     this.PC = this.getResetVectorAddress();
+    this.CYC = 0;
+    this.A = 0;
+    this.X = 0;
+    this.Y = 0;
+    this.nmiDelayedFlag.reset();
+    this.irqDelayedFlag.reset();
+    this.apu.reset();
+    
+    // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
+    for (let i = 0; i < 8; i++) {
+      this.dummyReadTick();
+    }
+
+    this.transferDMCDMA = false
+    this.waitCyclesDMC = 0
+    this.transferSpriteDMA = false
+    
   }
 
   stepFrame(breakAfterScanlineChange: boolean) {
@@ -636,6 +655,7 @@ class EmulatorState {
   }
 
   step() {
+    this.prevOpcodePC = this.PC;
     const opcode = this.readOpcode();
 
     if (opcode in opcodeTable) {

@@ -36,6 +36,27 @@ export default class SquareWaveGenerator {
     this.envelope.update();
   }
 
+  reset() {
+    this.lengthCounter.reset();
+    this.envelope.reset();
+    this.isEnabled = false;
+    this.index = 0
+    this.sequence = sequences[0];
+    this.constantVolume = false;
+    this.volumeOrEnvelopePeriod = 0;
+    this.timerSetting = 200;
+    this.timerValue = 0;
+    this.generatorIndex = 0;
+    this.curOutputValue = 0;
+    this.sweepEnabled = false;
+    this.sweepPeriod = 0;
+    this.sweepNegate = false;
+    this.sweepShift = 0;
+    this.sweepMutesChannel = false;
+    this.sweepDivider = 0;
+    this.sweepReloadFlag = false;
+  }
+
   updateLengthCounterAndSweepUnit() {
     this.lengthCounter.update();
 
@@ -163,7 +184,7 @@ export default class SquareWaveGenerator {
     this.isEnabled = isEnabled;
 
     if (!this.isEnabled) {
-      this.lengthCounter.reset();
+      this.lengthCounter.clear();
     }
   }
 }

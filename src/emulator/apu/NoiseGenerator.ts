@@ -14,7 +14,18 @@ class NoiseGenerator {
   envelope = new EnvelopeGenerator();
   lengthCounter = new LengthCounter();
   constantVolume = false;
-  isEnabled = true;
+  isEnabled = false;
+
+  reset() {
+    this.mode = 0;
+    this.timerSetting = 0;
+    this.timerValue = 0;
+    this.shiftRegister = 1;
+    this.curOutputValue = 0;
+    this.volumeOrEnvelopePeriod = 0;
+    this.constantVolume = false;
+    this.isEnabled = false;
+  }
 
   updateEnvelope() {
     this.envelope.update();
@@ -101,7 +112,7 @@ class NoiseGenerator {
     this.isEnabled = enabled;
 
     if (!enabled) {
-      this.lengthCounter.reset();
+      this.lengthCounter.clear();
     }
 
     this.updateSampleValue();
