@@ -263,4 +263,16 @@ export const testPPURomWithImageAndResetImage = (romFile: string, resetImgFile: 
   }
 
   validatePPURomImage(state, romFile, imgFile);
+  return state;
+};
+
+export const testPPURomWithImageAndResetImageTwice = (romFile: string, resetImgFile: string, resetImgFile2: string, numFramesBeforeReset: number, imgFile: string, numFrames: number) => {
+  const state = testPPURomWithImageAndResetImage(romFile, resetImgFile, numFramesBeforeReset, resetImgFile2, numFramesBeforeReset);
+  state.reset();
+
+  for (let i = 0; i < numFrames; i++) {
+    state.stepFrame(false);
+  }
+
+  validatePPURomImage(state, romFile, imgFile);
 };

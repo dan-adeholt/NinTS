@@ -1,5 +1,5 @@
 import { test } from 'vitest'
-import { testInstructionTestRom, testPPURomWithImage, testPPURomWithImageAndResetImage } from './testutil';
+import { testInstructionTestRom, testPPURomWithImage, testPPURomWithImageAndResetImage, testPPURomWithImageAndResetImageTwice } from './testutil';
 
 test('blargg - 01 - Length Control', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/01.len_ctr.nes', 'nes-test-images/ok_blargg_apu.png', 25));
 test('blargg - 02 - Length Table', () => testPPURomWithImage('nes-test-roms/blargg_apu_2005.07.30/02.len_table.nes', 'nes-test-images/ok_blargg_apu.png', 25));
@@ -38,4 +38,5 @@ test('DMC DMA During Read4 - dma 4016 read', () => testPPURomWithImage(dmcDmaDur
 const apuResetRoot = 'nes-test-roms/apu_reset/';
 test('apu_reset - 4015_cleared.nes', () => testPPURomWithImageAndResetImage(apuResetRoot + '/4015_cleared.nes', 'nes-test-images/reset_image.png', 30, 'nes-test-images/apu_reset_4015_cleared.nes.png', 30));
 test('apu_reset - 4017_timing.nes', () => testPPURomWithImageAndResetImage(apuResetRoot + '/4017_timing.nes', 'nes-test-images/reset_image_4017_timing.nes.png', 30, 'nes-test-images/apu_reset_4017_timing.nes.png', 30));
+test('apu_reset - 4017_written.nes', () => testPPURomWithImageAndResetImageTwice(apuResetRoot + '/4017_written.nes', 'nes-test-images/reset_image.png', 'nes-test-images/reset_image_again.png', 30, 'nes-test-images/apu_reset_4017_written.nes.png', 30));
 // test(, () => testInstructionTestRom(apuResetRoot + '4015_cleared.nes'));
