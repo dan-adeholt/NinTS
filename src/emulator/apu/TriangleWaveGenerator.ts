@@ -16,19 +16,6 @@ class TriangleWaveGenerator {
   curOutputValue = sequence[0];
   linearReloadFlag = true;
 
-  reset() {
-    // Do not reset length counter for this channel - unclear why, makes len_ctrs_enabled.nes pass
-    this.isEnabled = false;
-    this.linearCounterHaltFlag = false;
-    this.linearCounterReload = 0;
-    this.timerSetting = 0;
-    this.timerValue = 0;
-    this.linearCounter = 0;
-    this.generatorIndex = 0;
-    this.curOutputValue = sequence[0];
-    this.linearReloadFlag = true;
-  }
-
   updateLinearCounter() {
     if (this.linearReloadFlag) {
       this.linearCounter = this.linearCounterReload;

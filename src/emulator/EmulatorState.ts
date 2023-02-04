@@ -42,7 +42,7 @@ const ignoredKeys = [
 ];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */ 
-const readObjectState = (state : any, data: any) => {
+const readObjectState = (state: any, data: any) => {
   const entries = Object.entries(state);
   entries.forEach(([key, value]) => {
     const storedValue = data[key];
@@ -88,6 +88,7 @@ const dumpObjectState = (state : any, prefix = '') => {
   return dumpedState;
 }
 
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 class DelayedFlag {
   value = false
@@ -112,23 +113,20 @@ class DelayedFlag {
   }
 }
 
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
 class EmulatorState {
   A = 0;
   X = 0;
   Y = 0;
-  P = 0x4;
+  P = 0;
   PC = 0;
   SP = 0;
-  masterClock = cpuStep; // For some reason the master clock is set forward 1 cycle in Mesen. Causes PPU to get delayed.
-  ppuOffset = 1; // But there is also a PPU offset - very weird.
-  cpuStep = cpuStep;
-  cpuHalfStep = cpuHalfStep;
+  masterClock = 0;
+  ppuOffset = 0;
+  cpuStep = 0;
+  cpuHalfStep = 0;
+  CYC = 0
+
   mapper: Mapper
-  // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
-  // set it to match.
-  CYC = -1;
   settings: RomSettings;
   breakpoints: Record<number, boolean> = {};
   apu: APU;
@@ -152,21 +150,15 @@ class EmulatorState {
   prevNmiFlag = false;
 
   irqDelayedFlag = new DelayedFlag();
-
   nmiDelayedFlag = new DelayedFlag();
-
   addressOperand = 0
 
   transferSpriteDMA = false
-
   handlingDMA = false
-
   transferDMCDMA = false
 
   addressSpriteDMA = 0
-
   waitCyclesDMC = 0
-
   prevOpcodePC = 0
 
   dmcDmaCallback = () => {
@@ -190,34 +182,29 @@ class EmulatorState {
     this.initMachine(this.rom, this.enableTraceLogging, this.audioSampleCallback);
   }
 
-  initMachine(rom : Rom, enableTraceLogging = false, audioSampleCallback : ((sample: number) => void) | null) {
-    this.ppuMemory = new PPUMemorySpace(rom);
-    this.cpuMemory = new CPUMemorySpace(rom);
-    this.mapper = parseMapper(rom, this.cpuMemory, this.ppuMemory);
-    this.ppu = new PPU(rom.settings, this.mapper);
-    this.audioSampleCallback = audioSampleCallback;
-
-    // Reset vector
-    const startingLocation = this.mapper.cpuMemory.read(0xFFFC) + (this.mapper.cpuMemory.read(0xFFFD) << 8);
-
-    this.nmiDelayedFlag.reset();
-    this.irqDelayedFlag.reset();
-
-    this.apu = new APU(audioSampleCallback, this.dmcDmaCallback);
+// Initialize all properties that have the same initial value for both cold boot and for reset   
+  initializeSharedState() {
     this.A = 0;
     this.X = 0;
     this.Y = 0;
     this.P = 0x4;
-    this.PC = startingLocation;
-    this.SP = 0xFD;
+    this.PC = this.getResetVectorAddress();
+
+    this.transferDMCDMA = false
+    this.waitCyclesDMC = 0
+    this.transferSpriteDMA = false
+
     this.masterClock = cpuStep; // For some reason the master clock is set forward 1 cycle in Mesen. Causes PPU to get delayed.
     this.ppuOffset = 1; // But there is also a PPU offset - very weird.
       // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
     // set it to match.
     this.CYC = -1;
-    this.settings = rom.settings;
-    this.breakpoints = {};
-    this.traceLogLines = [];
+
+    this.lastNMI = 0;
+    this.lastNMIOccured = false;
+    this.addressOperand = 0
+    this.addressSpriteDMA = 0
+
     this.controller1 = 0;
     this.controller2 = 0;
     this.controller1Latch = 0;
@@ -225,28 +212,56 @@ class EmulatorState {
     this.controller1NumReadBits = 0;
     this.controller2NumReadBits = 0;
     this.controllerStrobe = false;
-  
-    this.enableTraceLogging = enableTraceLogging;
-    this.rom = rom;
-    this.lastNMI = 0;
-    this.lastNMIOccured = false;
-    this.audioSampleCallback = audioSampleCallback;
-    this.addressOperand = 0
-    this.transferSpriteDMA = false
-    this.addressSpriteDMA = 0
-    this.transferDMCDMA = false
-    this.waitCyclesDMC = 0
+    this.nmiDelayedFlag.reset();
+    this.irqDelayedFlag.reset();
+
+    this.cpuStep = cpuStep;
+    this.cpuHalfStep = cpuHalfStep;
 
     // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
     for (let i = 0; i < 8; i++) {
       this.dummyReadTick();
-    }
+    }    
+  }
+
+  initMachine(rom : Rom, enableTraceLogging = false, audioSampleCallback : ((sample: number) => void) | null) {
+    this.rom = rom;
+    this.settings = rom.settings;
+    this.enableTraceLogging = enableTraceLogging;  
+    this.audioSampleCallback = audioSampleCallback;
+    this.ppuMemory = new PPUMemorySpace(rom);
+    this.cpuMemory = new CPUMemorySpace(rom);
+    this.mapper = parseMapper(rom, this.cpuMemory, this.ppuMemory);
+    this.ppu = new PPU(rom.settings, this.mapper);
+    this.apu = new APU(audioSampleCallback, this.dmcDmaCallback);
+    this.breakpoints = {};
+    this.traceLogLines = [];
+
+    this.SP = 0xFD;
+
+    this.initializeSharedState();  
 
     if (!import.meta.env.VITEST && localStorageAutoloadEnabled()) {
       this.loadEmulatorFromLocalStorage();
     }
 
     return this;
+  }
+
+  reset() {
+    setInterrupt(this, true);
+    this.SP -= 3;
+    if (this.SP < 0) {
+      this.SP += 0xFF;
+    }
+
+    const lastValue4017 = this.apu.lastValue4017;
+    const triangleLengthCounter = this.apu.triangle.lengthCounter;
+    this.apu = new APU(this.audioSampleCallback, this.dmcDmaCallback);
+    this.apu.setAPURegisterMem(0x4017, lastValue4017, this.CYC);
+    this.apu.triangle.lengthCounter = triangleLengthCounter;
+
+    this.initializeSharedState()
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -479,33 +494,6 @@ class EmulatorState {
 
   getResetVectorAddress(): number {
     return this.readMem(0xFFFC) + (this.readMem(0xFFFD) << 8);
-  }
-
-  reset() {
-    setInterrupt(this, true);
-    this.SP -= 3;
-    if (this.SP < 0) {
-      this.SP += 0xFF;
-    }
-
-    this.PC = this.getResetVectorAddress();
-    this.CYC = 0;
-    this.A = 0;
-    this.X = 0;
-    this.Y = 0;
-    this.nmiDelayedFlag.reset();
-    this.irqDelayedFlag.reset();
-    this.apu.reset();
-    
-    // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
-    for (let i = 0; i < 8; i++) {
-      this.dummyReadTick();
-    }
-
-    this.transferDMCDMA = false
-    this.waitCyclesDMC = 0
-    this.transferSpriteDMA = false
-    
   }
 
   stepFrame(breakAfterScanlineChange: boolean) {

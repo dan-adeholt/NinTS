@@ -16,17 +16,6 @@ class NoiseGenerator {
   constantVolume = false;
   isEnabled = false;
 
-  reset() {
-    this.mode = 0;
-    this.timerSetting = 0;
-    this.timerValue = 0;
-    this.shiftRegister = 1;
-    this.curOutputValue = 0;
-    this.volumeOrEnvelopePeriod = 0;
-    this.constantVolume = false;
-    this.isEnabled = false;
-  }
-
   updateEnvelope() {
     this.envelope.update();
     this.updateSampleValue();

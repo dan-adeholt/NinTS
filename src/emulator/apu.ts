@@ -329,21 +329,6 @@ class APU {
     this.tickSequencers();
     this.tickSampleCollector();
   }
-
-  reset() {
-    // Also reset frame counter  
-    this.frameInterrupt = false;
-    this.frameInterruptCycle = 0;
-    this.triggerIRQ = true;
-    this.disabled = false;
-
-    this.square1.reset();
-    this.square2.reset();
-    this.triangle.reset();
-    this.noise.reset();
-    this.dmc.reset();
-    this.setAPURegisterMem(0x4017, this.lastValue4017, 0);
-  }
 }
 
 export default APU;
