@@ -49,7 +49,6 @@ class APU {
   cpuDivider = APU_CPU_DIVIDER;
   elapsedApuCycles = 0;
   apuStep = 0;
-  evenTick = true;
   numTicks = 0;
   accumulatedCycles = 0;
   apuSampleBucket = 0;
@@ -301,8 +300,6 @@ class APU {
   }
 
   tickSequencers() {
-    this.evenTick = !this.evenTick;
-
     this.dmc.updatePendingDMC();
     this.square1.updateSequencer();
     this.square2.updateSequencer();
