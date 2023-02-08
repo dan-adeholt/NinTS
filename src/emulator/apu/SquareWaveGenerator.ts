@@ -2,10 +2,10 @@ import EnvelopeGenerator from './EnvelopeGenerator';
 import LengthCounter from './LengthCounter';
 
 const sequences = [
-  [0, 1, 0, 0, 0, 0, 0, 0],
-  [0, 1, 1, 0, 0, 0, 0, 0],
-  [0, 1, 1, 1, 1, 0, 0, 0],
-  [1, 0, 0, 1, 1, 1, 1, 1]
+  [0, 0, 0, 0, 0, 0, 0, 1],
+  [0, 0, 0, 0, 0, 0, 1, 1],
+  [0, 0, 0, 0, 1, 1, 1, 1],
+  [1, 1, 1, 1, 1, 1, 0, 0]
 ];
 
 export default class SquareWaveGenerator {
@@ -14,7 +14,8 @@ export default class SquareWaveGenerator {
   sequence = sequences[0];
   constantVolume = false;
   volumeOrEnvelopePeriod = 0;
-  timerSetting = 200;
+  timerSetting = 0;
+  timerSettingCpuCount = 0;
   timerValue = 0;
   generatorIndex = 0;
   curOutputValue = 0;
@@ -57,7 +58,7 @@ export default class SquareWaveGenerator {
     this.sweepMutesChannel = (targetPeriod > 0x7FF) || (this.timerSetting < 8);
 
     if (!this.sweepMutesChannel) {
-      this.timerSetting = targetPeriod;
+      this.updateTimerSetting(targetPeriod);
     }
 
     if (this.sweepReloadFlag || this.sweepDivider <= 0) {
@@ -69,12 +70,17 @@ export default class SquareWaveGenerator {
     }
   }
 
+  updateTimerSetting(newValue: number) {
+    this.timerSetting = newValue;
+    this.timerSettingCpuCount = (newValue * 2) + 2;
+  }
+
   updateSequencer() {
     if (!this.isEnabled || (!this.lengthCounter.haltCounter && this.lengthCounter.lengthCounter === 0) || this.sweepMutesChannel) {
       this.curOutputValue = 0;
     }
-    else if (--this.timerValue <= -1) {
-      this.timerValue = this.timerSetting;
+    else if (--this.timerValue <= 0) {
+      this.timerValue = this.timerSettingCpuCount;
 
       if (this.constantVolume) {
         this.curOutputValue = this.sequence[this.generatorIndex] * this.volumeOrEnvelopePeriod;
@@ -133,13 +139,13 @@ export default class SquareWaveGenerator {
         break;
       }
       case 2: { // Timer low 8 bits
-        this.timerSetting = value | (this.timerSetting & 0b11100000000);
+        this.updateTimerSetting(value | (this.timerSetting & 0b11100000000))  
         break;
       }
       case 3: { // Length counter load and timer high 3 bits
         const timerHigh = (value & 0b00000111);
-        this.timerSetting = (timerHigh << 8) | (this.timerSetting & 0b11111111);
-        this.timerValue = this.timerSetting;
+        this.updateTimerSetting((timerHigh << 8) | (this.timerSetting & 0b11111111))  
+
         this.generatorIndex = 0;
 
         if (this.isEnabled) {
@@ -158,6 +164,7 @@ export default class SquareWaveGenerator {
         break;
     }
   }
+
 
   setEnabled(isEnabled: boolean) {
     this.isEnabled = isEnabled;

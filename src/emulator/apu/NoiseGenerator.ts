@@ -41,7 +41,7 @@ class NoiseGenerator {
   }
 
   updateSequencer() {
-    if (--this.timerValue <= -1) {
+    if (--this.timerValue <= 0) {
       this.timerValue = this.timerSetting;
 
       let xorBit;

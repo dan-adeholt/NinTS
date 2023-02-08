@@ -1,4 +1,4 @@
-const NTSCRates = [214, 190, 170, 160, 143, 127, 113, 107,  95,  80,  71,  64, 53,  42,  36,  27];
+const NTSCRates = [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54];
 
 type DMCReaderState = {
   dmcCountdown: number
@@ -39,7 +39,7 @@ class DMCGenerator {
   }
 
   clock = {
-    period: NTSCRates[0] - 1,
+    period: NTSCRates[0],
     timer: NTSCRates[0]
   }
 

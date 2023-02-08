@@ -57,24 +57,24 @@ class APU {
   frameCounterDelayCycles = -1;
   pendingFrameCounterMode = 0;
   frameCounterMode = 0;
-  lastSample = 0;
-  lastRawSample = -0.5;
+  lastSampleLeft = 0;
+  lastRawSampleLeft = -0.5;
+  lastSampleRight = 0;
+  lastRawSampleRight = -0.5;
   accumulatedSamplesSquare1 = 0;
   accumulatedSamplesSquare2 = 0;
   accumulatedSamplesTriangle = 0;
   accumulatedSamplesNoise = 0;
   accumulatedSamplesDmc = 0;
-  logAudio = false;
-  audioSamples: number[] = [];
   frameInterrupt = false;
   frameInterruptCycle = 0;
   triggerIRQ = true;
   disabled = false;
   lastValue4017 = 0;
 
-  audioSampleCallback : ((sample: number) => void) | null = null
+  audioSampleCallback : ((sampleLeft: number, sampleRight: number) => void) | null = null
 
-  constructor(audioSampleCallback : ((sample: number) => void) | null, triggerDMACallback: (() => void) | null = null) {
+  constructor(audioSampleCallback : ((sampleLeft: number, sampleRight: number) => void) | null, triggerDMACallback: (() => void) | null = null) {
     this.audioSampleCallback = audioSampleCallback
     this.dmc.reader.triggerDMACallback = triggerDMACallback
   }
@@ -172,8 +172,15 @@ class APU {
       // dmc = 0;
 
 
-    const pulseOut = (sq1 === 0 && sq2 === 0) ? 0 :  95.88 / ((8128 / (sq1 + sq2)) + 100);
+    let pulseOut = 0;
+
+    if (sq1 !== 0 || sq2 !== 0) {
+      pulseOut = 95.88 / (
+        (8128 / (sq1 + sq2)) + 100);
+    }
+        
     let tndOut = 0;
+
     if (tri !== 0 || noise !== 0 || dmc !== 0) {
       const t1 = tri / 8227;
       const n1 = noise / 12241;
@@ -188,20 +195,21 @@ class APU {
     this.accumulatedSamplesTriangle = 0;
     this.accumulatedSamplesNoise = 0;
     this.accumulatedSamplesDmc = 0;
-
+    
     // DC blocker: https://www.dsprelated.com/freebooks/filters/DC_Blocker.html
     const R = 0.9985;
     // const R = 0.995;
-    const normalized = pulseOut + tndOut;
+    const normalizedLeft = pulseOut + tndOut;
+    const rawSampleLeft = (normalizedLeft - 0.5) * 2.0;
+    const newSampleLeft = rawSampleLeft - this.lastRawSampleLeft + R * this.lastSampleLeft;
 
-    const rawSample = (normalized - 0.5) * 2.0;
-    const newSample = rawSample - this.lastRawSample + R * this.lastSample;
+    this.lastRawSampleLeft = rawSampleLeft;
+    this.lastSampleLeft = newSampleLeft;
 
-    this.lastRawSample = rawSample;
-    this.lastSample = newSample;
-
-    return newSample;
+    this.lastRawSampleRight = rawSampleLeft;
+    this.lastSampleRight = newSampleLeft;
   }
+
 
   irqStep() {
     if (this.triggerIRQ && !this.frameInterrupt) {
@@ -230,12 +238,9 @@ class APU {
     this.accumulateSampleValue();
 
     while (this.apuSampleBucket > CPU_CYCLES_PER_SAMPLE) {
-      const sample = this.readSampleValue();
-      this.audioSampleCallback?.(sample);
+      this.readSampleValue();
+      this.audioSampleCallback?.(this.lastSampleLeft, this.lastSampleRight);
       this.apuSampleBucket -= CPU_CYCLES_PER_SAMPLE;
-      if (this.logAudio) {
-        this.audioSamples.push(sample);
-      }
     }
   }
 
@@ -296,17 +301,14 @@ class APU {
   }
 
   tickSequencers() {
-    // Do one iteration for each cpu cycle, but update sequencers for square waves every 2 cycles
     this.evenTick = !this.evenTick;
 
     this.dmc.updatePendingDMC();
+    this.square1.updateSequencer();
+    this.square2.updateSequencer();
+    this.noise.updateSequencer();
+    this.dmc.updateSequencer();
 
-    if (this.evenTick) {
-      this.square1.updateSequencer();
-      this.square2.updateSequencer();
-      this.noise.updateSequencer();
-      this.dmc.updateSequencer();
-    }
 
     this.triangle.updateSequencer();
   }

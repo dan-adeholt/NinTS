@@ -2,16 +2,19 @@ import { AUDIO_BUFFER_SIZE } from './emulator/apu';
 
 class AudioBuffer {
   writePosition = 0;
-  writeBuffer = new Float32Array(AUDIO_BUFFER_SIZE);
-  playBuffer = new Float32Array(AUDIO_BUFFER_SIZE);
+  writeBufferLeft = new Float32Array(AUDIO_BUFFER_SIZE);
+  writeBufferRight = new Float32Array(AUDIO_BUFFER_SIZE);
+  playBufferLeft = new Float32Array(AUDIO_BUFFER_SIZE);
+  playBufferRight = new Float32Array(AUDIO_BUFFER_SIZE);
   playBufferFull = false;
-  lastSample = 0;
+  lastSampleLeft = 0;
+  lastSampleRight = 0;
   numBuffers = 0;
   startTime = 0;
   expected = 0
   produced = 0
 
-  receiveSample(sample: number) {
+  receiveSample(sampleLeft: number, sampleRight: number) {
     this.produced++
 
     if (this.numBuffers === 0) {
@@ -36,8 +39,11 @@ class AudioBuffer {
       }
     }
 
-    this.writeBuffer[this.writePosition++] = sample;
-    this.lastSample = sample;
+    this.writeBufferLeft[this.writePosition] = sampleLeft;
+    this.writeBufferRight[this.writePosition] = sampleRight;
+    this.writePosition++;
+    this.lastSampleLeft = sampleLeft;
+    this.lastSampleRight = sampleRight;
 
     if (this.writePosition === AUDIO_BUFFER_SIZE && !this.playBufferFull) {
       this.swapAudioBuffers();
@@ -45,7 +51,8 @@ class AudioBuffer {
   }
 
   swapAudioBuffers() {
-    [this.writeBuffer, this.playBuffer] = [this.playBuffer, this.writeBuffer];
+    [this.writeBufferLeft, this.playBufferLeft] = [this.playBufferLeft, this.writeBufferLeft];
+    [this.writeBufferRight, this.playBufferRight] = [this.playBufferRight, this.writeBufferRight];
     this.playBufferFull = true;
     this.writePosition = 0;
   }
@@ -58,16 +65,17 @@ class AudioBuffer {
     }
 
     if (!this.playBufferFull) { // Got buffer underflow, force buffer swap with constant value for remaining slots
-      this.writeBuffer.fill(this.lastSample, this.writePosition);
+      this.writeBufferLeft.fill(this.lastSampleLeft, this.writePosition);
+      this.writeBufferRight.fill(this.lastSampleRight, this.writePosition);
       this.swapAudioBuffers();
     }
 
     if (destination.copyToChannel) { // Newer method, not available in all browsers
-      destination.copyToChannel(this.playBuffer, 0);
-      destination.copyToChannel(this.playBuffer, 1);
+      destination.copyToChannel(this.playBufferLeft, 0);
+      destination.copyToChannel(this.playBufferRight, 1);
     } else {
-      destination.getChannelData(0).set(this.playBuffer);
-      destination.getChannelData(1).set(this.playBuffer);
+      destination.getChannelData(0).set(this.playBufferLeft);
+      destination.getChannelData(1).set(this.playBufferRight);
     }
 
     this.playBufferFull = false;

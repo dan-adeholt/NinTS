@@ -144,7 +144,7 @@ class EmulatorState {
   rom: Rom
   lastNMI = 0;
   lastNMIOccured = false;
-  audioSampleCallback: ((sample: number) => void) | null
+  audioSampleCallback: ((sampleLeft: number, sampleRight: number) => void) | null
   ppuMemory: PPUMemorySpace
   cpuMemory: CPUMemorySpace
   prevNmiFlag = false;
@@ -224,7 +224,7 @@ class EmulatorState {
     }    
   }
 
-  initMachine(rom : Rom, enableTraceLogging = false, audioSampleCallback : ((sample: number) => void) | null) {
+  initMachine(rom : Rom, enableTraceLogging = false, audioSampleCallback : ((sampleLeft: number, sampleRight: number) => void) | null) {
     this.rom = rom;
     this.settings = rom.settings;
     this.enableTraceLogging = enableTraceLogging;  

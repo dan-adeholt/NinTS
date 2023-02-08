@@ -1,5 +1,4 @@
 import { NamedExoticComponent } from 'react';
-import APUDebugger from './components/APUDebugger';
 import { BaseDialogProps } from './Dialog';
 import EmulatorState from './emulator/EmulatorState';
 import { KeyListener, RunModeType } from './App';
@@ -14,7 +13,6 @@ import Profiler from './components/Profiler';
 
 export enum DebugDialog {
   CPUDebugger = 'CPU Debugger',
-  APUDebugger = 'APU Debugger',
   PPUNametables = 'PPU Nametables',
   PPUSprites = 'PPU Sprites',
   PPUOAM = 'PPU OAM',
@@ -37,7 +35,6 @@ export type DebugDialogProps = BaseDialogProps & {
 // // NamedExoticComponent is because we React.memo all the debug dialogs
 // Function instead of constant so that HMR works
 export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<DebugDialogProps>> => ({
-  [DebugDialog.APUDebugger]: APUDebugger,
   [DebugDialog.CPUDebugger]: CPUDebugger,
   [DebugDialog.PPUNametables]: PPUNameTableDebugger,
   [DebugDialog.PPUSprites]: PPUSpritesDebugger,
@@ -50,14 +47,13 @@ export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<
 
 export const DebugDialogToHotkey : Record<DebugDialog, string> = {
   [DebugDialog.CPUDebugger]: 'F1',
-  [DebugDialog.APUDebugger]: 'F2',
-  [DebugDialog.PPUNametables]: 'F3',
-  [DebugDialog.PPUSprites]: 'F4',
-  [DebugDialog.PPUOAM]: 'F5',
-  [DebugDialog.VRAMDebugger]: 'F6',
-  [DebugDialog.PPUScanlines]: 'F8',
-  [DebugDialog.CompareTrace]: 'F9',
-  [DebugDialog.Profiler]: 'F12',
+  [DebugDialog.PPUNametables]: 'F2',
+  [DebugDialog.PPUSprites]: 'F3',
+  [DebugDialog.PPUOAM]: 'F4',
+  [DebugDialog.VRAMDebugger]: 'F5',
+  [DebugDialog.PPUScanlines]: 'F6',
+  [DebugDialog.CompareTrace]: 'F7',
+  [DebugDialog.Profiler]: 'F8',
 }
 
 export const HotkeyToDebugDialog: Record<string, DebugDialog> = {};

@@ -83,7 +83,7 @@ function App() {
             const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
             const rom = parseROM(romBuffer);
             try {
-                _emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+                _emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
             } catch (e) {
                 if (typeof e === "string") {
                     setError(e);
@@ -174,7 +174,7 @@ function App() {
         const rom = parseROM(romBuffer);
         setError(null);
         try {
-            emulator.initMachine(rom, false, sample => audioBuffer.receiveSample(sample));
+            emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
         } catch (e) {
             if (typeof e === "string") {
                 setError(e);
