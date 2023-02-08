@@ -32,8 +32,8 @@
     "@types/react-dom": "^18.0.6",
     "@vitejs/plugin-react": "^2.1.0",
     "typescript": "^4.6.4",
-    "vite": "^3.1.0",
-    "vitest": "^0.24.3"
+    "vite": "^4.1.1",
+    "vitest": "^0.26.2"
   },
   "pre-commit": [
     "test",
