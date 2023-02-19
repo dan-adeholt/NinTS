@@ -39,6 +39,17 @@ td {
     min-width: 50px;
 }
 
+dd {
+  margin-left: 0;
+  font-size: 0.92em;
+  margin-bottom: 0.4em;
+}
+
+dt {
+  color: #569BD5;
+  font-size: 0.75em;
+}
+
 td label {
     color: #569BD5;
     clear:both;

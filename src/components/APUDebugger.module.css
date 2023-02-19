@@ -1,0 +1,56 @@
+.container {
+  display: grid;
+  grid-template-columns: 60fr 40fr;
+  grid-template-rows: 30fr 30fr 30fr;
+  box-sizing: border-box;
+  column-gap: 10px;
+  row-gap: 10px;
+  min-width: 900px;
+  min-height: 300px;  
+  grid-template-areas: 
+  "square1 triangle"
+  "square2 noise"
+  "dmc dmc"
+}
+
+.innerContainer {
+  display: flex;
+  flex-grow: 1;
+}
+
+.innerContainer>div {
+  flex-grow: 1;
+}
+
+.innerContainer>div + div {
+  border-left: 1px solid #333;
+  padding-left: 10px;
+}
+
+.channel {
+    border: 1px solid gray;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.square1 {
+  grid-area: square1;
+}
+
+.square2 {
+  grid-area: square2;
+}
+
+.triangle {
+  grid-area: triangle;
+}
+
+.noise {
+  grid-area: noise;
+}
+
+.dmc {
+  grid-area: dmc;
+}

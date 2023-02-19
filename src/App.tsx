@@ -13,7 +13,7 @@ import EmulatorState, {
 import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import { BREAKPOINTS_KEY } from './components/CPUDebugger';
 import AudioBuffer from './AudioBuffer';
-import { AUDIO_BUFFER_SIZE, SAMPLE_RATE } from './emulator/apu';
+import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from './emulator/apu';
 import Toolbar from './Toolbar';
 import { HotkeyToDebugDialog, getDebugDialogComponents } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
@@ -39,7 +39,7 @@ const KeyTable: Record<string, number> = {
     '-': INPUT_START
 };
 
-const ntscFrameLength = 1000.0 / 60.0;
+const ntscFrameLength = 1000.0 / FRAMES_PER_SECOND;
 
 type AudioState = {
     scriptProcessor: ScriptProcessorNode

@@ -10,9 +10,11 @@ import PPUVRAMDebugger from './components/PPUVRAMDebugger';
 import PPUScanlineDebugger from './components/PPUScanlineDebugger';
 import CompareTraceDebugger from './components/CompareTraceDebugger';
 import Profiler from './components/Profiler';
+import APUDebugger from './components/APUDebugger';
 
 export enum DebugDialog {
   CPUDebugger = 'CPU Debugger',
+  APUDebugger = 'APU Debugger',
   PPUNametables = 'PPU Nametables',
   PPUSprites = 'PPU Sprites',
   PPUOAM = 'PPU OAM',
@@ -36,6 +38,7 @@ export type DebugDialogProps = BaseDialogProps & {
 // Function instead of constant so that HMR works
 export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<DebugDialogProps>> => ({
   [DebugDialog.CPUDebugger]: CPUDebugger,
+  [DebugDialog.APUDebugger]: APUDebugger,
   [DebugDialog.PPUNametables]: PPUNameTableDebugger,
   [DebugDialog.PPUSprites]: PPUSpritesDebugger,
   [DebugDialog.PPUOAM]: PPUOAMDebugger,
@@ -47,13 +50,14 @@ export const getDebugDialogComponents = (): Record<string, NamedExoticComponent<
 
 export const DebugDialogToHotkey : Record<DebugDialog, string> = {
   [DebugDialog.CPUDebugger]: 'F1',
-  [DebugDialog.PPUNametables]: 'F2',
-  [DebugDialog.PPUSprites]: 'F3',
-  [DebugDialog.PPUOAM]: 'F4',
-  [DebugDialog.VRAMDebugger]: 'F5',
-  [DebugDialog.PPUScanlines]: 'F6',
-  [DebugDialog.CompareTrace]: 'F7',
-  [DebugDialog.Profiler]: 'F8',
+  [DebugDialog.APUDebugger]: 'F2',
+  [DebugDialog.PPUNametables]: 'F3',
+  [DebugDialog.PPUSprites]: 'F4',
+  [DebugDialog.PPUOAM]: 'F5',
+  [DebugDialog.VRAMDebugger]: 'F6',
+  [DebugDialog.PPUScanlines]: 'F7',
+  [DebugDialog.CompareTrace]: 'F8',
+  [DebugDialog.Profiler]: 'F9',
 }
 
 export const HotkeyToDebugDialog: Record<string, DebugDialog> = {};

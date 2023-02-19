@@ -4,7 +4,7 @@ import DMCGenerator from './apu/DMCGenerator';
 import NoiseGenerator from './apu/NoiseGenerator';
 
 const NTSC_CYCLES_PER_FRAME = 29780.5;
-const FRAMES_PER_SECOND = 60.0;
+export const FRAMES_PER_SECOND = 3579545.45 / 227.333 / 262;
 
 export const NTSC_CPU_CYCLES_PER_SECOND = NTSC_CYCLES_PER_FRAME * FRAMES_PER_SECOND;
 export const SAMPLE_RATE = 48000;
@@ -38,7 +38,6 @@ const steps5 = [
   [37281, FRAME_TYPE_HALF],
   [37282, FRAME_TYPE_IDLE]
 ];
-
 class APU {
   square1 = new SquareWaveGenerator(0);
   square2 = new SquareWaveGenerator(1);
@@ -60,6 +59,7 @@ class APU {
   lastRawSampleLeft = -0.5;
   lastSampleRight = 0;
   lastRawSampleRight = -0.5;
+
   accumulatedSamplesSquare1 = 0;
   accumulatedSamplesSquare2 = 0;
   accumulatedSamplesTriangle = 0;
@@ -70,7 +70,6 @@ class APU {
   triggerIRQ = true;
   disabled = false;
   lastValue4017 = 0;
-
   audioSampleCallback : ((sampleLeft: number, sampleRight: number) => void) | null = null
 
   constructor(audioSampleCallback : ((sampleLeft: number, sampleRight: number) => void) | null, triggerDMACallback: (() => void) | null = null) {
@@ -98,6 +97,7 @@ class APU {
     } else if (address === 0x4017) {
       this.lastValue4017 = value;  
       this.pendingFrameCounterMode = (value & 0b10000000) >> 7;
+
       if (cpuCycles % 2 === 0) {
         // If the write occurs during an APU cycle, the effects occur 3 CPU cycles after the $4017 write cycle
         this.frameCounterDelayCycles = 3;
@@ -143,70 +143,41 @@ class APU {
   }
 
   readSampleValue() {
-    let sq1 = this.square1.curOutputValue;
-    let sq2 = this.square2.curOutputValue;
-    let tri = this.triangle.curOutputValue;
-    let noise = this.noise.curOutputValue;
-    let dmc = this.dmc.output.counter;
+    const sq1 = this.accumulatedSamplesSquare1 / this.accumulatedCycles;
+    const sq2 = this.accumulatedSamplesSquare2 / this.accumulatedCycles;
+    const tri = this.accumulatedSamplesTriangle / this.accumulatedCycles;
+    const noise = this.accumulatedSamplesNoise / this.accumulatedCycles;
+    const dmc = this.accumulatedSamplesDmc / this.accumulatedCycles;
+    const pulseOut = 163.67 / (24329.0 / (sq1 + sq2) + 100)
+    const tndOut = 95.52 / (8128.0 / (3 * tri + 2 * noise + dmc) + 100);
 
-    // sq1 = 0;
-    // sq2 = 0;
-    // tri = 0;
-    // noise = 0;
-    // dmc = 0;
+    // const pulseOut = 95.52 / (8128.0 / (2 * noise) + 100);
+    // const tndOut = 95.52 / (8128.0 / (dmc) + 100);
 
-    sq1 = this.accumulatedSamplesSquare1 / this.accumulatedCycles;
-    sq2 = this.accumulatedSamplesSquare2 / this.accumulatedCycles;
-    tri = this.accumulatedSamplesTriangle / this.accumulatedCycles;
-    noise = this.accumulatedSamplesNoise / this.accumulatedCycles;
-    dmc = this.accumulatedSamplesDmc / this.accumulatedCycles;
-
-    // sq1 = 0;
-    // sq2 = 0;
-    // tri = 0;
-    // noise = 0;
-    // dmc = 0;
-
-    //
-      // dmc = 0;
-
-
-    let pulseOut = 0;
-
-    if (sq1 !== 0 || sq2 !== 0) {
-      pulseOut = 95.88 / (
-        (8128 / (sq1 + sq2)) + 100);
-    }
-        
-    let tndOut = 0;
-
-    if (tri !== 0 || noise !== 0 || dmc !== 0) {
-      const t1 = tri / 8227;
-      const n1 = noise / 12241;
-      const d1 = (dmc / 22638);
-      tndOut = (159.79) /
-        ((1.0 / (t1 + n1 + d1)) + 100);
-    }
-
+    const monoOut = pulseOut + tndOut;
     this.accumulatedCycles = 0;
     this.accumulatedSamplesSquare1 = 0;
     this.accumulatedSamplesSquare2 = 0;
     this.accumulatedSamplesTriangle = 0;
     this.accumulatedSamplesNoise = 0;
     this.accumulatedSamplesDmc = 0;
-    
+
     // DC blocker: https://www.dsprelated.com/freebooks/filters/DC_Blocker.html
     const R = 0.9985;
     // const R = 0.995;
-    const normalizedLeft = pulseOut + tndOut;
+    const normalizedLeft = monoOut;
     const rawSampleLeft = (normalizedLeft - 0.5) * 2.0;
     const newSampleLeft = rawSampleLeft - this.lastRawSampleLeft + R * this.lastSampleLeft;
 
     this.lastRawSampleLeft = rawSampleLeft;
     this.lastSampleLeft = newSampleLeft;
 
-    this.lastRawSampleRight = rawSampleLeft;
-    this.lastSampleRight = newSampleLeft;
+    const normalizedRight = monoOut;
+    const rawSampleRight = (normalizedRight - 0.5) * 2.0;
+    const newSampleRight = rawSampleRight - this.lastRawSampleRight + R * this.lastSampleRight;
+
+    this.lastRawSampleRight = rawSampleRight;
+    this.lastSampleRight = newSampleRight;
   }
 
 

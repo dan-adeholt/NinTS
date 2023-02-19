@@ -10,10 +10,8 @@ class NoiseGenerator {
   timerValue = 0;
   shiftRegister = 1;
   curOutputValue = 0;
-  volumeOrEnvelopePeriod = 0;
   envelope = new EnvelopeGenerator();
   lengthCounter = new LengthCounter();
-  constantVolume = false;
   isEnabled = false;
 
   updateEnvelope() {
@@ -32,8 +30,8 @@ class NoiseGenerator {
     } else {
       if ((this.shiftRegister & 0b1) === 0) {
         this.curOutputValue = 0;
-      } else if (this.constantVolume) {
-        this.curOutputValue = this.volumeOrEnvelopePeriod;
+      } else if (this.envelope.constantVolume) {
+        this.curOutputValue = this.envelope.envelopePeriodOrVolume;
       } else {
         this.curOutputValue = this.envelope.decayLevelCounter;
       }
@@ -69,10 +67,8 @@ class NoiseGenerator {
         this.lengthCounter.setHalt(haltCounterOrEnvelopeLoop);
         this.lengthCounter.haltCounter = haltCounterOrEnvelopeLoop;
         this.envelope.envelopeLoop = haltCounterOrEnvelopeLoop;
-
-        this.constantVolume = constantVolume === 1;
-        this.volumeOrEnvelopePeriod = volumeEnvelope;
-        this.envelope.envelopePeriod = this.volumeOrEnvelopePeriod;
+        this.envelope.constantVolume = constantVolume === 1;
+        this.envelope.envelopePeriodOrVolume = volumeEnvelope;
 
         break;
       } case 0x400E: {
