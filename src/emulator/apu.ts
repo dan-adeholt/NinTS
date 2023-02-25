@@ -148,12 +148,9 @@ class APU {
     const tri = this.accumulatedSamplesTriangle / this.accumulatedCycles;
     const noise = this.accumulatedSamplesNoise / this.accumulatedCycles;
     const dmc = this.accumulatedSamplesDmc / this.accumulatedCycles;
-    const pulseOut = 163.67 / (24329.0 / (sq1 + sq2) + 100)
-    const tndOut = 95.52 / (8128.0 / (3 * tri + 2 * noise + dmc) + 100);
-
-    // const pulseOut = 95.52 / (8128.0 / (2 * noise) + 100);
-    // const tndOut = 95.52 / (8128.0 / (dmc) + 100);
-
+    const pulseOut = 95.52 / (8128.0 / (sq1 + sq2) + 100);
+    const tndOut = 163.67 / (24329.0 / (3 * tri + 2 * noise + dmc) + 100);
+    
     const monoOut = pulseOut + tndOut;
     this.accumulatedCycles = 0;
     this.accumulatedSamplesSquare1 = 0;
