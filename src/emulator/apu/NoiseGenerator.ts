@@ -28,14 +28,14 @@ class NoiseGenerator {
     if (this.lengthCounter.lengthCounter === 0) {
       this.curOutputValue = 0;
     } else {
-      if ((this.shiftRegister & 0b1) === 0) {
+      if ((this.shiftRegister & 0x01) === 0x01) {
         this.curOutputValue = 0;
       } else if (this.envelope.constantVolume) {
         this.curOutputValue = this.envelope.envelopePeriodOrVolume;
       } else {
         this.curOutputValue = this.envelope.decayLevelCounter;
       }
-    }  
+    }
   }
 
   updateSequencer() {
