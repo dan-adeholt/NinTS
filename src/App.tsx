@@ -60,41 +60,39 @@ const renderScreen = (display: Display | null, emulator: EmulatorState | null ) 
 }
 
 export type KeyListener = (event: KeyboardEvent) => void
+const audioBuffer = new AudioBuffer();
+
+let initialError: (string | null) = null;
+
+const emulator = new EmulatorState();
+const lastRomArray = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM);
+
+if (lastRomArray != null) {
+  const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
+  const rom = parseROM(romBuffer);
+  try {
+    emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+  } catch (e) {
+    if (typeof e === "string") {
+      initialError = e;
+    } else if (e instanceof Error) {
+      initialError = e.message;
+    }
+  }
+}
 
 function App() {
     // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
-    const [error, setError] = useState<string | null>(null);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     const [title, setTitle] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string) ?? "No file selected");
-    const audioBuffer = useMemo(() => new AudioBuffer(), []);
     const startTime = useRef(performance.now());
-
+    const [error, setError] = useState<string | null>(initialError);
     const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
 
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
-    const emulator = useMemo(()=> {
-        const _emulator = new EmulatorState();
-        const lastRomArray = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM);
-
-        if (lastRomArray != null){
-            const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
-            const rom = parseROM(romBuffer);
-            try {
-                _emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
-            } catch (e) {
-                if (typeof e === "string") {
-                    setError(e);
-                } else if (e instanceof Error) {
-                    setError(e.message);
-                }
-            }
-        }
-
-        return _emulator;
-    }, [audioBuffer]);
 
     const display = useRef<Display | null>(null);
 
