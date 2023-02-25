@@ -77,7 +77,6 @@ class NoiseGenerator {
 
         this.mode = mode >> 7;
         this.timerSetting = NTSCEntryTable[periodIndex];
-        this.shiftRegister = NTSCEntryTable[periodIndex];
         break;
       }
       case 0x400F: { // Length counter load and timer high 3 bits
