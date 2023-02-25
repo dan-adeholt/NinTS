@@ -6,7 +6,7 @@ const NTSCEntryTable = [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762,
 
 class NoiseGenerator {
   mode = 0;
-  timerSetting = 0;
+  timerSetting = NTSCEntryTable[0];
   timerValue = 0;
   shiftRegister = 1;
   curOutputValue = 0;
