@@ -1,4 +1,4 @@
-import { COLOR_TABLE } from './constants';
+import { COLOR_TABLE, GREYSCALE_COLOR_TABLE } from './constants';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
 import Mapper from './mappers/Mapper';
@@ -27,7 +27,7 @@ export const SPRITE_ATTRIB_FLIP_VERTICAL   = 0b10000000;
 export const SPRITE_ATTRIB_PRIORITY        = 0b00100000;
 export const SPRITE_ATTRIBS_PALETTE        = 0b00000011;
 
-// const PPUMASK_GREYSCALE = 1;
+const PPUMASK_GREYSCALE = 1;
 const PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS = 1 << 1;
 const PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS = 1 << 2;
 const PPUMASK_RENDER_BACKGROUND = 1 << 3;
@@ -128,6 +128,7 @@ class PPU {
 
   vramReadDisableCounter = 0
   showSpritesLeftSide = false
+  greyscale = false
 
   showBackgroundLeftSide = false
 
@@ -140,6 +141,9 @@ class PPU {
   maskBackgroundEnabled = false;
   colors = COLOR_TABLE[0];
   muteVerticalBlank = false;
+
+  colorLatch1 = 0;
+  colorLatch2 = 0;
 
   oamMemory = (new Uint8Array(256)).fill(0xFF);
   secondaryOamMemory = new Uint8Array(32);
@@ -172,11 +176,11 @@ class PPU {
   paletteIndexedColor(indexedColor: number, paletteIndex: number, baseOffset: number) {
     // Shortcut: We know we are always in palette RAM here, read from there directly.    
     if (indexedColor === 1) {
-      return this.colors[this.paletteRAM[(baseOffset + (paletteIndex * 4)) & 0x1F]];
+      return this.paletteRAM[(baseOffset + (paletteIndex * 4)) & 0x1F];
     } else if (indexedColor === 2) {
-      return this.colors[this.paletteRAM[(baseOffset + (paletteIndex * 4) + 1) & 0x1F]];
+      return this.paletteRAM[(baseOffset + (paletteIndex * 4) + 1) & 0x1F];
     } else if (indexedColor === 3) {
-      return this.colors[this.paletteRAM[(baseOffset + (paletteIndex * 4) + 2) & 0x1F]];
+      return this.paletteRAM[(baseOffset + (paletteIndex * 4) + 2) & 0x1F];
     }
 
     return 0;
@@ -335,6 +339,8 @@ class PPU {
         this.oamAddress = value;
         break;
       case PPUMASK: {
+        this.greyscale = (value & PPUMASK_GREYSCALE) != 0;
+
         this.showSpritesLeftSide = (value & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS) !== 0;
         this.showBackgroundLeftSide = (value & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS) !== 0;
 
@@ -347,8 +353,25 @@ class PPU {
         }
 
         const emphasis = (value & PPUMASK_EMPHASIZE) >> 5;
-        this.colors = COLOR_TABLE[emphasis];
+        if (!this.greyscale) {
+          this.colors = COLOR_TABLE[emphasis];
+        } else {
+          this.colors = GREYSCALE_COLOR_TABLE[emphasis];
+        }
 
+        // Reach back in time and apply the new style to the two preceding pixels. 
+        // The reason for this is that the attributes are read two cycles later in
+        // the rendering pipeline. See the following discussion from bizhawk dev 
+        // team: https://tasvideos.org/Forum/Topics/17971?CurrentPage=6&Highlight=440662#440662
+        const pixelIndex = (this.scanline << 8) + this.scanlineCycle - 1;
+
+        if (pixelIndex > 0) {
+          this.framebuffer[pixelIndex] = this.colors[this.colorLatch1];
+
+          if (pixelIndex - 1 > 0) {
+            this.framebuffer[pixelIndex - 1] = this.colors[this.colorLatch2];
+          }
+        } 
 
         break;
       }
@@ -682,23 +705,24 @@ class PPU {
     }
 
     // Draw pixel
-    const index = (this.scanline * SCREEN_WIDTH) + pixel;
+    const index = (this.scanline << 8) + pixel;
+    let color = 0;
 
     if (spriteColor === 0) {
       if (backgroundColor !== 0) {
-        this.framebuffer[index] = backgroundColor;
+        color = backgroundColor;
       } else {
         const vramBackgroundColor = this.readPPUMem(VRAM_BACKGROUND_COLOR);
-        this.framebuffer[index] = this.colors[vramBackgroundColor];
+        color = vramBackgroundColor;
       }
     } else if (backgroundColor !== 0) {
       const spritePriority = (spriteData >>> 2) & 0b1;
 
       // Both colors set
       if (spritePriority === 0) {
-        this.framebuffer[index] = spriteColor;
+        color = spriteColor;
       } else {
-        this.framebuffer[index] = backgroundColor;
+        color = backgroundColor;
       }
 
       const spriteNumber = (spriteData >>> 5);
@@ -712,9 +736,14 @@ class PPU {
       ) {
         this.spriteZeroHit = true;
       }
-    } else {
-      this.framebuffer[index] = spriteColor;
+    } else {      
+      color = spriteColor;
     }
+
+    this.colorLatch1 = color;    
+    this.colorLatch2 = this.colorLatch1;
+    
+    this.framebuffer[index] = this.colors[color];
   }
 
   handleVblankScanline() {
@@ -813,7 +842,7 @@ class PPU {
 
 
       this.cycle++;
-        this.masterClock += this.ppuDivider;
+      this.masterClock += this.ppuDivider;
     }
 
     this.slack = targetMasterClock - this.masterClock;

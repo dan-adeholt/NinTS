@@ -97,7 +97,6 @@ export const COLOR_TABLE = [
   new Uint32Array(COLORS.length),
   new Uint32Array(COLORS.length),
 ]
-
 for (let mask = 0; mask <= 0b111; mask++) {
   let redFactor = 1.0;
   let greenFactor = 1.0;
@@ -127,5 +126,25 @@ for (let mask = 0; mask <= 0b111; mask++) {
     const g = Math.floor(((color >> 8) & 0b11111111) * greenFactor);
     const b = Math.floor(((color) & 0b11111111) * blueFactor);
     COLOR_TABLE[mask][i] = 0xFF000000 | r << 16 | g << 8 | b;
+  }
+}
+
+export const GREYSCALE_COLOR_TABLE = [
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+  new Uint32Array(COLORS.length),
+]
+
+for (let i = 0; i < GREYSCALE_COLOR_TABLE.length; i++) {
+  const colorArray = GREYSCALE_COLOR_TABLE[i];
+  colorArray.set(COLOR_TABLE[i]);
+
+  for (let j = 0; j < colorArray.length; j++) {
+    colorArray[j] = colorArray[j & 0x30];
   }
 }
