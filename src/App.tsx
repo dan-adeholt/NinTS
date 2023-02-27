@@ -15,7 +15,7 @@ import { BREAKPOINTS_KEY } from './components/CPUDebugger';
 import AudioBuffer from './AudioBuffer';
 import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from './emulator/apu';
 import Toolbar from './Toolbar';
-import { HotkeyToDebugDialog, getDebugDialogComponents } from './DebugDialog';
+import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
 
 const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
@@ -277,6 +277,10 @@ function App() {
             if (emulator.stepFrame(false)) {
                 // Hit breakpoint
                 _setRunMode(RunModeType.STOPPED);
+                setDialogState(oldState => {
+                  return { ...oldState, [DebugDialog.CPUDebugger]: true };
+                });
+
                 stopped = true;
                 break;
             }
@@ -287,7 +291,7 @@ function App() {
         if (!stopped) {
             animationFrameRef.current = window.requestAnimationFrame(updateFrame);
         }
-    }, [runMode, emulator, display, _setRunMode]);
+    }, [runMode, emulator, display, _setRunMode, setDialogState]);
 
     return (
           <div>
