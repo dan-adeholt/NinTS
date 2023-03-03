@@ -740,8 +740,8 @@ class PPU {
       color = spriteColor;
     }
 
+    this.colorLatch2 = this.colorLatch1;    
     this.colorLatch1 = color;    
-    this.colorLatch2 = this.colorLatch1;
     
     this.framebuffer[index] = this.colors[color];
   }
