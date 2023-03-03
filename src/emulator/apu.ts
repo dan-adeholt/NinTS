@@ -3,8 +3,9 @@ import TriangleWaveGenerator from './apu/TriangleWaveGenerator';
 import DMCGenerator from './apu/DMCGenerator';
 import NoiseGenerator from './apu/NoiseGenerator';
 
+const LOCK_INTEGER_FPS = true;
 const NTSC_CYCLES_PER_FRAME = 29780.5;
-export const FRAMES_PER_SECOND = 3579545.45 / 227.333 / 262;
+export const FRAMES_PER_SECOND = LOCK_INTEGER_FPS ? 60 : (3579545.45 / 227.333 / 262);
 
 export const NTSC_CPU_CYCLES_PER_SECOND = NTSC_CYCLES_PER_FRAME * FRAMES_PER_SECOND;
 export const SAMPLE_RATE = 48000;
