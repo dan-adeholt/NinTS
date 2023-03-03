@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './App.module.css';
 import './global.css';
 import { parseROM } from './emulator/parseROM';
@@ -47,9 +47,10 @@ type AudioState = {
 }
 
 type Display = {
-    context: CanvasRenderingContext2D
-    imageData: ImageData
-    framebuffer: Uint32Array
+  element: (HTMLCanvasElement | null)
+  context: CanvasRenderingContext2D
+  imageData: ImageData
+  framebuffer: Uint32Array
 }
 
 const renderScreen = (display: Display | null, emulator: EmulatorState | null ) => {
@@ -84,19 +85,37 @@ if (lastRomArray != null) {
 function App() {
     // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
+    const audioRef = useRef<AudioState | null>(null);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     const [title, setTitle] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string) ?? "No file selected");
     const startTime = useRef(performance.now());
+    const displayContainer = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(initialError);
     const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
+    const display = useRef<Display | null>(null);
+    const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
 
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
 
-    const display = useRef<Display | null>(null);
+    useLayoutEffect(() => {
+      const measure = () => {
+        if (displayContainer.current && display.current?.element) {
+          console.log(displayContainer.current?.clientWidth);
+          const newScale = (displayContainer.current?.clientHeight) / display.current?.element?.height;
+          display.current.element.style.transform = `scale(${newScale})`;
+        }
+      }
 
-    const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
+      console.log('Adding resize listener');
+      measure();
+      window.addEventListener('resize', measure);
+
+      return () => {
+        window.removeEventListener('resize', measure);
+      }
+    });
 
     const addKeyListener = useCallback((listener : KeyListener) => {
         setKeyListeners(oldListeners => {
@@ -133,7 +152,7 @@ function App() {
         console.log(e);
     }, []);
 
-    const audioRef = useRef<AudioState | null>(null);
+    
 
     const stopAudioContext = useCallback(() => {
         if (audioRef.current) {
@@ -294,53 +313,52 @@ function App() {
     }, [runMode, emulator, display, _setRunMode, setDialogState]);
 
     return (
-          <div>
-              <Toolbar
-                emulator={emulator}
-                toggleOpenDialog={toggleOpenDialog}
-                loadRom={loadRomFromUserInput}
-                setRunMode={_setRunMode}
-              />
-              <ErrorBoundary>
+      <div className={styles.mainContainer}>
+      <Toolbar
+        emulator={emulator}
+        toggleOpenDialog={toggleOpenDialog}
+        loadRom={loadRomFromUserInput}
+        setRunMode={_setRunMode}
+        romName={title}
+      />
+      <ErrorBoundary>
 
-                  { Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (
-                    <DialogComponent
-                      isOpen={dialogState[type]}
-                      onClose={() => toggleOpenDialog(type)}
-                      emulator={emulator}
-                      runMode={runMode}
-                      setRunMode={_setRunMode}
-                      key={type + emulator.rom?.romSHA}
-                      onRefresh={triggerRefresh}
-                      refresh={refresh}
-                      addKeyListener={addKeyListener}
-                      removeKeyListener={removeKeyListener}
-                    />
-                  ))
+        {Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (
+          <DialogComponent
+            isOpen={dialogState[type]}
+            onClose={() => toggleOpenDialog(type)}
+            emulator={emulator}
+            runMode={runMode}
+            setRunMode={_setRunMode}
+            key={type + emulator.rom?.romSHA}
+            onRefresh={triggerRefresh}
+            refresh={refresh}
+            addKeyListener={addKeyListener}
+            removeKeyListener={removeKeyListener}
+          />
+        ))
+          }
+          <div className={styles.displayContainer} ref={displayContainer}>
+            {error}
+            {!error && (
+                <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
+                  const context = ref?.getContext("2d");
+                  if (context != null) {
+                    const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+                    const framebuffer = new Uint32Array(imageData.data.buffer);
+                    for (let i = 0; i < framebuffer.length; i++) {
+                      framebuffer[i] = 0xdadada;
+                    }
+                    display.current = { imageData, framebuffer, context, element: ref };
+                    context.fillStyle = '#2a2a2a';
+                    context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
                   }
-                  <div className={styles.app}>
-                      <h1>{ title }</h1>
-                      <div className={styles.drawingArea}>
-                          <div className={styles.canvasContainer}>
-                              { error }
-                              { !error && (
-                                  <div className={styles.displayContainer}>
-                                      <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
-                                          const context = ref?.getContext("2d");
-                                          if (context != null) {
-                                              const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
-                                              const framebuffer = new Uint32Array(imageData.data.buffer);
-                                              display.current = { imageData, framebuffer, context };
-                                          }
-                                      }}/>
-                                  </div>
-                              ) }
-                          </div>
-                      </div>
-                  </div>
-              </ErrorBoundary>
-          </div>
-    );
+              }} />
+            )}
+        </div>
+      </ErrorBoundary>
+    </div>
+  );
 }
 
 export default App;

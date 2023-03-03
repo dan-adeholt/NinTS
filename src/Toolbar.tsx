@@ -13,6 +13,7 @@ type ToolbarProps = {
   toggleOpenDialog: (dialog : DebugDialog) => void
   loadRom: (rom: Uint8Array, filename: string) => void,
   setRunMode: (newRunMode: RunModeType) => void
+  romName: string
 };
 
 enum DropdownMenu {
@@ -21,7 +22,7 @@ enum DropdownMenu {
   Savegames = 3
 }
 
-const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode } : ToolbarProps) => {
+const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, romName } : ToolbarProps) => {
   const [menuState, setMenuState] = useState<Record<number, boolean>>({});
   const toggleOpen = (menu: DropdownMenu) => setMenuState(oldState => ({ [menu]: !oldState[menu]}));
   const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);
@@ -50,7 +51,10 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode } : ToolbarPr
   return (
     <div className={styles.toolbar}>
       <div className={styles.item}>
-        <h1>NinJS</h1>
+        <div>
+          <div><h1>NinJS</h1></div>  
+          <div className={styles.romName}>{ romName }</div>
+        </div>
       </div>
       <div className={styles.item}>
         <input id="file-upload" type="file" onChange={romFileChanged}/>

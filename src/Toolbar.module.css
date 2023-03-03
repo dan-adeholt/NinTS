@@ -1,19 +1,17 @@
 .toolbar {
     display: flex;
     justify-content: center;
-    margin-bottom: 10px;
     border-bottom: 1px solid #333;
+    width: 100%;
 }
 
 .item {
     padding: 10px;
     position: relative;
     display: flex;
+    align-items: center;
 }
 
-.toolbar button {
-
-}
 .buttonRow > button, .buttonRow > label {
     border-radius: 0;
 }
@@ -45,4 +43,9 @@
 
 .item h1 {
     margin: 0 20px 0 0;
+    font-size: 1.5em;
+}
+
+.romName {
+  font-size: 0.8em;
 }

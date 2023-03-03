@@ -11,17 +11,11 @@ body {
   box-sizing: border-box;
 }
 
-.content {
-  flex-grow: 1;
-
-}
-
-.app {
+.mainContainer {
   display: flex;
-  height: 100%;
-  box-sizing: border-box;
-  justify-content: center;
   flex-direction: column;
+  height: 100vh;
+  width: 100vw;
   align-items: center;
 }
 
@@ -72,25 +66,10 @@ body {
   border: 1px solid gray;
 }
 
-.drawingArea {
-  display: flex;
-}
-
-.controlsArea {
-  display: flex;
-  flex-direction: column;
-}
-
-.controlsArea button {
-  margin-right: 5px;
-}
-
-
 .displayContainer {
-  width: 770px;
-  height: 722px;
+  height: 100%;
+  aspect-ratio: 256 / 240;
   box-sizing: border-box;
-  border: 1px solid gray;
 }
 
 .debugDisplayContainer {
@@ -102,18 +81,11 @@ body {
 
 .displayContainer canvas {
   box-sizing: border-box;
-
-  transform: scale(3);
   transform-origin: 0% 0%;
   /* Firefox */
   image-rendering: crisp-edges;
   /* Chromium + Safari */
   image-rendering: pixelated;
-}
-
-.canvasContainer {
-  display: flex;
-  flex-direction: column;
 }
 
 input[type="file"] {
