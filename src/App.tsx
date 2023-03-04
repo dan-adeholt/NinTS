@@ -229,7 +229,6 @@ function App() {
             setIsSteppingScanline(newRunMode == RunModeType.RUNNING_SINGLE_SCANLINE);
             emulator.stepFrame(newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE);
             if (display.current != null && emulator) {
-                display.current.context.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
                 display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
                 display.current.context.putImageData(display.current.imageData, 0, 0);
             }
