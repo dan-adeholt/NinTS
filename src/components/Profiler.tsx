@@ -51,7 +51,7 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
     const ntscPpuClockSpeed = 21.477272 / 3.0;
     const clockSpeed = ((ppu.cycle - startCycle) / (diffMs * 1000));
     const ratio = (clockSpeed / ntscPpuClockSpeed).toFixed(2);
-    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + ratio + 'MHz');
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz, ' + ratio);
   }, []);
 
   const profileCPU = useCallback(async () => {
