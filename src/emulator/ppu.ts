@@ -100,6 +100,13 @@ function getPaletteFromByte(v: number, byte: number) {
   return byte & 0b11;
 }
 
+// Precalculate scanlines to skip
+const skipBackgroundRegisterUpdates = new Array(350);
+
+for (let scanlineCycle = 0; scanlineCycle < skipBackgroundRegisterUpdates.length; scanlineCycle++) {
+  skipBackgroundRegisterUpdates[scanlineCycle] = (scanlineCycle > 257 && scanlineCycle < 321) || scanlineCycle > 336 || scanlineCycle < 1;
+}
+
 class PPU {
   cycle = -1;
   scanlineCycle = -1;
@@ -141,7 +148,8 @@ class PPU {
   maskBackgroundEnabled = false;
   colors = COLOR_TABLE[0];
   muteVerticalBlank = false;
-
+  pendingTileLowByte = 0;
+  pendingTileHighByte = 0;
   colorLatch1 = 0;
   colorLatch2 = 0;
 
@@ -594,48 +602,60 @@ class PPU {
   updateBackgroundRegisters() {
     const scanlineCycle = this.scanlineCycle;
 
-    if (scanlineCycle > 257 && scanlineCycle < 322 || scanlineCycle > 337 || scanlineCycle < 2) {
+    if (skipBackgroundRegisterUpdates[scanlineCycle]) {
       return;
-    }
+    }    
 
-    if (scanlineCycle === 328) {
-      this.tileScanlineIndex = 0;
-    }
+    switch(scanlineCycle % 8) {
+      case 0: {
+        let lowByte = this.pendingTileLowByte;
+        let highByte = this.pendingTileHighByte;
+        const palette = this.pendingBackgroundPalette << 2;
+        for (let i = 0; i < 8; i++) {
+          const c1 = (lowByte & BIT_7) >>> 7;
+          const c2 = (highByte & BIT_7) >>> 6;
+          lowByte <<= 1;
+          highByte <<= 1;
+          this.tileScanline[this.tileScanlineIndex++] = palette | c2 | c1;
+        }
 
-    if (scanlineCycle % 8 === 0) {
-      // Read attributes into temporary registers. We cheat a bit and do this in one pass, in
-      // reality it's a sequential process taking place across several cycles
+        this.incrementHorizontalV();
 
-      const nametable = (this.V & 0x0C00);
-      const y = ((this.V >>> 4) & 0b111000);  // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
-      const x = ((this.V >>> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
-
-      const attributeAddress = 0x23C0 | nametable | y | x;
-      const tileIndex = (this.controlBgPatternAddress << 8) | this.readPPUMem(0x2000 | (this.V & 0x0FFF));
-      const attribute = this.readPPUMem(attributeAddress);
-      const palette = getPaletteFromByte(this.V, attribute);
-
-      const fineY = (this.V & POINTER_FINE_Y_MASK) >> 12;
-
-      this.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + fineY;
-      this.pendingBackgroundPalette = palette;
-
-      this.incrementHorizontalV();
-
-      if (scanlineCycle === 256) {
-        this.incrementVerticalV();
+        if (scanlineCycle === 256) {
+          this.incrementVerticalV();
+        }
+        
+        break;
       }
-    } else if ((scanlineCycle - 1) % 8 === 0) {
-      let lowByte = this.readPPUMem(this.pendingBackgroundTileIndex);
-      let highByte = this.readPPUMem(this.pendingBackgroundTileIndex + 8);
+      case 1: {
+        if (scanlineCycle === 321) {
+          this.tileScanlineIndex = 0;
+        }
 
-      const palette = this.pendingBackgroundPalette << 2;
-      for (let i = 0; i < 8; i++) {
-        const c1 = (lowByte & BIT_7) >>> 7;
-        const c2 = (highByte & BIT_7) >>> 6;
-        lowByte <<= 1;
-        highByte <<= 1;
-        this.tileScanline[this.tileScanlineIndex++] = palette | c2 | c1;
+        const tileIndex = (this.controlBgPatternAddress << 8) | this.readPPUMem(0x2000 | (this.V & 0x0FFF));
+        const fineY = (this.V & POINTER_FINE_Y_MASK) >> 12;
+        this.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + fineY;      
+        break;
+      }
+      case 3: {
+        const nametable = (this.V & 0x0C00);
+        const y = ((this.V >>> 4) & 0b111000);  // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
+        const x = ((this.V >>> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
+
+        const attributeAddress = 0x23C0 | nametable | y | x;
+        const attribute = this.readPPUMem(attributeAddress);
+        const palette = getPaletteFromByte(this.V, attribute);
+        
+        this.pendingBackgroundPalette = palette;
+        break;
+      }
+      case 5: {
+        this.pendingTileLowByte = this.readPPUMem(this.pendingBackgroundTileIndex);
+        break;
+      }
+      case 7: {
+        this.pendingTileHighByte = this.readPPUMem(this.pendingBackgroundTileIndex + 8);
+        break;
       }
     }
 
