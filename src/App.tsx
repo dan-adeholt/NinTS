@@ -102,13 +102,12 @@ function App() {
     useLayoutEffect(() => {
       const measure = () => {
         if (displayContainer.current && display.current?.element) {
-          console.log(displayContainer.current?.clientWidth);
           const newScale = (displayContainer.current?.clientHeight) / display.current?.element?.height;
           display.current.element.style.transform = `scale(${newScale})`;
         }
       }
 
-      console.log('Adding resize listener');
+      
       measure();
       window.addEventListener('resize', measure);
 
@@ -230,6 +229,7 @@ function App() {
             setIsSteppingScanline(newRunMode == RunModeType.RUNNING_SINGLE_SCANLINE);
             emulator.stepFrame(newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE);
             if (display.current != null && emulator) {
+                display.current.context.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
                 display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
                 display.current.context.putImageData(display.current.imageData, 0, 0);
             }
@@ -312,6 +312,21 @@ function App() {
         }
     }, [runMode, emulator, display, _setRunMode, setDialogState]);
 
+    const canvasRefCallback = useCallback((ref: HTMLCanvasElement | null) => {
+      const context = ref?.getContext("2d");
+      if (context != null) {
+        const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+        const framebuffer = new Uint32Array(imageData.data.buffer);
+        for (let i = 0; i < framebuffer.length; i++) {
+          framebuffer[i] = 0xdadada;
+        }
+        console.log('Here');
+        display.current = { imageData, framebuffer, context, element: ref };
+        context.fillStyle = '#2a2a2a';
+        context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+      }
+    }, []);
+
     return (
       <div className={styles.mainContainer}>
       <Toolbar
@@ -341,19 +356,7 @@ function App() {
           <div className={styles.displayContainer} ref={displayContainer}>
             {error}
             {!error && (
-                <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={ref => {
-                  const context = ref?.getContext("2d");
-                  if (context != null) {
-                    const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
-                    const framebuffer = new Uint32Array(imageData.data.buffer);
-                    for (let i = 0; i < framebuffer.length; i++) {
-                      framebuffer[i] = 0xdadada;
-                    }
-                    display.current = { imageData, framebuffer, context, element: ref };
-                    context.fillStyle = '#2a2a2a';
-                    context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
-                  }
-              }} />
+                <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRefCallback} />
             )}
         </div>
       </ErrorBoundary>
@@ -361,4 +364,4 @@ function App() {
   );
 }
 
-export default App;
+export default React.memo(App);
