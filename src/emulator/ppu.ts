@@ -101,10 +101,10 @@ function getPaletteFromByte(v: number, byte: number) {
 }
 
 // Precalculate scanlines to skip
-const skipBackgroundRegisterUpdates = new Array(350);
+const backgroundRegisterUpdateScanlines = new Array(350);
 
-for (let scanlineCycle = 0; scanlineCycle < skipBackgroundRegisterUpdates.length; scanlineCycle++) {
-  skipBackgroundRegisterUpdates[scanlineCycle] = (scanlineCycle > 257 && scanlineCycle < 321) || scanlineCycle > 336 || scanlineCycle < 1;
+for (let scanlineCycle = 0; scanlineCycle < backgroundRegisterUpdateScanlines.length; scanlineCycle++) {
+  backgroundRegisterUpdateScanlines[scanlineCycle] = scanlineCycle != 0 && (scanlineCycle <= 257 || (scanlineCycle >= 321 && scanlineCycle <= 336));
 }
 
 class PPU {
@@ -602,10 +602,6 @@ class PPU {
   updateBackgroundRegisters() {
     const scanlineCycle = this.scanlineCycle;
 
-    if (skipBackgroundRegisterUpdates[scanlineCycle]) {
-      return;
-    }    
-
     switch(scanlineCycle % 8) {
       case 0: {
         let lowByte = this.pendingTileLowByte;
@@ -695,7 +691,9 @@ class PPU {
   handleVisibleScanline() {
     if (this.maskRenderingEnabled) {
       this.updateSpriteScanning();
-      this.updateBackgroundRegisters();
+      if (backgroundRegisterUpdateScanlines[this.scanlineCycle]) {
+        this.updateBackgroundRegisters();
+      }
     }
 
     const scanlineCycle = this.scanlineCycle;
@@ -782,7 +780,9 @@ class PPU {
 
   handlePrerenderScanline() {
     if (this.maskRenderingEnabled) {
-      this.updateBackgroundRegisters();
+      if (backgroundRegisterUpdateScanlines[this.scanlineCycle]) {
+        this.updateBackgroundRegisters();
+      }  
     }
 
     if (this.scanlineCycle === 1) {
