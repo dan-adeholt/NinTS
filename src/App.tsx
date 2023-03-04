@@ -319,7 +319,7 @@ function App() {
         for (let i = 0; i < framebuffer.length; i++) {
           framebuffer[i] = 0xdadada;
         }
-        console.log('Here');
+
         display.current = { imageData, framebuffer, context, element: ref };
         context.fillStyle = '#2a2a2a';
         context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
