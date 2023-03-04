@@ -191,7 +191,7 @@ class PPU {
       return this.paletteRAM[(baseOffset + (paletteIndex * 4) + 2) & 0x1F];
     }
 
-    return 0;
+    return -1;
   }
 
   paletteIndexedSpriteColor(indexedColor: number, paletteIndex: number) {
@@ -702,7 +702,7 @@ class PPU {
       return;
     }
 
-    let spriteColor = 0;
+    let spriteColor = -1;
     const pixel = scanlineCycle - 1;
     const tileData = this.tileScanline[pixel + this.X];
     const backgroundColorIndex = tileData & 0b11;
@@ -710,11 +710,10 @@ class PPU {
     const minSpriteCycle = this.showSpritesLeftSide ? 0 : 8;
     const minBackgroundCycle = this.showBackgroundLeftSide ? 0 : 8;
 
-    const backgroundColor = (this.maskBackgroundEnabled && scanlineCycle > minBackgroundCycle) ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : 0;
+    const backgroundColor = (this.maskBackgroundEnabled && scanlineCycle > minBackgroundCycle) ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : -1;
 
     const spriteData = this.spriteScanline[pixel];
     const spritePatternColor = spriteData & 0b11;
-
 
     // No sprites are rendered on the first scanline
     if (this.scanline > 0 && spritePatternColor !== 0 && this.maskSpritesEnabled && scanlineCycle > minSpriteCycle) {
@@ -726,14 +725,14 @@ class PPU {
     const index = (this.scanline << 8) + pixel;
     let color = 0;
 
-    if (spriteColor === 0) {
-      if (backgroundColor !== 0) {
+    if (spriteColor === -1) {
+      if (backgroundColor !== -1) {
         color = backgroundColor;
       } else {
         const vramBackgroundColor = this.readPPUMem(VRAM_BACKGROUND_COLOR);
         color = vramBackgroundColor;
       }
-    } else if (backgroundColor !== 0) {
+    } else if (backgroundColor !== -1) {
       const spritePriority = (spriteData >>> 2) & 0b1;
 
       // Both colors set
