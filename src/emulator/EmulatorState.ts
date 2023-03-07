@@ -429,13 +429,13 @@ class EmulatorState {
         this.transferDMCDMA = false;
         wroteDMCByte = true;
       } else if (this.transferSpriteDMA) {
+        this.tickDMCWaitCycle();        
         spriteByte = readByte(this, dmaAddress++);
         writtenSpriteDMABytes++;
-        this.tickDMCWaitCycle();
       } else {
         // DMC is running, but not yet ready. Do a dummy read, and decrement DMA wait counter.
+        this.tickDMCWaitCycle();        
         dummyRead();
-        this.tickDMCWaitCycle();
       }
 
       // DMC DMA exits before making a write cycle.
@@ -444,6 +444,7 @@ class EmulatorState {
       }
 
       // Then do a write cycle
+      this.tickDMCWaitCycle();
       if (this.transferSpriteDMA && writtenSpriteDMABytes > 0 && !wroteDMCByte) {
         this.startWriteTick();
         this.ppu.pushOAMValue(spriteByte);
@@ -451,8 +452,6 @@ class EmulatorState {
       } else {
         dummyRead();
       }
-
-      this.tickDMCWaitCycle();
 
       if (writtenSpriteDMABytes === 256) {
         this.transferSpriteDMA = false;
@@ -601,14 +600,6 @@ class EmulatorState {
    * is one more than it would be otherwise. That would be fairly easy to
    * simulate, but the problem is that the PPU has ALSO had time to execute
    * some cycles.
-   *
-   * Mesen implements their ticks somewhat differently than we do, they split
-   * the cycle into two phases. In the first phase the cycle count is incremented
-   * and the master clock is updated with 5 cycles (for read operations) and 7 cycles
-   * (for write operations). Then the actual this.is updated. Then the second phase
-   * is executed, and then it is inverted: 7 cycles for read operations, 5 cycles for
-   * write operations. I do not know why they do it this way; we might end up doing
-   * something similar for all our ticks. But right now we only do it for the opcodes.
    *
    * Now the actual trace statement is actually recorded after the first phase of the
    * opcode read has taken place, which means that the cycle count has been updated

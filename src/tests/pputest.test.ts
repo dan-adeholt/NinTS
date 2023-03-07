@@ -27,6 +27,7 @@ test('blargg - VBL clear time', () => testPPURomWithImage('nes-test-roms/blargg_
 test('blargg - VRAM access', () => testPPURomWithImage('nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes', 'nes-test-images/vram_access.nes.png', 25));
 
 test('sprdma_and_dmc_dma - base', () => testInstructionTestRom('nes-test-roms/sprdma_and_dmc_dma/sprdma_and_dmc_dma.nes'));
+test('sprdma_and_dmc_dma - 512', () => testInstructionTestRom('nes-test-roms/sprdma_and_dmc_dma/sprdma_and_dmc_dma_512.nes'));
 
 test('nmi_sync NTSC', () => testPPURomWithImage('nes-test-roms/nmi_sync/demo_ntsc.nes', 'nes-test-images/nmi_sync_demo_ntsc.nes.png', 25));
 
