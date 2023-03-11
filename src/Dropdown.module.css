@@ -11,7 +11,7 @@
     flex-direction: column;
     margin-top: 5px;
     z-index: 2;
-    top: 44px;
+    top: 46px;
 }
 .open {
     visibility: visible;
@@ -23,6 +23,9 @@
     text-align: left;
     border-bottom: 1px solid #444;
     background: transparent;
+}
+.dropdown button:last-child {
+  border-bottom: 0;  
 }
 
 .dropdown button:hover {

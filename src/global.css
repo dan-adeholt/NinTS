@@ -56,3 +56,10 @@ td label {
     display:block;
     font-size: 0.8em;
 }
+
+
+button:disabled, button:disabled:hover {
+  color: #555;
+  background-color: #bababa;
+  cursor: default;
+}

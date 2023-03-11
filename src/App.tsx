@@ -17,9 +17,7 @@ import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from './emulator/ap
 import Toolbar from './Toolbar';
 import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
-
-const LOCAL_STORAGE_KEY_LAST_ROM = 'last-rom';
-const LOCAL_STORAGE_KEY_LAST_TITLE = 'last-title';
+import { LOCAL_STORAGE_KEY_LAST_ROM, LOCAL_STORAGE_KEY_LAST_TITLE, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './components/types';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
@@ -89,6 +87,8 @@ function App() {
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     const [title, setTitle] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string) ?? "No file selected");
+    const [romList, setRomList] = useState<RomEntry[]>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_ROM_LIST) ?? '[]') ?? []);
+
     const startTime = useRef(performance.now());
     const displayContainer = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(initialError);
@@ -201,14 +201,23 @@ function App() {
 
         setTitle(filename);
         triggerRefresh();
+        return rom;
     }, [audioBuffer, emulator, triggerRefresh]);
 
+    console.log(romList);
+
     const loadRomFromUserInput = useCallback((romBuffer: Uint8Array, filename: string) => {
-        localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, JSON.stringify(Array.from(romBuffer)));
-        localStorage.setItem(LOCAL_STORAGE_KEY_LAST_TITLE, filename);
-        localStorage.removeItem(BREAKPOINTS_KEY);
-        loadRom(romBuffer, filename);
-    }, [loadRom]);
+      localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, JSON.stringify(Array.from(romBuffer)));
+      localStorage.setItem(LOCAL_STORAGE_KEY_LAST_TITLE, filename);
+      localStorage.removeItem(BREAKPOINTS_KEY);
+      const rom = loadRom(romBuffer, filename);
+      const entry: RomEntry = { filename, sha: rom.romSHA };      
+      const newRomList = romList.filter(romEntry => romEntry.sha !== entry.sha);
+      newRomList.unshift(entry);
+      setRomList(newRomList);
+      localStorage.setItem(LOCAL_STORAGE_KEY_ROM_LIST, JSON.stringify(newRomList));
+      localStorage.setItem(LOCAL_STORAGE_ROM_PREFIX + entry.sha, JSON.stringify(Array.from(romBuffer)));
+    }, [loadRom, romList]);
 
     const animationFrameRef = useRef<number | null>(null);
 
@@ -334,6 +343,7 @@ function App() {
         loadRom={loadRomFromUserInput}
         setRunMode={_setRunMode}
         romName={title}
+        romList={romList}
       />
       <ErrorBoundary>
 

@@ -7,6 +7,8 @@ import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
 import classNames from 'classnames';
 import EmulatorState, { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './emulator/EmulatorState';
+import { RomEntry } from './components/types';
+import ROMList from './components/ROMList';
 
 type ToolbarProps = {
   emulator: EmulatorState
@@ -14,15 +16,17 @@ type ToolbarProps = {
   loadRom: (rom: Uint8Array, filename: string) => void,
   setRunMode: (newRunMode: RunModeType) => void
   romName: string
+  romList: RomEntry[]
 };
 
 enum DropdownMenu {
   Settings = 1,
   Profile = 2,
-  Savegames = 3
+  Savegames = 3,
+  RomList = 4
 }
 
-const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, romName } : ToolbarProps) => {
+const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, romName, romList } : ToolbarProps) => {
   const [menuState, setMenuState] = useState<Record<number, boolean>>({});
   const toggleOpen = (menu: DropdownMenu) => setMenuState(oldState => ({ [menu]: !oldState[menu]}));
   const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);
@@ -53,12 +57,25 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, romName } : 
       <div className={styles.item}>
         <div>
           <div><h1>NinJS</h1></div>  
-          <div className={styles.romName}>{ romName }</div>
+          <div>{ romName }</div>
         </div>
       </div>
       <div className={styles.item}>
         <input id="file-upload" type="file" onChange={romFileChanged}/>
         <label className="labelButton" htmlFor="file-upload"><FontAwesomeIcon icon={faFile}/><span>Open file...</span></label>
+      </div>
+      <div className={styles.item}>
+        <button onClick={() => toggleOpen(DropdownMenu.RomList)} disabled={romList.length === 0}>
+          <FontAwesomeIcon icon={faFileAlt}/>
+          <span>Recent games...</span>
+        </button>
+        <Dropdown isOpen={menuState[DropdownMenu.RomList]}>
+          <ROMList romList={romList} loadRom={(romBuffer: Uint8Array, filename: string) => {
+            toggleOpen(DropdownMenu.RomList);
+            loadRom(romBuffer, filename);
+            setRunMode(RunModeType.RUNNING);
+          }}/>  
+        </Dropdown>
       </div>
       <div className={classNames(styles.buttonRow, styles.item)}>
         <button onClick={() => setRunMode(RunModeType.RUNNING)}><FontAwesomeIcon icon={faPlay}/></button>
