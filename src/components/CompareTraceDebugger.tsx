@@ -4,9 +4,9 @@ import Dialog from '../Dialog';
 import styles from './PPUDebugging.module.css';
 import classNames from 'classnames';
 import { hex } from '../emulator/stateLogging';
+import { LOCAL_STORAGE_KEY_MUTED_LOCATIONS_PREFIX } from './types';
 
 const prefixLine = (idx: number, str: string) => '[' + idx + '] ' + str
-const LOCAL_STORAGE_KEY_MUTED_LOCATIONS = 'muted-locations';
 
 type ErrorDebugEntry = {
   name: string
@@ -51,7 +51,7 @@ function phaseToString(phase: Phase) {
   }
 }
 
-const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDialogProps) => {
+const CompareTraceDebugger = ({ emulator, onClose, onRefresh } : DebugDialogProps) => {
   const fileUrl = (localStorage.getItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL + '-' + emulator.rom?.romSHA) as string) ?? '';
 
   const _setFileUrl = (newUrl: string) => {
@@ -64,7 +64,7 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
     data: null
   });
 
-  const [mutedLocations, setMutedLocations] = useState<number[]>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS) ?? '[]') ?? []);
+  const [mutedLocations, setMutedLocations] = useState<number[]>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS_PREFIX + emulator.rom?.romSHA) ?? '[]') ?? []);
 
   const dumpingState = useRef<DumpingState>({
     lineIndex: 0,
@@ -189,19 +189,19 @@ const CompareTraceDebugger = ({ emulator, isOpen, onClose, onRefresh } : DebugDi
   const mute = useCallback(() => {
     const newMutedLocations = mutedLocations.concat([emulator.PC])
     setMutedLocations(newMutedLocations);
-    localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS, JSON.stringify(newMutedLocations));
+    localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS_PREFIX + emulator.rom?.romSHA, JSON.stringify(newMutedLocations));
   }, [emulator, mutedLocations]);
 
   const clearMuted = useCallback(() => {
     setMutedLocations([]);
-    localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS, JSON.stringify([]));
+    localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS_PREFIX + emulator.rom?.romSHA, JSON.stringify([]));
   }, []);
 
   const errorDetails = phase.phase === 'error' ? phase.data as ErrorType : null
   const isLoadingOrComparing = phase.phase === 'loading' || phase.phase === 'comparing';
 
   return (
-    <Dialog onClose={onClose} isOpen={isOpen} title="Compare trace debugger">
+    <Dialog onClose={onClose} title="Compare trace debugger">
       <div className={styles.inputRow}>
         <input value={fileUrl} onChange={e => _setFileUrl(e.target.value)}/>
         <button disabled={isLoadingOrComparing} onClick={compare}>Compare</button>

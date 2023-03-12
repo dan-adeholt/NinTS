@@ -11,7 +11,7 @@ import classNames from 'classnames';
 import styles from './PPUDebugging.module.css';
 import { hex } from '../emulator/stateLogging';
 
-const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
+const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
   const [perfStr, setPerfStr] = useState<string | null>(null);
 
   const profileAPU = useCallback(() => {
@@ -134,7 +134,7 @@ const Profiler = ({ isOpen, onClose, emulator } : DebugDialogProps) => {
   }, [emulator]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Profiler">
+    <Dialog onClose={onClose} title="Profiler">
       <div className={styles.inputRow}>
         <button onClick={profileAPU}>Profile APU</button>
         <button onClick={profilePPU}>Profile PPU</button>

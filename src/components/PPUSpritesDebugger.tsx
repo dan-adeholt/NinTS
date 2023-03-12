@@ -68,7 +68,7 @@ const generateFrameBuffer = (ppu: PPU) => {
 };
 
 
-const PPUSpritesDebugger = ({ emulator, isOpen, onClose, refresh } : DebugDialogProps) => {
+const PPUSpritesDebugger = ({ emulator, onClose, refresh } : DebugDialogProps) => {
   const ppuCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useLayoutEffect(() => {
@@ -84,7 +84,7 @@ const PPUSpritesDebugger = ({ emulator, isOpen, onClose, refresh } : DebugDialog
   }, [ppuCanvasRef, emulator, refresh]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="PPU Sprites" horizontalPosition={DialogHorizontalPosition.RIGHT}>
+    <Dialog onClose={onClose} title="PPU Sprites" horizontalPosition={DialogHorizontalPosition.RIGHT}>
       <div className={styles.ppuContainer}>
         <canvas width={256} height={128} ref={ppuCanvasRef}/>
       </div>

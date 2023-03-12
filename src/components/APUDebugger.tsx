@@ -199,10 +199,9 @@ const DMCDebugger = ({ dmc } : DMCDebuggerProps) => {
   );
 }
 
-const APUDebugger = ({ emulator, isOpen, onClose }: DebugDialogProps) => {
+const APUDebugger = ({ emulator, onClose }: DebugDialogProps) => {
   return (
     <Dialog
-      isOpen={isOpen}
       onClose={onClose}
       title="APU Debugger"
       horizontalPosition={DialogHorizontalPosition.RIGHT}>

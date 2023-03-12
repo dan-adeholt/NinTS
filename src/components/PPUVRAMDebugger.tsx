@@ -4,7 +4,7 @@ import styles from './PPUDebugging.module.css';
 import Dialog, { DialogHorizontalPosition } from '../Dialog';
 import { DebugDialogProps } from '../DebugDialog';
 
-const PPUVRAMDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
+const PPUVRAMDebugger = ({ emulator, refresh, onClose } : DebugDialogProps) => {
   const lines = useMemo<string[]>(() => {
     const ret: string[] = [];
     for (let i = 0; i < 1024; i++) {
@@ -21,7 +21,7 @@ const PPUVRAMDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogPro
   }, [emulator, refresh])
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="PPU VRAM Debugger" horizontalPosition={DialogHorizontalPosition.RIGHT}>
+    <Dialog onClose={onClose} title="PPU VRAM Debugger" horizontalPosition={DialogHorizontalPosition.RIGHT}>
       <div className={styles.hexViewer}>
         { lines }
       </div>

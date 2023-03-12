@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styles from './Dialog.module.css';
 import classNames from 'classnames';
 import ReactDOM from 'react-dom';
@@ -8,7 +8,6 @@ import { DragOffset, useDrag } from './hooks/useDrag';
 
 export type BaseDialogProps = {
   onClose: () => void
-  isOpen: boolean
 }
 
 export enum DialogHorizontalPosition {
@@ -36,7 +35,6 @@ let curZIndex = 10;
 
 const Dialog = (
   {
-    isOpen,
     children,
     title,
     onClose,
@@ -48,16 +46,25 @@ const Dialog = (
     x: 0, y: 0
   });
 
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [zIndex, setZIndex] = useState(curZIndex+1);
   const transform = 'translate(calc(-' + horizontalPosition + ' + ' + offset.x + 'px), calc(-' + verticalPosition + ' + ' + offset.y + 'px)';
 
   const { onMouseDown } = useDrag(offset, setOffset);
 
+  // Used to add fade-in effect immediately after node has been added to DOM.
+  useEffect(() => {
+    if (dialogRef.current) {
+      dialogRef.current.className = classNames(styles.dialog, styles.isOpen);
+    }
+  }, []);
+
   const content = (
     <div
+      ref={dialogRef}
       style={{ transform, zIndex, left: horizontalPosition, top: verticalPosition }}
       onMouseDown={() => setZIndex(curZIndex++)}
-      className={classNames(styles.dialog, isOpen && styles.isOpen)}>
+      className={classNames(styles.dialog)}>
       <div
         className={styles.header}
         onMouseDown={onMouseDown}

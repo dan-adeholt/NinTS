@@ -12,8 +12,6 @@ import { DebugDialogProps } from '../DebugDialog';
 import Dialog, { DialogHorizontalPosition } from '../Dialog';
 import EmulatorBreakState from '../emulator/EmulatorBreakState';
 
-export const BREAKPOINTS_KEY = 'Breakpoints';
-
 const allOpcodeNames = new Set(Object.values(opcodeMetadata).map(opcode => opcode.name));
 
 const getComponentStyle = (component : string) => {
@@ -28,8 +26,8 @@ const getComponentStyle = (component : string) => {
 type AddressRowData = {
   lines: DisassembledLine[],
   emulator: EmulatorState,
-  breakpoints: Record<number, boolean>
-  toggleBreakpoint: (breakpoint: string) => void,
+  breakpoints: Map<number, boolean>
+  toggleBreakpoint: (breakpoint: number) => void,
   running: boolean
 };
 
@@ -44,8 +42,8 @@ const AddressRowRaw = ({ data, index } : AddressRowProps) => {
   const line = disassembleLine(data.emulator, item.address);
 
   return <div className={classNames(styles.row, !data.running && item.address === data.emulator?.PC && styles.currentRow)}>
-    <div className={classNames(styles.breakpoint, data.breakpoints[item.address] && styles.active)}
-         onClick={() => data.toggleBreakpoint(item.address.toString(10))}>
+    <div className={classNames(styles.breakpoint, data.breakpoints.get(item.address) && styles.active)}
+         onClick={() => data.toggleBreakpoint(item.address)}>
       <div/>
     </div>
     <div>
@@ -59,8 +57,7 @@ const AddressRowRaw = ({ data, index } : AddressRowProps) => {
 
 const AddressRow = React.memo(AddressRowRaw);
 
-const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, setRunMode, addKeyListener, removeKeyListener } : DebugDialogProps) => {
-  const [breakpoints, setBreakpoints] = useState<Record<string, boolean>>(JSON.parse(localStorage.getItem(BREAKPOINTS_KEY) ?? '{}') ?? {});
+const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMode, addKeyListener, removeKeyListener, breakpoints, setBreakpoints } : DebugDialogProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [newBreakpointAddress, setNewBreakpointAddress] = useState('');
 
@@ -69,26 +66,25 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
     onRefresh();
   }, [emulator, onRefresh]);
 
-  const removeBreakpoint = useCallback((address: string) => {
+  const removeBreakpoint = useCallback((address: number) => {
     setBreakpoints(oldBreakpoints => {
       const newBreakpoints = { ...oldBreakpoints };
-      delete newBreakpoints[address];
-      localStorage.setItem(BREAKPOINTS_KEY, JSON.stringify(newBreakpoints));
+      newBreakpoints.delete(address);
+      
       return newBreakpoints;
     })
   }, []);
 
-  const toggleBreakpoint = useCallback((address: string) => {
+  const toggleBreakpoint = useCallback((address: number) => {
     setBreakpoints(oldBreakpoints => {
-      const newBreakpoints = { ...oldBreakpoints };
+      const newBreakpoints = new Map<number, boolean>(oldBreakpoints);
 
-      if (address in newBreakpoints) {
-        newBreakpoints[address] = !newBreakpoints[address];
+      if (newBreakpoints.has(address)) {
+        newBreakpoints.set(address, !newBreakpoints.get(address));
       } else {
-        newBreakpoints[address] = true;
+        newBreakpoints.set(address, true);  
       }
 
-      localStorage.setItem(BREAKPOINTS_KEY, JSON.stringify(newBreakpoints));
       return newBreakpoints;
     })
   }, []);
@@ -96,7 +92,7 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
   const addBreakpoint = useCallback(() => {
     const address = parseInt(newBreakpointAddress.replace('$', '0x'), 16);
     setNewBreakpointAddress('');
-    toggleBreakpoint('' + address);
+    toggleBreakpoint(address);
   }, [newBreakpointAddress, toggleBreakpoint]);
 
   const runEmulator = useCallback(() => {
@@ -115,11 +111,6 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
     setRunMode(RunModeType.STOPPED);
   }, [setRunMode]);
 
-  // Sync breakpoints with emulator
-  useEffect(() => {
-    emulator.breakpoints = breakpoints;
-  }, [breakpoints, emulator]);
-
   const running = runMode !== RunModeType.STOPPED;
 
   const handleKeyEvent = useCallback((e : KeyboardEvent) => {
@@ -131,22 +122,6 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
       case 'n':
       case 'F10':
         stepEmulator();
-        break;
-      case 'r':
-        if (!e.metaKey) {
-          if (running) {
-            stopEmulator();
-          } else {
-            runEmulator();
-          }
-        }
-        break;
-      case 'F11':
-      case 'f':
-        runEmulatorFrame();
-        break;
-      case 'l':
-        runScanline();
         break;
       default:
         break;
@@ -183,10 +158,10 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
     {
       view: (<div className={styles.breakpointContainer}>
         {
-          Object.entries(breakpoints).map(([breakpointAddress, breakpointState]) => (
+          Array.from(breakpoints).map(([breakpointAddress, breakpointState]) => (
             <div key={breakpointAddress}>
               <input type="checkbox" onChange={() => toggleBreakpoint(breakpointAddress)} checked={breakpointState}/>
-              0x{ hex(parseInt(breakpointAddress, 10)) }
+              0x{ hex(breakpointAddress) }
               <button onClick={() => removeBreakpoint(breakpointAddress)}>Remove</button>
             </div>
           ))
@@ -226,7 +201,6 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, isOpen, onClose, s
   return (
     <Dialog
       withoutPadding
-      isOpen={isOpen}
       onClose={onClose}
       title="CPU Debugger"
       horizontalPosition={DialogHorizontalPosition.LEFT}

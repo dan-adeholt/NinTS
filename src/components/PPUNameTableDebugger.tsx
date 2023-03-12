@@ -66,7 +66,7 @@ const generateFrameBuffer = (emulator: EmulatorState) => {
   return texture;
 };
 
-const PPUNameTableDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
+const PPUNameTableDebugger = ({ emulator, refresh, onClose } : DebugDialogProps) => {
   const ppuCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -95,7 +95,6 @@ const PPUNameTableDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDial
   return (
     <Dialog
       onClose={onClose}
-      isOpen={isOpen}
       title={"PPU Nametables " + titleStringSuffix}
       horizontalPosition={DialogHorizontalPosition.RIGHT}
     >

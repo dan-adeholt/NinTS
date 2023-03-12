@@ -4,7 +4,7 @@ import { DebugDialogProps } from '../DebugDialog';
 import Dialog, { DialogHorizontalPosition } from '../Dialog';
 import classNames from 'classnames';
 
-const PPUScanlineDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialogProps) => {
+const PPUScanlineDebugger = ({ emulator, refresh, onClose } : DebugDialogProps) => {
   const lines = useMemo(() => {
     const lines = emulator.ppu.scanlineLogger.getLines();
 
@@ -18,7 +18,7 @@ const PPUScanlineDebugger = ({ emulator, refresh, isOpen, onClose } : DebugDialo
   }, [refresh, emulator])
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={"PPU Scanline logs"} horizontalPosition={DialogHorizontalPosition.RIGHT}>
+    <Dialog onClose={onClose} title={"PPU Scanline logs"} horizontalPosition={DialogHorizontalPosition.RIGHT}>
       <div className={classNames(styles.ppuScanlineDebugger, styles.hexViewer)}>
         { lines }
       </div>

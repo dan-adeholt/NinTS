@@ -11,13 +11,12 @@ import EmulatorState, {
     INPUT_UP
 } from './emulator/EmulatorState';
 import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
-import { BREAKPOINTS_KEY } from './components/CPUDebugger';
 import AudioBuffer from './AudioBuffer';
 import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from './emulator/apu';
 import Toolbar from './Toolbar';
 import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
-import { LOCAL_STORAGE_KEY_LAST_ROM, LOCAL_STORAGE_KEY_LAST_TITLE, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './components/types';
+import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './components/types';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
@@ -63,8 +62,15 @@ const audioBuffer = new AudioBuffer();
 
 let initialError: (string | null) = null;
 
+const initialRomList: RomEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_ROM_LIST) ?? '[]') ?? [];
+
 const emulator = new EmulatorState();
-const lastRomArray = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM);
+let lastRomArray = null;
+const intialRomEntry = initialRomList?.[0];
+
+if (intialRomEntry != null) {
+  lastRomArray = localStorage.getItem(LOCAL_STORAGE_ROM_PREFIX + intialRomEntry.sha);
+}
 
 if (lastRomArray != null) {
   const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
@@ -80,14 +86,33 @@ if (lastRomArray != null) {
   }
 }
 
+const breakpointsToJSON = (breakpoints: Map<number, boolean>) => {  
+  return JSON.stringify(Array.from(breakpoints.entries()));
+}
+
+const loadBreakpoints = (romSHA: string) => {
+  const key = LOCAL_STORAGE_BREAKPOINTS_PREFIX + romSHA;
+  const item = localStorage.getItem(key);
+  const parsed = JSON.parse(item ?? '[]');
+  
+  try {
+    return new Map<number, boolean>(parsed);
+  } catch(e) {
+    return new Map<number, boolean>(); 
+  }
+}
+
+
+
 function App() {
     // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
     const audioRef = useRef<AudioState | null>(null);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
-    const [title, setTitle] = useState((localStorage.getItem(LOCAL_STORAGE_KEY_LAST_TITLE) as string) ?? "No file selected");
-    const [romList, setRomList] = useState<RomEntry[]>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_ROM_LIST) ?? '[]') ?? []);
+    const [title, setTitle] = useState(intialRomEntry?.filename ?? "No file selected");
+    const [romList, setRomList] = useState<RomEntry[]>(initialRomList);
+    const [breakpoints, setBreakpoints] = useState<Map<number, boolean>>(loadBreakpoints(emulator.rom?.romSHA));
 
     const startTime = useRef(performance.now());
     const displayContainer = useRef<HTMLDivElement>(null);
@@ -98,6 +123,11 @@ function App() {
 
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
+    // Sync breakpoints with emulator
+    useEffect(() => {
+      emulator.breakpoints = breakpoints;
+      localStorage.setItem(LOCAL_STORAGE_BREAKPOINTS_PREFIX + emulator.rom.romSHA, breakpointsToJSON(breakpoints));
+    }, [breakpoints, emulator]);
 
     useLayoutEffect(() => {
       const measure = () => {
@@ -128,31 +158,10 @@ function App() {
         });
     }, []);
 
-    const handleKeyEvent = useCallback((e : KeyboardEvent) => {
-        if ((e.target as HTMLInputElement)?.type === 'text') {
-            return;
-        }
-
-        if (e.type === 'keydown' && e.key in HotkeyToDebugDialog) {
-            toggleOpenDialog(HotkeyToDebugDialog[e.key]);
-        }
-
-        if (e.key in KeyTable) {
-            emulator?.setInputController(KeyTable[e.key], e.type === 'keydown');
-            e.preventDefault();
-        }
-
-        for (const listener of keyListeners) {
-            listener(e);
-        }
-    }, [keyListeners, emulator]);
-
     const handleGamepad = useCallback((e : GamepadEvent) => {
         console.log(e);
     }, []);
-
     
-
     const stopAudioContext = useCallback(() => {
         if (audioRef.current) {
             audioRef.current.scriptProcessor.disconnect(audioRef.current.audioContext.destination);
@@ -199,17 +208,14 @@ function App() {
             }
         }
 
+        setBreakpoints(loadBreakpoints(rom.romSHA));
         setTitle(filename);
         triggerRefresh();
         return rom;
     }, [audioBuffer, emulator, triggerRefresh]);
 
-    console.log(romList);
-
     const loadRomFromUserInput = useCallback((romBuffer: Uint8Array, filename: string) => {
-      localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, JSON.stringify(Array.from(romBuffer)));
-      localStorage.setItem(LOCAL_STORAGE_KEY_LAST_TITLE, filename);
-      localStorage.removeItem(BREAKPOINTS_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_BREAKPOINTS_PREFIX);
       const rom = loadRom(romBuffer, filename);
       const entry: RomEntry = { filename, sha: rom.romSHA };      
       const newRomList = romList.filter(romEntry => romEntry.sha !== entry.sha);
@@ -253,6 +259,49 @@ function App() {
 
         triggerRefresh();
     }, [triggerRefresh]);
+
+
+    const handleKeyEvent = useCallback((e : KeyboardEvent) => {
+      if ((e.target as HTMLInputElement)?.type === 'text') {
+          return;
+      }
+
+      if (e.type === 'keydown') {
+        if(e.key in HotkeyToDebugDialog) {
+          toggleOpenDialog(HotkeyToDebugDialog[e.key]);
+        } else {
+          switch (e.key) {
+            case 'r':
+              if (!e.metaKey) {
+                if (runMode === RunModeType.RUNNING) {
+                  _setRunMode(RunModeType.STOPPED);
+                } else {
+                  _setRunMode(RunModeType.RUNNING);
+                }
+              }
+              break;
+            case 'f':
+              _setRunMode(RunModeType.RUNNING_SINGLE_FRAME);
+              break;
+            case 'l':
+              _setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+
+      if (e.key in KeyTable) {
+          emulator?.setInputController(KeyTable[e.key], e.type === 'keydown');
+          e.preventDefault();
+      }
+
+      for (const listener of keyListeners) {
+          listener(e);
+      }
+  }, [keyListeners, emulator, _setRunMode, runMode]);
+
 
 
     const handleFocus = useCallback(() => {
@@ -312,7 +361,7 @@ function App() {
                 break;
             }
         }
-
+        
         renderScreen(display.current, emulator);
 
         if (!stopped) {
@@ -334,7 +383,7 @@ function App() {
         context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
       }
     }, []);
-
+    
     return (
       <div className={styles.mainContainer}>
       <Toolbar
@@ -347,9 +396,8 @@ function App() {
       />
       <ErrorBoundary>
 
-        {Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => (
+        {Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => dialogState[type] && (
           <DialogComponent
-            isOpen={dialogState[type]}
             onClose={() => toggleOpenDialog(type)}
             emulator={emulator}
             runMode={runMode}
@@ -359,6 +407,8 @@ function App() {
             refresh={refresh}
             addKeyListener={addKeyListener}
             removeKeyListener={removeKeyListener}
+            breakpoints={breakpoints}
+            setBreakpoints={setBreakpoints}
           />
         ))
           }

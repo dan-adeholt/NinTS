@@ -128,7 +128,7 @@ class EmulatorState {
 
   mapper: Mapper
   settings: RomSettings;
-  breakpoints: Record<number, boolean> = {};
+  breakpoints: Map<number, boolean> = new Map<number, boolean>();
   apu: APU;
   ppu: PPU;
   traceLogLines: string[] = [];
@@ -234,7 +234,7 @@ class EmulatorState {
     this.mapper = parseMapper(rom, this.cpuMemory, this.ppuMemory);
     this.ppu = new PPU(rom.settings, this.mapper);
     this.apu = new APU(audioSampleCallback, this.dmcDmaCallback);
-    this.breakpoints = {};
+    this.breakpoints = new Map<number, boolean>();
     this.traceLogLines = [];
 
     this.SP = 0xFD;
@@ -506,7 +506,7 @@ class EmulatorState {
         break;
       }
 
-      hitBreakpoint = this.breakpoints[this.PC];
+      hitBreakpoint = !!this.breakpoints.get(this.PC);
 
       if (EmulatorBreakState.break) {
         hitBreakpoint = true;

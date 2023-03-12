@@ -1,4 +1,4 @@
-import { NamedExoticComponent } from 'react';
+import { Dispatch, NamedExoticComponent, SetStateAction } from 'react';
 import { BaseDialogProps } from './Dialog';
 import EmulatorState from './emulator/EmulatorState';
 import { KeyListener, RunModeType } from './App';
@@ -32,6 +32,8 @@ export type DebugDialogProps = BaseDialogProps & {
   refresh: number
   addKeyListener: (handler: KeyListener) => void
   removeKeyListener: (handler: KeyListener) => void
+  breakpoints: Map<number, boolean>
+  setBreakpoints: Dispatch<SetStateAction<Map<number, boolean>>>
 }
 
 // // NamedExoticComponent is because we React.memo all the debug dialogs

@@ -22,7 +22,7 @@ type OAMLine = {
 }
 
 
-const PPUOAMDebugger = ({ refresh, emulator, isOpen, onClose } : DebugDialogProps) => {
+const PPUOAMDebugger = ({ refresh, emulator, onClose } : DebugDialogProps) => {
   const lines = useMemo<OAMLine[]>(() => {
     if (emulator === null) {
       return [];
@@ -46,7 +46,7 @@ const PPUOAMDebugger = ({ refresh, emulator, isOpen, onClose } : DebugDialogProp
   }, [refresh, emulator]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={"OAM Debugger"} horizontalPosition={DialogHorizontalPosition.RIGHT}>
+    <Dialog onClose={onClose} title={"OAM Debugger"} horizontalPosition={DialogHorizontalPosition.RIGHT}>
       <div className={classNames(styles.ppuOamDebugger, styles.monospace)}>
 
         { lines.map((line, idx) => (
