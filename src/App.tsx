@@ -8,7 +8,8 @@ import EmulatorState, {
     INPUT_DOWN,
     INPUT_LEFT,
     INPUT_RIGHT, INPUT_SELECT, INPUT_START,
-    INPUT_UP
+    INPUT_UP,
+    localStorageAutoloadEnabled
 } from './emulator/EmulatorState';
 import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import AudioBuffer from './AudioBuffer';
@@ -77,6 +78,10 @@ if (lastRomArray != null) {
   const rom = parseROM(romBuffer);
   try {
     emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+
+    if (localStorageAutoloadEnabled()) {
+      emulator.loadEmulatorFromLocalStorage();
+    }
   } catch (e) {
     if (typeof e === "string") {
       initialError = e;
@@ -200,6 +205,11 @@ function App() {
         setError(null);
         try {
             emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+
+          if (localStorageAutoloadEnabled()) {
+            emulator.loadEmulatorFromLocalStorage();
+          }
+
         } catch (e) {
             if (typeof e === "string") {
                 setError(e);

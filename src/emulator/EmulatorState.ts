@@ -241,10 +241,6 @@ class EmulatorState {
 
     this.initializeSharedState();  
 
-    if (!import.meta.env.VITEST && localStorageAutoloadEnabled()) {
-      this.loadEmulatorFromLocalStorage();
-    }
-
     return this;
   }
 
