@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest --watch=false",
-    "lint": "yarn tsc --noEmit && eslint . --ext .ts,.tsx,.js --max-warnings=0"
+    "lint": "yarn tsc --noEmit && eslint . --ext .ts,.tsx,.js --max-warnings=0",
+    "perfTest": "yarn esbuild src/emulator/perfTest.ts --platform=node --bundle --outfile=/tmp/out.js && node /tmp/out.js",
+    "profile": "yarn perfTest && node --prof --no-logfile-per-isolate /tmp/out.js && node --prof-process --preprocess v8.log > v8.json"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.2.0",

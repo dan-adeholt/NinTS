@@ -5,14 +5,14 @@ import Mapper from './mappers/Mapper';
 import { RomSettings } from './parseROM';
 import Logger from './logger';
 
-const PPUCTRL	  = 0x2000;
-const PPUMASK	  = 0x2001;
-const PPUSTATUS = 0x2002;
-const OAMADDR   =	0x2003;
-const OAMDATA	  = 0x2004;
-const PPUSCROLL	= 0x2005;
-const PPUADDR	  = 0x2006;
-const PPUDATA	  = 0x2007;
+export const PPUCTRL	  = 0x2000;
+export const PPUMASK	  = 0x2001;
+export const PPUSTATUS = 0x2002;
+export const OAMADDR   =	0x2003;
+export const OAMDATA	  = 0x2004;
+export const PPUSCROLL	= 0x2005;
+export const PPUADDR	  = 0x2006;
+export const PPUDATA	  = 0x2007;
 
 const POINTER_HORIZ_MASK = 0b000010000011111;
 const POINTER_HORIZ_MASK_INV = ~POINTER_HORIZ_MASK;
@@ -43,13 +43,13 @@ const POST_RENDER_SCANLINE = 240;
 const VBLANK_SCANLINE = 241;
 export const PRE_RENDER_SCANLINE = 261;
 
-const VRAM_BACKGROUND_COLOR = 0x3f00;
 const VRAM_BG_PALETTE_1_ADDRESS = 0x3F01;
 const VRAM_SPRITE_PALETTE_1_ADDRESS = 0x3F11;
 
 export const SCREEN_WIDTH = 256;
 export const SCREEN_HEIGHT = 240;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let isSteppingScanline = false;
 
 export function setIsSteppingScanline(_isSteppingScanline: boolean) {
@@ -80,10 +80,6 @@ export function greyScaleColorForIndexedColor(indexedColor: number) {
   }
 }
 
-function isPPUPaletteAddress(ppuAddress: number) {
-  return ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF;
-}
-
 function getPaletteFromByte(v: number, byte: number) {
   const coarseX = (v & 0b0000011111) % 4;
   const coarseY = ((v & 0b1111100000) >>> 5) % 4;
@@ -98,13 +94,6 @@ function getPaletteFromByte(v: number, byte: number) {
   }
 
   return byte & 0b11;
-}
-
-// Precalculate scanlines to skip
-const backgroundRegisterUpdateScanlines = new Array(350);
-
-for (let scanlineCycle = 0; scanlineCycle < backgroundRegisterUpdateScanlines.length; scanlineCycle++) {
-  backgroundRegisterUpdateScanlines[scanlineCycle] = scanlineCycle != 0 && (scanlineCycle <= 257 || (scanlineCycle >= 321 && scanlineCycle <= 336));
 }
 
 class PPU {
@@ -153,23 +142,25 @@ class PPU {
   colorLatch1 = 0;
   colorLatch2 = 0;
 
+  minSpriteCycle = 8;
+  minBackgroundCycle = 8;
   oamMemory = (new Uint8Array(256)).fill(0xFF);
   secondaryOamMemory = new Uint8Array(32);
   spriteZeroIsInSpriteUnits = false;
   pendingBackgroundTileIndex = 0;
   pendingBackgroundPalette = 0;
   spriteZeroHit = false;
-  spriteScanline = new Uint32Array(SCREEN_WIDTH);
+  spriteScanline = new Uint8Array(SCREEN_WIDTH);
   tileScanlineIndex = 0;
-  tileScanline = new Uint32Array(SCREEN_WIDTH + 8);
+  tileScanline = new Uint8Array(SCREEN_WIDTH + 8);
   framebuffer = new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT);
-  paletteRAM = new Uint32Array(32)
+  paletteRAM = new Uint8Array(32)
   slack = 0;
   disabled = false;
-  mapper: Mapper;
   scanlineLogger = new Logger();
   triggerDelayedStateUpdate = false
-
+  mapper: Mapper;
+  
   constructor(settings: RomSettings, mapper: Mapper) {
     // Boot palette values are the same as Mesens in order to be compatible with value peeking
     const initialPalette = [
@@ -182,16 +173,17 @@ class PPU {
 
 
   paletteIndexedColor(indexedColor: number, paletteIndex: number, baseOffset: number) {
-    // Shortcut: We know we are always in palette RAM here, read from there directly.    
-    if (indexedColor === 1) {
-      return this.paletteRAM[(baseOffset + (paletteIndex * 4)) & 0x1F];
-    } else if (indexedColor === 2) {
-      return this.paletteRAM[(baseOffset + (paletteIndex * 4) + 1) & 0x1F];
-    } else if (indexedColor === 3) {
-      return this.paletteRAM[(baseOffset + (paletteIndex * 4) + 2) & 0x1F];
+    // Shortcut: We know we are always in palette RAM here, read from there directly. 
+    switch (indexedColor) {
+      case 1:
+        return this.paletteRAM[(baseOffset + (paletteIndex * 4)) & 0x1F];  
+      case 2:
+        return this.paletteRAM[(baseOffset + (paletteIndex * 4) + 1) & 0x1F];  
+      case 3:
+        return this.paletteRAM[(baseOffset + (paletteIndex * 4) + 2) & 0x1F];  
+      default:
+        return -1;
     }
-
-    return -1;
   }
 
   paletteIndexedSpriteColor(indexedColor: number, paletteIndex: number) {
@@ -199,13 +191,7 @@ class PPU {
   }
 
   incrementVRAMAddress() {
-    if (this.controlVramIncrement === 0) {
-      this.V += 1;
-    } else {
-      this.V += 32;
-    }
-
-    this.V = this.V % (1 << 16);
+    this.V = (this.V + this.controlVramIncrement) % (1 << 16);
   }
 
   writePPUPaletteMem(paletteAddress: number, value: number) {
@@ -231,7 +217,7 @@ class PPU {
   }
   
   readPPUMem(ppuAddress: number) {
-    if (isPPUPaletteAddress(ppuAddress)) {
+    if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF) {
       return this.paletteRAM[ppuAddress & 0x1F];
     } else {
       return this.mapper.ppuMemory.read(ppuAddress);
@@ -239,7 +225,7 @@ class PPU {
   }
 
   writePPUMem(ppuAddress: number, value: number) {
-    if (isPPUPaletteAddress(ppuAddress)) {
+    if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF) {
       this.writePPUPaletteMem(ppuAddress & 0x1F, value);
     } else {
       this.mapper.ppuMemory.write(ppuAddress, value);
@@ -289,17 +275,18 @@ class PPU {
       if (this.vramReadDisableCounter > 0) {
         return this.busLatch;
       } else if (ppuAddress >= 0x3F00) {
-        ret = this.readPPUMem(ppuAddress);
+        ret = this.paletteRAM[ppuAddress & 0x1F];  
+
         if (!peek) {
           // From: https://wiki.nesdev.com/w/index.php/PPU_registers#Data_.28.242007.29_.3C.3E_read.2Fwrite
           // Reading the palettes still updates the internal buffer though, but the data placed in it is the mirrored nametable data that would appear "underneath" the palette.
-          this.dataBuffer = this.readPPUMem(ppuAddress - 0x1000);
+          this.dataBuffer = this.mapper.ppuMemory.read(ppuAddress - 0x1000);
           this.incrementVRAMAddress();
         }
       } else {
         ret = this.dataBuffer;
         if (!peek) {
-          this.dataBuffer = this.readPPUMem(ppuAddress);
+          this.dataBuffer = this.mapper.ppuMemory.read(ppuAddress);
           this.incrementVRAMAddress();
         }
       }
@@ -330,10 +317,6 @@ class PPU {
     this.oamAddress = (this.oamAddress + 1) & 0xFF;
   }
 
-  getSpriteSize() {
-    return this.controlSpriteSize === 1 ? 16 : 8;
-  }
-
   setPPURegisterMem(address: number, value: number) {
     if (address !== 0x4014) {
       this.busLatch = value;
@@ -351,10 +334,20 @@ class PPU {
 
         this.showSpritesLeftSide = (value & PPUMASK_SHOW_SPRITES_LEFT_8_PIXELS) !== 0;
         this.showBackgroundLeftSide = (value & PPUMASK_SHOW_BACKGROUND_LEFT_8_PIXELS) !== 0;
-
         this.pendingMaskRenderingEnabled = (value & PPUMASK_RENDER_ENABLED_FLAGS) !== 0;
         this.maskSpritesEnabled = (value & PPUMASK_RENDER_SPRITES) !== 0;
         this.maskBackgroundEnabled = (value & PPUMASK_RENDER_BACKGROUND) !== 0;
+
+        this.minSpriteCycle = this.showSpritesLeftSide ? 0 : 8;
+        this.minBackgroundCycle = this.showBackgroundLeftSide ? 0 : 8;
+
+        if (!this.maskSpritesEnabled) {
+          this.minSpriteCycle = 300;
+        }
+
+        if (!this.maskBackgroundEnabled) {
+          this.minBackgroundCycle = 300;
+        }
 
         if (this.pendingMaskRenderingEnabled !== this.maskRenderingEnabled) {
           this.triggerDelayedStateUpdate = true;
@@ -384,19 +377,20 @@ class PPU {
         break;
       }
       case PPUCTRL: {
-        this.controlBaseNameTable =         (value & 0b00000011);
-        this.controlVramIncrement =         (value & 0b00000100) >>> 2;
-        this.controlSpritePatternAddress =  (value & 0b00001000) >>> 3;
-        this.controlBgPatternAddress =      (value & 0b00010000) >>> 4;
-        this.controlSpriteSize =            (value & 0b00100000) >>> 5;
+        this.controlBaseNameTable =         ((value & 0b00000011) << 10);
+        this.controlVramIncrement =         ((value & 0b00000100) >>> 2) === 0 ? 1 : 32;
+        this.controlSpritePatternAddress =  ((value & 0b00001000) >>> 3) << 8;
+        this.controlBgPatternAddress =      ((value & 0b00010000) >>> 4) << 8;
+        this.controlSpriteSize =            (value & 0b00100000) >>> 5 === 1 ? 16 : 8;
         this.controlPpuMasterSlave =        (value & 0b01000000) >>> 6;
         this.controlGenerateNMI =           (value & 0b10000000) >>> 7;
 
+        
         this.updateNMIFlag();
 
           // Copy base name table data to T register at bits 11 and 12
         this.T = this.T & 0b111001111111111;
-        this.T = this.T | (this.controlBaseNameTable << 10);
+        this.T = this.T | (this.controlBaseNameTable);
         break;
       }
       case PPUSCROLL:
@@ -457,9 +451,9 @@ class PPU {
   }
 
   clearSecondaryOAM() {
-    if (isSteppingScanline) {
-      this.scanlineLogger.log('Clearing secondary OAM');
-    }
+    // if (isSteppingScanline) {
+    //   this.scanlineLogger.log('Clearing secondary OAM');
+    // }
 
     for (let i = 0; i < this.secondaryOamMemory.length; i++) {
       this.secondaryOamMemory[i] = 0xFF;
@@ -467,11 +461,9 @@ class PPU {
   }
 
   initializeSecondaryOAM() {
-    if (isSteppingScanline) {
-      this.scanlineLogger.log('Init secondary OAM');
-    }
-
-    const spriteSize = this.getSpriteSize();
+    // if (isSteppingScanline) {
+    //   this.scanlineLogger.log('Init secondary OAM');
+    // }
 
     let secondaryIndex = 0;
     const scanline = this.scanline;
@@ -479,10 +471,10 @@ class PPU {
     this.spriteZeroIsInSpriteUnits = false;
     for (let i = this.oamAddress; i < (this.oamMemory.length - 3) && secondaryIndex < this.secondaryOamMemory.length; i+=4) {
       const y = this.oamMemory[i];
-      if (scanline >= y && scanline < (y + spriteSize)) {
-        if (isSteppingScanline) {
-          this.scanlineLogger.log(i + ' - Adding sprite to secondary OAM at ' + this.oamMemory[i+3] + ',' + y + ' - ' + this.oamMemory[i+1] + ' ' + this.oamMemory[i+2]);
-        }
+      if (scanline >= y && scanline < (y + this.controlSpriteSize)) {
+        // if (isSteppingScanline) {
+        //   this.scanlineLogger.log(i + ' - Adding sprite to secondary OAM at ' + this.oamMemory[i+3] + ',' + y + ' - ' + this.oamMemory[i+1] + ' ' + this.oamMemory[i+2]);
+        // }
 
         this.secondaryOamMemory[secondaryIndex++] = y;
         this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[i+1];
@@ -499,7 +491,6 @@ class PPU {
 
   copyToSpriteUnits() {
     let oamAddress = 0;
-    const spriteSize = this.getSpriteSize();
 
     for (let i = 0; i < SCREEN_WIDTH; i++) {
       this.spriteScanline[i] = 0;
@@ -513,10 +504,10 @@ class PPU {
       let pixelRow = this.scanline - y;
 
       if (attributes & SPRITE_ATTRIB_FLIP_VERTICAL) {
-        pixelRow = spriteSize - 1 - pixelRow;
+        pixelRow = this.controlSpriteSize - 1 - pixelRow;
       }
 
-      if (spriteSize === 16) {
+      if (this.controlSpriteSize === 16) {
         const nametable = tileIndex & 0b1;
         tileIndex = (nametable << 8) | (tileIndex & 0b11111110);
 
@@ -525,7 +516,7 @@ class PPU {
           tileIndex++;
         }
       } else {
-        tileIndex = (this.controlSpritePatternAddress << 8) | tileIndex;
+        tileIndex = (this.controlSpritePatternAddress) | tileIndex;
       }
 
       const chrIndex = tileIndex * 8 * 2 + pixelRow;
@@ -535,8 +526,8 @@ class PPU {
       const paletteIndex = attributes & SPRITE_ATTRIBS_PALETTE;
 
       if (y !== 0xFF) {
-        let shiftRegister1 = this.readPPUMem(chrIndex);
-        let shiftRegister2 = this.readPPUMem(chrIndex + 8);
+        let shiftRegister1 = this.mapper.ppuMemory.read(chrIndex);
+        let shiftRegister2 = this.mapper.ppuMemory.read(chrIndex + 8);
 
         for (let xp = x; xp < x + 8; xp++) {
           let c1;
@@ -628,7 +619,7 @@ class PPU {
           this.tileScanlineIndex = 0;
         }
 
-        const tileIndex = (this.controlBgPatternAddress << 8) | this.readPPUMem(0x2000 | (this.V & 0x0FFF));
+        const tileIndex = (this.controlBgPatternAddress) | this.mapper.ppuMemory.read(0x2000 | (this.V & 0x0FFF));
         const fineY = (this.V & POINTER_FINE_Y_MASK) >> 12;
         this.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + fineY;      
         break;
@@ -639,18 +630,18 @@ class PPU {
         const x = ((this.V >>> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
 
         const attributeAddress = 0x23C0 | nametable | y | x;
-        const attribute = this.readPPUMem(attributeAddress);
+        const attribute = this.mapper.ppuMemory.read(attributeAddress);
         const palette = getPaletteFromByte(this.V, attribute);
         
         this.pendingBackgroundPalette = palette;
         break;
       }
       case 5: {
-        this.pendingTileLowByte = this.readPPUMem(this.pendingBackgroundTileIndex);
+        this.pendingTileLowByte = this.mapper.ppuMemory.read(this.pendingBackgroundTileIndex);
         break;
       }
       case 7: {
-        this.pendingTileHighByte = this.readPPUMem(this.pendingBackgroundTileIndex + 8);
+        this.pendingTileHighByte = this.mapper.ppuMemory.read(this.pendingBackgroundTileIndex + 8);
         break;
       }
     }
@@ -661,18 +652,22 @@ class PPU {
   }
 
   updateSpriteScanning() {
-    const { scanlineCycle } = this;
-
-    if (scanlineCycle >= 257 && scanlineCycle <= 320) {
+    if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320) {
       this.oamAddress = 0;
     }
 
-    if (scanlineCycle === 1) {
-      this.clearSecondaryOAM();
-    } else if (scanlineCycle === 257) {
-      this.initializeSecondaryOAM();
-    } else if (scanlineCycle === 321) {
-      this.copyToSpriteUnits();
+    switch (this.scanlineCycle) {
+      case 1:
+        this.clearSecondaryOAM();  
+        break;  
+      case 257: 
+        this.initializeSecondaryOAM();
+        break;
+      case 321: 
+        this.copyToSpriteUnits();
+        break;
+      default:
+        break;
     }
   }
 
@@ -691,65 +686,66 @@ class PPU {
   handleVisibleScanline() {
     if (this.maskRenderingEnabled) {
       this.updateSpriteScanning();
-      if (backgroundRegisterUpdateScanlines[this.scanlineCycle]) {
+      if (this.scanlineCycle != 0 && (this.scanlineCycle <= 257 || (this.scanlineCycle >= 321 && this.scanlineCycle <= 336))) {
         this.updateBackgroundRegisters();
       }
     }
 
-    const scanlineCycle = this.scanlineCycle;
 
-    if (scanlineCycle <= 0 || scanlineCycle > 256) {
+    if (this.scanlineCycle <= 0 || this.scanlineCycle > 256) {
       return;
+    }
+    
+    const pixel = this.scanlineCycle - 1;
+
+    let backgroundColor = -1;
+
+    if (this.scanlineCycle > this.minBackgroundCycle) {
+      const tileData = this.tileScanline[pixel + this.X];  
+      const backgroundColorIndex = tileData & 0b11;  
+      const backgroundPaletteIndex = (tileData & 0b1100) >>> 2;  
+      backgroundColor = this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS);
     }
 
     let spriteColor = -1;
-    const pixel = scanlineCycle - 1;
-    const tileData = this.tileScanline[pixel + this.X];
-    const backgroundColorIndex = tileData & 0b11;
-    const backgroundPaletteIndex = (tileData & 0b1100) >>> 2;
-    const minSpriteCycle = this.showSpritesLeftSide ? 0 : 8;
-    const minBackgroundCycle = this.showBackgroundLeftSide ? 0 : 8;
-
-    const backgroundColor = (this.maskBackgroundEnabled && scanlineCycle > minBackgroundCycle) ? this.paletteIndexedColor(backgroundColorIndex, backgroundPaletteIndex, VRAM_BG_PALETTE_1_ADDRESS) : -1;
-
-    const spriteData = this.spriteScanline[pixel];
-    const spritePatternColor = spriteData & 0b11;
+    let spritePriority = 1;
+    let spriteNumber = 0;
 
     // No sprites are rendered on the first scanline
-    if (this.scanline > 0 && spritePatternColor !== 0 && this.maskSpritesEnabled && scanlineCycle > minSpriteCycle) {
-      const spritePalette = (spriteData >>> 3) & 0b11;
-      spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
+    if (this.scanline > 0 && this.scanlineCycle > this.minSpriteCycle) {
+      const spriteData = this.spriteScanline[pixel];  
+      const spritePatternColor = spriteData & 0b11;
+      spritePriority = (spriteData >>> 2) & 0b1;
+      spriteNumber = (spriteData >>> 5);
+
+      if (spritePatternColor !== 0) {
+        const spritePalette = (spriteData >>> 3) & 0b11;
+        spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
+      }  
     }
 
     // Draw pixel
-    const index = (this.scanline << 8) + pixel;
-    let color = 0;
+    let color;
 
     if (spriteColor === -1) {
       if (backgroundColor !== -1) {
         color = backgroundColor;
       } else {
-        const vramBackgroundColor = this.readPPUMem(VRAM_BACKGROUND_COLOR);
-        color = vramBackgroundColor;
+        color = this.paletteRAM[0];
       }
-    } else if (backgroundColor !== -1) {
-      const spritePriority = (spriteData >>> 2) & 0b1;
-
-      // Both colors set
+    } else if (backgroundColor !== -1) {      // Both colors set
       if (spritePriority === 0) {
         color = spriteColor;
       } else {
         color = backgroundColor;
       }
 
-      const spriteNumber = (spriteData >>> 5);
-
       // Sprite zero handling
       if (!this.spriteZeroHit &&
         this.spriteZeroIsInSpriteUnits &&
         // If sprite zero is among the sprite units, it's always at sprite number 0
         spriteNumber === 0 &&
-        scanlineCycle !== 256
+        this.scanlineCycle !== 256
       ) {
         this.spriteZeroHit = true;
       }
@@ -759,8 +755,7 @@ class PPU {
 
     this.colorLatch2 = this.colorLatch1;    
     this.colorLatch1 = color;    
-    
-    this.framebuffer[index] = this.colors[color];
+    this.framebuffer[(this.scanline << 8) + pixel] = this.colors[color];
   }
 
   handleVblankScanline() {
@@ -779,7 +774,7 @@ class PPU {
 
   handlePrerenderScanline() {
     if (this.maskRenderingEnabled) {
-      if (backgroundRegisterUpdateScanlines[this.scanlineCycle]) {
+      if (this.scanlineCycle != 0 && (this.scanlineCycle <= 257 || (this.scanlineCycle >= 321 && this.scanlineCycle <= 336))) {
         this.updateBackgroundRegisters();
       }  
     }
@@ -789,21 +784,19 @@ class PPU {
       this.updateNMIFlag();
     }
 
-    if (isSteppingScanline) {
-      this.scanlineLogger.clear();
-    }
+    // if (isSteppingScanline) {
+    //   this.scanlineLogger.clear();
+    // }
 
     if (this.scanlineCycle === 0) {
       this.spriteZeroHit = false;
-    } else if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320) {
-      if (this.maskRenderingEnabled) {
-        this.oamAddress = 0;
+    } else if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320 && this.maskRenderingEnabled) {
+      this.oamAddress = 0;
 
-        if (this.scanlineCycle === 257) {
-          this.resetHorizontalScroll();
-        } else if (this.scanlineCycle === 280) {
-          this.resetVerticalScroll();
-        }
+      if (this.scanlineCycle === 257) {
+        this.resetHorizontalScroll();
+      } else if (this.scanlineCycle === 280) {
+        this.resetVerticalScroll();
       }
     }
   }
@@ -830,8 +823,8 @@ class PPU {
     this.scanlineCycle = scanlineCycle;
   }
 
-  updateDelayedState() {
-    this.maskRenderingEnabled = this.pendingMaskRenderingEnabled;
+  tick() {
+    this.updatePPU(this.masterClock + this.ppuDivider * 3);
   }
 
   updatePPU(targetMasterClock: number) {
@@ -854,11 +847,7 @@ class PPU {
         this.handlePrerenderScanline();
       }
 
-      if (this.triggerDelayedStateUpdate) {
-        this.updateDelayedState();
-        this.triggerDelayedStateUpdate = false;
-      }
-
+      this.maskRenderingEnabled = this.pendingMaskRenderingEnabled;
 
       this.cycle++;
       this.masterClock += this.ppuDivider;

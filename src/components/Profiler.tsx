@@ -6,7 +6,7 @@ import { EmptyRom, parseROM } from '../emulator/parseROM';
 import PPUMemorySpace from '../emulator/mappers/PPUMemorySpace';
 import CPUMemorySpace from '../emulator/mappers/CPUMemorySpace';
 import parseMapper from '../emulator/mappers/parseMapper';
-import PPU from '../emulator/ppu';
+import PPU, { PPUMASK } from '../emulator/ppu';
 import classNames from 'classnames';
 import styles from './PPUDebugging.module.css';
 import { hex } from '../emulator/stateLogging';
@@ -45,6 +45,9 @@ const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
     ppu.maskBackgroundEnabled = true;
     ppu.maskRenderLeftSide = true;
     ppu.maskSpritesEnabled = true;
+    ppu.minBackgroundCycle = 0;
+    ppu.minSpriteCycle = 0;
+    ppu.writePPUMem(PPUMASK, 0b00011110);
     const t0 = performance.now();
     ppu.updatePPU(ppu.masterClock + 800000000);
     const diffMs = (performance.now() - t0);

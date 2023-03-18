@@ -36,7 +36,7 @@ const generateFrameBuffer = (ppu: PPU) => {
     texture[i] = 0xFFFFFFFF;
   }
 
-  const spriteSize = ppu.getSpriteSize();
+  const spriteSize = ppu.controlSpriteSize;
 
   let x = 0;
   let y = 0;

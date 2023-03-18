@@ -4,7 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
-
+dist
 # testing
 /coverage
 
@@ -24,3 +24,5 @@ yarn-error.log*
 .idea
 
 run.sh
+v8.json
+v8.log
