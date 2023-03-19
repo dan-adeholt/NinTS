@@ -581,7 +581,6 @@ type OpcodeMetadataEntry = {
 }
 
 export const opcodeMetadata: (Record<number, OpcodeMetadataEntry>) = {};
-export const opcodeTable = new Array(256);
 
 opcodes.forEach(entry => {
     const [opcode, name, mode] = entry;

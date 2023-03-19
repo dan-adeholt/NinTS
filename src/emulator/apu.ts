@@ -48,7 +48,6 @@ class APU {
   cpuDivider = APU_CPU_DIVIDER;
   elapsedApuCycles = 0;
   apuStep = 0;
-  numTicks = 0;
   accumulatedCycles = 0;
   apuSampleBucket = 0;
 
@@ -217,10 +216,9 @@ class APU {
     this.elapsedApuCycles++;
 
     const curSteps = step4 ? steps4 : steps5;
-
-    if (this.elapsedApuCycles >= curSteps[this.apuStep][0]) {
-      const frameType = curSteps[this.apuStep][1];
-      this.numTicks++;
+    const curStep = curSteps[this.apuStep];
+    if (this.elapsedApuCycles >= curStep[0]) {
+      const frameType = curStep[1];
 
       switch (frameType) {
         case FRAME_TYPE_HALF:

@@ -13,7 +13,7 @@ import Mapper from "./mappers/Mapper";
 import { P_REG_INTERRUPT, setInterrupt } from './instructions/util';
 import { readByte } from './memory';
 import EmulatorBreakState from './EmulatorBreakState';
-import { CPU_HALF_STEP } from './constants';
+import { CPU_HALF_STEP_P1, CPU_HALF_STEP_M1 } from './constants';
 
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
@@ -553,22 +553,22 @@ class EmulatorState {
   startReadTick(address: number) {
     this.checkDMA(address)
     this.CYC++;
-    this.ppu.updatePPU(CPU_HALF_STEP - 1);
+    this.ppu.updatePPU(CPU_HALF_STEP_M1);
     this.apu.tick();
   }
 
   endReadTick() {
-    this._updatePPUAndHandleNMI(CPU_HALF_STEP + 1);
+    this._updatePPUAndHandleNMI(CPU_HALF_STEP_P1);
   }
 
   startWriteTick() {
     this.CYC++;
-    this.ppu.updatePPU(CPU_HALF_STEP + 1);
+    this.ppu.updatePPU(CPU_HALF_STEP_P1);
     this.apu.tick();
   }
 
   endWriteTick() {
-    this._updatePPUAndHandleNMI(CPU_HALF_STEP - 1);
+    this._updatePPUAndHandleNMI(CPU_HALF_STEP_M1);
   }
 
   // In order for CYC to fit within a small integer we need to make sure it does not
