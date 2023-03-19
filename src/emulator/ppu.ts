@@ -1,4 +1,4 @@
-import { COLOR_TABLE, GREYSCALE_COLOR_TABLE } from './constants';
+import { COLOR_TABLE, GREYSCALE_COLOR_TABLE, PPU_STEP, CPU_STEP, PPU_OFFSET } from './constants';
 import { BIT_0, BIT_7 } from './instructions/util';
 import { hex } from './stateLogging';
 import Mapper from './mappers/Mapper';
@@ -97,12 +97,11 @@ function getPaletteFromByte(v: number, byte: number) {
 }
 
 class PPU {
-  cycle = -1;
   scanlineCycle = -1;
   scanline = 0;
   scanlineShifted = 0;
   masterClock = 0;
-  ppuDivider = 4;
+
   evenFrame = true;
   frameCount = 0;
   vblankCount = 0;
@@ -169,6 +168,9 @@ class PPU {
     this.mapper = mapper;
 
     this.paletteRAM.set(initialPalette);
+    // For some reason the master clock is set forward 1 cycle in Mesen. Causes PPU to get delayed.
+    // Initialized with an offset in order to be compatible with Mesens behavior
+    this.masterClock = CPU_STEP - PPU_OFFSET;
   }
 
 
@@ -821,15 +823,17 @@ class PPU {
   }
 
   tick() {
-    this.updatePPU(this.masterClock + this.ppuDivider * 3);
+    this.updatePPU(PPU_STEP * 3);
   }
 
-  updatePPU(targetMasterClock: number) {
+  updatePPU(diff: number) {
     if (this.disabled) {
       return;
     }
 
-    while (this.masterClock + this.ppuDivider <= targetMasterClock) {
+    this.masterClock += diff;
+
+    while (this.masterClock >= PPU_STEP) {
       if (this.vramReadDisableCounter > 0) {
         this.vramReadDisableCounter--;
       }
@@ -845,9 +849,7 @@ class PPU {
       }
 
       this.maskRenderingEnabled = this.pendingMaskRenderingEnabled;
-
-      this.cycle++;
-      this.masterClock += this.ppuDivider;
+      this.masterClock -= PPU_STEP;
     }
   }
 }

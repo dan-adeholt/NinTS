@@ -13,6 +13,7 @@ import Mapper from "./mappers/Mapper";
 import { P_REG_INTERRUPT, setInterrupt } from './instructions/util';
 import { readByte } from './memory';
 import EmulatorBreakState from './EmulatorBreakState';
+import { CPU_HALF_STEP } from './constants';
 
 export const INPUT_A        = 0b00000001;
 export const INPUT_B        = 0b00000010;
@@ -24,9 +25,6 @@ export const INPUT_LEFT     = 0b01000000;
 export const INPUT_RIGHT    = 0b10000000;
 
 export const LOCAL_STORAGE_KEY_AUTOLOAD = 'setting-autoload';
-
-const cpuStep = 12;
-const cpuHalfStep = cpuStep / 2;
 
 const ignoredKeys = [
   'mapper.ppuMemory.memory',
@@ -120,10 +118,7 @@ class EmulatorState {
   P = 0;
   PC = 0;
   SP = 0;
-  masterClock = 0;
   ppuOffset = 0;
-  cpuStep = 0;
-  cpuHalfStep = 0;
   CYC = NaN
 
   mapper: Mapper
@@ -194,8 +189,6 @@ class EmulatorState {
     this.waitCyclesDMC = 0
     this.transferSpriteDMA = false
 
-    this.masterClock = cpuStep; // For some reason the master clock is set forward 1 cycle in Mesen. Causes PPU to get delayed.
-    this.ppuOffset = 1; // But there is also a PPU offset - very weird.
       // https://wiki.nesdev.com/w/index.php/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution - 7 cycles for reset routine. But mesen takes 8 for some reason,
     // set it to match.
     this.CYC = -1;
@@ -214,9 +207,6 @@ class EmulatorState {
     this.controllerStrobe = false;
     this.nmiDelayedFlag.reset();
     this.irqDelayedFlag.reset();
-
-    this.cpuStep = cpuStep;
-    this.cpuHalfStep = cpuHalfStep;
 
     // Align with Mesen: CPU takes 8 cycles before it starts executing ROM code
     for (let i = 0; i < 8; i++) {
@@ -514,12 +504,13 @@ class EmulatorState {
       }
     }
 
-
+    // Ok to call relatively infrequently
+    this.ensureSmallCycleNumber();
     return hitBreakpoint;
   }
 
-  _updatePPUAndHandleNMI() {
-    this.ppu.updatePPU(this.masterClock - this.ppuOffset);
+  _updatePPUAndHandleNMI(ppuDiff: number) {
+    this.ppu.updatePPU(ppuDiff);
 
     // From NESDEV:
     // The NMI input is connected to an edge detector. This edge detector polls the status of the NMI line during φ2 of each
@@ -564,26 +555,32 @@ class EmulatorState {
   startReadTick(address: number) {
     this.checkDMA(address)
     this.CYC++;
-    this.masterClock += this.cpuHalfStep - 1;
-    this.ppu.updatePPU(this.masterClock - this.ppuOffset);
+    this.ppu.updatePPU(CPU_HALF_STEP - 1);
     this.apu.tick();
   }
 
   endReadTick() {
-    this.masterClock += this.cpuHalfStep + 1;
-    this._updatePPUAndHandleNMI();
+    this._updatePPUAndHandleNMI(CPU_HALF_STEP + 1);
   }
 
   startWriteTick() {
     this.CYC++;
-    this.masterClock += this.cpuHalfStep + 1;
-    this.ppu.updatePPU(this.masterClock - this.ppuOffset);
+    this.ppu.updatePPU(CPU_HALF_STEP + 1);
     this.apu.tick();
   }
 
   endWriteTick() {
-    this.masterClock += this.cpuHalfStep - 1;
-    this._updatePPUAndHandleNMI();
+    this._updatePPUAndHandleNMI(CPU_HALF_STEP - 1);
+  }
+
+  // In order for CYC to fit within a small integer we need to make sure it does not
+  // cross the 1^30 boundary, with some margin for error. Otherwise CYC will
+  // become too large for a SMI after around 600 seconds, which would have
+  // performance implications as CYC++ is called very often. Wrap around after ~300
+  // seconds, still useful for tracing and debugging. Comment this out if you want
+  // to run for longer than 300 seconds.
+  ensureSmallCycleNumber() {
+    this.CYC = this.CYC % (1 << 30);
   }
 
   /**
@@ -606,8 +603,6 @@ class EmulatorState {
    * to memory accesses.
    *
    */
-
-
   readOpcode() {
     this.startReadTick(this.PC);
 

@@ -1,3 +1,7 @@
+export const PPU_STEP = 4;
+export const CPU_STEP = 12;
+export const CPU_HALF_STEP = CPU_STEP / 2;
+export const PPU_OFFSET = 1; // Set to 1 to match Mesen behavior
 export const COLOR_NAMES = {
   LIGHT_GRAY: 0x10,
   DARK_GRAY: 0x2d,

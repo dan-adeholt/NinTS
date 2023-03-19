@@ -12,11 +12,10 @@ const runTest = () => {
   state.ppu.writePPUMem(PPUMASK, 0b00011110);  
   
   // Warm up the machine, make sure everything is optimized
+
   while (state.CYC < 5427091) {
     state.step();
   }
-
-  
   
   /// TOTAL
   let t0 = performance.now();
@@ -62,6 +61,7 @@ const runTest = () => {
   
   return [cpuMs, apuMs, ppuMs, systemMs];
 }
+
 let avgCpuMs = 0;
 let avgApuMs = 0;
 let avgPpuMs = 0;

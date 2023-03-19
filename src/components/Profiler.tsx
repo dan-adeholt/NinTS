@@ -39,8 +39,7 @@ const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
     const ppuMemory = new PPUMemorySpace(EmptyRom);
     const cpuMemory = new CPUMemorySpace(EmptyRom);
     const mapper = parseMapper(EmptyRom, cpuMemory, ppuMemory);
-    const ppu = new PPU(EmptyRom.settings, mapper);
-    const startCycle = ppu.cycle;
+    const ppu = new PPU(EmptyRom.settings, mapper, 0);
     ppu.maskRenderingEnabled = true;
     ppu.maskBackgroundEnabled = true;
     ppu.maskRenderLeftSide = true;
@@ -49,12 +48,9 @@ const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
     ppu.minSpriteCycle = 0;
     ppu.writePPUMem(PPUMASK, 0b00011110);
     const t0 = performance.now();
-    ppu.updatePPU(ppu.masterClock + 800000000);
+    ppu.updatePPU(800000000);
     const diffMs = (performance.now() - t0);
-    const ntscPpuClockSpeed = 21.477272 / 3.0;
-    const clockSpeed = ((ppu.cycle - startCycle) / (diffMs * 1000));
-    const ratio = (clockSpeed / ntscPpuClockSpeed).toFixed(2);
-    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz, ' + ratio);
+    setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms');
   }, []);
 
   const profileCPU = useCallback(async () => {
