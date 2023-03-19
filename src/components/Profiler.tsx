@@ -39,7 +39,7 @@ const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
     const ppuMemory = new PPUMemorySpace(EmptyRom);
     const cpuMemory = new CPUMemorySpace(EmptyRom);
     const mapper = parseMapper(EmptyRom, cpuMemory, ppuMemory);
-    const ppu = new PPU(EmptyRom.settings, mapper, 0);
+    const ppu = new PPU(EmptyRom.settings, mapper);
     ppu.maskRenderingEnabled = true;
     ppu.maskBackgroundEnabled = true;
     ppu.maskRenderLeftSide = true;
