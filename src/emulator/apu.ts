@@ -45,7 +45,6 @@ class APU {
   triangle = new TriangleWaveGenerator();
   noise = new NoiseGenerator();
   dmc = new DMCGenerator();
-  masterClock = 0;
   cpuDivider = APU_CPU_DIVIDER;
   elapsedApuCycles = 0;
   apuStep = 0;
@@ -67,7 +66,7 @@ class APU {
   accumulatedSamplesNoise = 0;
   accumulatedSamplesDmc = 0;
   frameInterrupt = false;
-  frameInterruptCycle = 0;
+  frameInterruptCycle = false;
   triggerIRQ = true;
   disabled = false;
   lastValue4017 = 0;
@@ -125,7 +124,7 @@ class APU {
         (this.dmc.irq.interrupt ?                        0b10000000 : 0);
 
       // If an interrupt flag was set at the same moment of the read, it will read back as 1 but it will not be cleared.
-      if (!peek && this.masterClock !== this.frameInterruptCycle) {
+      if (!peek && !this.frameInterruptCycle) {
         this.frameInterrupt = false;
       }
 
@@ -182,7 +181,7 @@ class APU {
   irqStep() {
     if (this.triggerIRQ && !this.frameInterrupt) {
       this.frameInterrupt = true;
-      this.frameInterruptCycle = this.masterClock;
+      this.frameInterruptCycle = true;
     }
   }
 
@@ -291,7 +290,7 @@ class APU {
       return
     }
 
-    this.masterClock += this.cpuDivider;
+    this.frameInterruptCycle = false;
     this.tickFrameCounter();
     this.reloadLengthCounters();
     this.tickSequencers();
