@@ -100,6 +100,7 @@ class PPU {
   cycle = -1;
   scanlineCycle = -1;
   scanline = 0;
+  scanlineShifted = 0;
   masterClock = 0;
   ppuDivider = 4;
   evenFrame = true;
@@ -160,7 +161,7 @@ class PPU {
   scanlineLogger = new Logger();
   triggerDelayedStateUpdate = false
   mapper: Mapper;
-  
+
   constructor(settings: RomSettings, mapper: Mapper) {
     // Boot palette values are the same as Mesens in order to be compatible with value peeking
     const initialPalette = [
@@ -364,7 +365,7 @@ class PPU {
         // The reason for this is that the attributes are read two cycles later in
         // the rendering pipeline. See the following discussion from bizhawk dev 
         // team: https://tasvideos.org/Forum/Topics/17971?CurrentPage=6&Highlight=440662#440662
-        const pixelIndex = (this.scanline << 8) + this.scanlineCycle - 1;
+        const pixelIndex = (this.scanlineShifted) + this.scanlineCycle - 1;
 
         if (pixelIndex > 0) {
           this.framebuffer[pixelIndex] = this.colors[this.colorLatch1];
@@ -622,6 +623,11 @@ class PPU {
         const tileIndex = (this.controlBgPatternAddress) | this.mapper.ppuMemory.read(0x2000 | (this.V & 0x0FFF));
         const fineY = (this.V & POINTER_FINE_Y_MASK) >> 12;
         this.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + fineY;      
+
+        if (scanlineCycle === 257) {
+          this.resetHorizontalScroll();
+        }
+        
         break;
       }
       case 3: {
@@ -631,9 +637,7 @@ class PPU {
 
         const attributeAddress = 0x23C0 | nametable | y | x;
         const attribute = this.mapper.ppuMemory.read(attributeAddress);
-        const palette = getPaletteFromByte(this.V, attribute);
-        
-        this.pendingBackgroundPalette = palette;
+        this.pendingBackgroundPalette = getPaletteFromByte(this.V, attribute);
         break;
       }
       case 5: {
@@ -644,10 +648,6 @@ class PPU {
         this.pendingTileHighByte = this.mapper.ppuMemory.read(this.pendingBackgroundTileIndex + 8);
         break;
       }
-    }
-
-    if (scanlineCycle === 257) {
-      this.resetHorizontalScroll();
     }
   }
 
@@ -691,7 +691,6 @@ class PPU {
       }
     }
 
-
     if (this.scanlineCycle <= 0 || this.scanlineCycle > 256) {
       return;
     }
@@ -715,17 +714,17 @@ class PPU {
     if (this.scanline > 0 && this.scanlineCycle > this.minSpriteCycle) {
       const spriteData = this.spriteScanline[pixel];  
       const spritePatternColor = spriteData & 0b11;
-      spritePriority = (spriteData >>> 2) & 0b1;
-      spriteNumber = (spriteData >>> 5);
 
       if (spritePatternColor !== 0) {
         const spritePalette = (spriteData >>> 3) & 0b11;
         spriteColor = this.paletteIndexedSpriteColor(spritePatternColor, spritePalette);
+        spritePriority = (spriteData >>> 2) & 0b1;
+        spriteNumber = (spriteData >>> 5);  
       }  
     }
 
     // Draw pixel
-    let color;
+    let color = spriteColor;
 
     if (spriteColor === -1) {
       if (backgroundColor !== -1) {
@@ -749,13 +748,11 @@ class PPU {
       ) {
         this.spriteZeroHit = true;
       }
-    } else {      
-      color = spriteColor;
     }
 
     this.colorLatch2 = this.colorLatch1;    
     this.colorLatch1 = color;    
-    this.framebuffer[(this.scanline << 8) + pixel] = this.colors[color];
+    this.framebuffer[this.scanlineShifted + pixel] = this.colors[color];
   }
 
   handleVblankScanline() {
@@ -802,14 +799,14 @@ class PPU {
   }
 
   incrementDot() {
-    let scanlineCycle = this.scanlineCycle + 1;
+    this.scanlineCycle++;
     const skipLastCycle = this.maskRenderingEnabled && !this.evenFrame;
 
-    if (scanlineCycle === 339 && this.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
-      scanlineCycle = 340;
-    } else if (scanlineCycle === 341) {
+    if (this.scanlineCycle === 339 && this.scanline === PRE_RENDER_SCANLINE && skipLastCycle) {
+      this.scanlineCycle = 340;
+    } else if (this.scanlineCycle === 341) {
       this.scanline++;
-      scanlineCycle = 0;
+      this.scanlineCycle = 0;
 
       if (this.scanline === POST_RENDER_SCANLINE) {
         this.frameCount++;
@@ -819,8 +816,9 @@ class PPU {
         this.scanline = 0;
         this.evenFrame = !this.evenFrame;
       }
+
+      this.scanlineShifted = this.scanline << 8;      
     }
-    this.scanlineCycle = scanlineCycle;
   }
 
   tick() {
