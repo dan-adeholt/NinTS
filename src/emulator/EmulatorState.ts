@@ -1,5 +1,5 @@
-import { hex, stateToString } from './stateLogging';
-import { OAM_DMA, opcodeMetadata, opcodeTable } from './cpu';
+import { stateToString } from './stateLogging';
+import { OAM_DMA, execOpcode } from './cpu';
 
 import PPU from './ppu';
 import { interruptHandler } from './instructions/stack';
@@ -124,7 +124,7 @@ class EmulatorState {
   ppuOffset = 0;
   cpuStep = 0;
   cpuHalfStep = 0;
-  CYC = 0
+  CYC = NaN
 
   mapper: Mapper
   settings: RomSettings;
@@ -622,23 +622,14 @@ class EmulatorState {
     }
 
     const opcode = this.readMem(this.PC);
-
     this.endReadTick();
-
     this.PC = (this.PC + 1) & 0xFFFF;
     return opcode;
   }
 
   step() {
     this.prevOpcodePC = this.PC;
-    const opcode = this.readOpcode();
-
-    if (opcode in opcodeTable) {
-      opcodeTable[opcode](this);
-    } else {
-      console.error('No handler found for opcode $' + hex(opcode === undefined ? -1 : opcode), opcodeMetadata[opcode]?.name ?? '', hex(this.PC));
-      return false;
-    }
+    execOpcode(this, this.readOpcode());
 
     // This actually annoys me a bit, if an NMI triggers we won't get the log output from the preceding opcode.
     // But this is the way Mesen does it so we do it to stay compatible.

@@ -156,7 +156,6 @@ class PPU {
   tileScanline = new Uint8Array(SCREEN_WIDTH + 8);
   framebuffer = new Uint32Array(SCREEN_WIDTH * SCREEN_HEIGHT);
   paletteRAM = new Uint8Array(32)
-  slack = 0;
   disabled = false;
   scanlineLogger = new Logger();
   triggerDelayedStateUpdate = false
@@ -850,8 +849,6 @@ class PPU {
       this.cycle++;
       this.masterClock += this.ppuDivider;
     }
-
-    this.slack = targetMasterClock - this.masterClock;
   }
 }
 
