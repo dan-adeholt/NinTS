@@ -38,6 +38,7 @@ const PPUMASK_RENDER_ENABLED_FLAGS = PPUMASK_RENDER_BACKGROUND | PPUMASK_RENDER_
 
 const PPUSTATUS_VBLANK          = 0b10000000;
 const PPUSTATUS_SPRITE_ZERO_HIT = 0b01000000;
+const PPUSTATUS_SPRITE_OVERFLOW = 0b00100000;
 
 const POST_RENDER_SCANLINE = 240;
 const VBLANK_SCANLINE = 241;
@@ -121,6 +122,7 @@ class PPU {
   busLatch = 0;
   dataBuffer = 0;
   oamAddress = 0;
+  spriteOverflow = false;
 
   vramReadDisableCounter = 0
   showSpritesLeftSide = false
@@ -260,6 +262,10 @@ class PPU {
 
       if (this.spriteZeroHit) {
         ret |= PPUSTATUS_SPRITE_ZERO_HIT;
+      }
+
+      if (this.spriteOverflow) {
+        ret |= PPUSTATUS_SPRITE_OVERFLOW;
       }
 
       ret |= (this.busLatch & 0b11111);
@@ -471,22 +477,36 @@ class PPU {
     const scanline = this.scanline;
 
     this.spriteZeroIsInSpriteUnits = false;
-    for (let i = this.oamAddress; i < (this.oamMemory.length - 3) && secondaryIndex < this.secondaryOamMemory.length; i+=4) {
-      const y = this.oamMemory[i];
+    let n = this.oamAddress;
+
+    for (; n < (this.oamMemory.length - 3) && secondaryIndex < this.secondaryOamMemory.length; n+=4) {
+      const y = this.oamMemory[n];
       if (scanline >= y && scanline < (y + this.controlSpriteSize)) {
         // if (isSteppingScanline) {
         //   this.scanlineLogger.log(i + ' - Adding sprite to secondary OAM at ' + this.oamMemory[i+3] + ',' + y + ' - ' + this.oamMemory[i+1] + ' ' + this.oamMemory[i+2]);
         // }
 
         this.secondaryOamMemory[secondaryIndex++] = y;
-        this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[i+1];
-        this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[i+2];
-        this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[i+3];
+        this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[n+1];
+        this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[n+2];
+        this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[n+3];
 
         // Sprite zero resides in at address OAM...OAM+3. If it is visible on screen, set flag
-        if (i === 0) {
+        if (n === 0) {
           this.spriteZeroIsInSpriteUnits = true;
         }
+      }
+    }
+
+    if (secondaryIndex >= this.secondaryOamMemory.length) {
+      for (let m = 0; (n+m) < this.oamMemory.length; n+=4) {
+        const y = this.oamMemory[n];
+        if (scanline >= y && scanline < (y + this.controlSpriteSize)) {
+          this.spriteOverflow = true;
+          break;
+        }
+
+        m = (m + 1) % 4;
       }
     }
   }
@@ -779,6 +799,7 @@ class PPU {
 
     if (this.scanlineCycle === 1) {
       this.nmiOccurred = false;
+      this.spriteOverflow = false;
       this.updateNMIFlag();
     }
 

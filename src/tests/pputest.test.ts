@@ -65,6 +65,12 @@ test('Sprite hit tests - Timing basics', () => testPPURomWithImage(spriteHitRoot
 test('Sprite hit tests - Timing order', () => testPPURomWithImage(spriteHitRoot + '10.timing_order.nes', 'nes-test-images/sprite_hit_tests-10.timing_order.nes.png', 65));
 test('Sprite hit tests - Edge timing', () => testPPURomWithImage(spriteHitRoot + '11.edge_timing.nes', 'nes-test-images/sprite_hit_tests-11.edge_timing.nes.png', 75));
 
+
+const spriteOverflowTests = 'nes-test-roms/sprite_overflow_tests/';
+test('Sprite overflow tests - Basics', () => testPPURomWithImage(spriteOverflowTests + '1.Basics.nes', 'nes-test-images/sprite_overflow_tests-1.Basics.nes.png', 35));
+test('Sprite overflow tests - Details', () => testPPURomWithImage(spriteOverflowTests + '2.Details.nes', 'nes-test-images/sprite_overflow_tests-2.Details.nes.png', 35));
+test('Sprite overflow tests - Emulator', () => testPPURomWithImage(spriteOverflowTests + '5.Emulator.nes', 'nes-test-images/sprite_overflow_tests-5.Emulator.nes.png', 35));
+
 const vblNMITimingRoot = 'nes-test-roms/vbl_nmi_timing/';
 
 test('VBL NMI Timing - Frame basics', () => testPPURomWithImage(vblNMITimingRoot + '1.frame_basics.nes', 'nes-test-images/vbl_nmi_timing-1.frame_basics.nes.png', 178));
