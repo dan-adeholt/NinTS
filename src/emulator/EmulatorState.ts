@@ -24,8 +24,6 @@ export const INPUT_DOWN     = 0b00100000;
 export const INPUT_LEFT     = 0b01000000;
 export const INPUT_RIGHT    = 0b10000000;
 
-export const LOCAL_STORAGE_KEY_AUTOLOAD = 'setting-autoload';
-
 const ignoredKeys = [
   'mapper.ppuMemory.memory',
   'mapper.ppuMemory.chrSource',
@@ -635,16 +633,6 @@ class EmulatorState {
     return true;
   }
 }
-
-export const localStorageAutoloadEnabled = () => {
-  const autoload = localStorage.getItem(LOCAL_STORAGE_KEY_AUTOLOAD);
-  return autoload != null && JSON.parse(autoload) === true;
-}
-
-export const setLocalStorageAutoloadEnabled = (enabled: boolean) => {
-  localStorage.setItem(LOCAL_STORAGE_KEY_AUTOLOAD, JSON.stringify(enabled));
-}
-
 
 export default EmulatorState;
 

@@ -8,8 +8,7 @@ import EmulatorState, {
     INPUT_DOWN,
     INPUT_LEFT,
     INPUT_RIGHT, INPUT_SELECT, INPUT_START,
-    INPUT_UP,
-    localStorageAutoloadEnabled
+    INPUT_UP
 } from './emulator/EmulatorState';
 import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
 import AudioBuffer from './AudioBuffer';
@@ -18,6 +17,7 @@ import Toolbar from './Toolbar';
 import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
 import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './components/types';
+import { localStorageAutoloadEnabled } from './components/localStorageUtil';
 
 export enum RunModeType {
     STOPPED = 'Stopped',

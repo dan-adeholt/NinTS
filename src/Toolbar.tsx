@@ -6,9 +6,10 @@ import Dropdown from './Dropdown';
 import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
 import classNames from 'classnames';
-import EmulatorState, { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './emulator/EmulatorState';
+import EmulatorState from './emulator/EmulatorState';
 import { RomEntry } from './components/types';
 import ROMList from './components/ROMList';
+import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './components/localStorageUtil';
 
 type ToolbarProps = {
   emulator: EmulatorState
