@@ -117,7 +117,7 @@ class EmulatorState {
   PC = 0;
   SP = 0;
   ppuOffset = 0;
-  CYC = NaN
+  CYC = 0
 
   mapper: Mapper
   settings: RomSettings;
