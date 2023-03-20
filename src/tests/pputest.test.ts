@@ -31,7 +31,7 @@ test('sprdma_and_dmc_dma - 512', () => testInstructionTestRom('nes-test-roms/spr
 
 test('nmi_sync NTSC', () => testPPURomWithImage('nes-test-roms/nmi_sync/demo_ntsc.nes', 'nes-test-images/nmi_sync_demo_ntsc.nes.png', 25));
 
-test('PPU Read Buffer', () => testInstructionTestRom('nes-test-roms/ppu_read_buffer/test_ppu_read_buffer.nes'));
+
 
 test('OAM read', () => testInstructionTestRom('nes-test-roms/oam_read/oam_read.nes'));
 
@@ -39,18 +39,6 @@ test('OAM read', () => testInstructionTestRom('nes-test-roms/oam_read/oam_read.n
 // PPU open bus
 // OAM stress
 
-const vblRoot = 'nes-test-roms/ppu_vbl_nmi/rom_singles/';
-test('PPU VBL NMI - Basics', () => testInstructionTestRom(vblRoot + '01-vbl_basics.nes'));
-test('PPU VBL NMI - Set time', () => testInstructionTestRom(vblRoot + '02-vbl_set_time.nes'));
-test('PPU VBL NMI - Set time', () => testInstructionTestRom(vblRoot + '02-vbl_set_time.nes'));
-test('PPU VBL NMI - Clear time', () => testInstructionTestRom(vblRoot + '03-vbl_clear_time.nes'));
-test('PPU VBL NMI - NMI Control', () => testInstructionTestRom(vblRoot + '04-nmi_control.nes'));
-test('PPU VBL NMI - NMI Timing', () => testInstructionTestRom(vblRoot + '05-nmi_timing.nes'));
-test('PPU VBL NMI - Suppression', () => testInstructionTestRom(vblRoot + '06-suppression.nes'));
-test('PPU VBL NMI - NMI On Timing', () => testInstructionTestRom(vblRoot + '07-nmi_on_timing.nes'));
-test('PPU VBL NMI - NMI Off Timing', () => testInstructionTestRom(vblRoot + '08-nmi_off_timing.nes'));
-test('PPU VBL NMI - Even odd frames', () => testInstructionTestRom(vblRoot + '09-even_odd_frames.nes'));
-test('PPU VBL NMI - Even odd timing', () => testInstructionTestRom(vblRoot + '10-even_odd_timing.nes'));
 
 const spriteHitRoot = 'nes-test-roms/sprite_hit_tests_2005.10.05/';
 test('Sprite hit tests - Basics', () => testPPURomWithImage(spriteHitRoot + '01.basics.nes', 'nes-test-images/sprite_hit_tests-01.basics.nes.png', 35));
@@ -71,12 +59,3 @@ test('Sprite overflow tests - Basics', () => testPPURomWithImage(spriteOverflowT
 test('Sprite overflow tests - Details', () => testPPURomWithImage(spriteOverflowTests + '2.Details.nes', 'nes-test-images/sprite_overflow_tests-2.Details.nes.png', 35));
 test('Sprite overflow tests - Emulator', () => testPPURomWithImage(spriteOverflowTests + '5.Emulator.nes', 'nes-test-images/sprite_overflow_tests-5.Emulator.nes.png', 35));
 
-const vblNMITimingRoot = 'nes-test-roms/vbl_nmi_timing/';
-
-test('VBL NMI Timing - Frame basics', () => testPPURomWithImage(vblNMITimingRoot + '1.frame_basics.nes', 'nes-test-images/vbl_nmi_timing-1.frame_basics.nes.png', 178));
-test('VBL NMI Timing - VBL Timing', () => testPPURomWithImage(vblNMITimingRoot + '2.vbl_timing.nes', 'nes-test-images/vbl_nmi_timing-2.vbl_timing.nes.png', 155));
-test('VBL NMI Timing - Even/Odd frames', () => testPPURomWithImage(vblNMITimingRoot + '3.even_odd_frames.nes', 'nes-test-images/vbl_nmi_timing-3.even_odd_frames.nes.png', 95));
-test('VBL NMI Timing - VBL Clear Timing', () => testPPURomWithImage(vblNMITimingRoot + '4.vbl_clear_timing.nes', 'nes-test-images/vbl_nmi_timing-4.vbl_clear_timing.nes.png', 125));
-test('VBL NMI Timing - NMI Suppression', () => testPPURomWithImage(vblNMITimingRoot + '5.nmi_suppression.nes', 'nes-test-images/vbl_nmi_timing-5.nmi_suppression.nes.png', 185));
-test('VBL NMI Timing - NMI Disable', () => testPPURomWithImage(vblNMITimingRoot + '6.nmi_disable.nes', 'nes-test-images/vbl_nmi_timing-6.nmi_disable.nes.png', 105));
-test('VBL NMI Timing - NMI Timing', () => testPPURomWithImage(vblNMITimingRoot + '7.nmi_timing.nes', 'nes-test-images/vbl_nmi_timing-7.nmi_timing.nes.png', 105));

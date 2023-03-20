@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest --watch=false",
+    "test": "vitest run",
     "lint": "yarn tsc --noEmit && eslint . --ext .ts,.tsx,.js --max-warnings=0",
     "perfTest": "yarn esbuild src/emulator/perfTest.ts --platform=node --bundle --outfile=/tmp/out.js && node /tmp/out.js",
     "profile": "yarn perfTest && node --prof --no-logfile-per-isolate /tmp/out.js && node --prof-process --preprocess v8.log > v8.json"
@@ -36,7 +36,7 @@
     "@vitejs/plugin-react": "^2.1.0",
     "typescript": "^4.6.4",
     "vite": "^4.1.1",
-    "vitest": "^0.26.2"
+    "vitest": "^0.29.3"
   },
   "pre-commit": [
     "test",
