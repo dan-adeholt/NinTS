@@ -68,7 +68,7 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMod
 
   const removeBreakpoint = useCallback((address: number) => {
     setBreakpoints(oldBreakpoints => {
-      const newBreakpoints = { ...oldBreakpoints };
+      const newBreakpoints = new Map<number, boolean>(oldBreakpoints);
       newBreakpoints.delete(address);
       
       return newBreakpoints;
