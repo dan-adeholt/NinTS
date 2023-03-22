@@ -7,10 +7,14 @@ const romRootPath = 'src/tests/roms/ppu-tests/';
 test('01 - Background', () => testPPURom(
   romRootPath + '01-background/01-background',
   (emulator) => {
-    emulator.stepFrame(false);
-
     for (let colorIndex = 0; colorIndex < COLORS.length; colorIndex++) {
       const expectedColor = COLORS[colorIndex];
+
+      for (let i = 0 ; i < emulator.ppu.framebuffer.length; i++) {
+        if (emulator.ppu.framebuffer[i] !== expectedColor) {
+          break;  
+        }
+      }
       expect(emulator.ppu.framebuffer.every(renderedColor => renderedColor === expectedColor)).toEqual(true);
       emulator.stepFrame(false);
     }

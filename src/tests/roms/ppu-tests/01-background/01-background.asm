@@ -22,19 +22,13 @@
 
 RESET:
   .include "../util/init.asm"
+  LDA #$80
+  STA $2000
+  LDX #00
+LOOP:
+  JMP LOOP
 
-ResetCycleColor:
-  LDX #$FF
-
-CycleColor:
-  INX
-  TXA
-
-vblankwait:
-  BIT PPU_STATUS
-  BPL vblankwait
-
-
+NMI:
   LDA #$3f
   STA PPU_ADDR
   LDA #$00
@@ -43,10 +37,20 @@ vblankwait:
   TXA
   STA PPU_DATA
 
+  LDA #$00
+  STA PPU_ADDR
+  LDA #$00
+  STA PPU_ADDR
+
   SBC #$3F
   BNE CycleColor
 
   JMP ResetCycleColor
 
-NMI:
+ResetCycleColor:
+  LDX #$FF
+
+CycleColor:
+  INX
+  TXA
   RTI

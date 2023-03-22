@@ -215,10 +215,6 @@ class PPU {
       this.paletteRAM[paletteAddress] = value;
     }
   }
-
-  readDirectPPUMem(ppuAddress: number) {  
-    return this.mapper.ppuMemory.read(ppuAddress);
-  }
   
   readPPUMem(ppuAddress: number) {
     if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF) {
@@ -750,8 +746,10 @@ class PPU {
     if (spriteColor === -1) {
       if (backgroundColor !== -1) {
         color = backgroundColor;
+      } else if (this.maskRenderingEnabled || ((this.V & 0x3F00) != 0x3F00)) {
+        color = this.paletteRAM[0] & 0x3F;
       } else {
-        color = this.paletteRAM[0];
+        color = this.paletteRAM[this.V & 0x1F] & 0x3F;
       }
     } else if (backgroundColor !== -1) {      // Both colors set
       if (spritePriority === 0) {
