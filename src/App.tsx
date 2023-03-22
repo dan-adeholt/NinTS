@@ -396,15 +396,16 @@ function App() {
     
     return (
       <div className={styles.mainContainer}>
-      <Toolbar
-        emulator={emulator}
-        toggleOpenDialog={toggleOpenDialog}
-        loadRom={loadRomFromUserInput}
-        setRunMode={_setRunMode}
-        romName={title}
-        romList={romList}
-      />
-      <ErrorBoundary>
+        <Toolbar
+          setRomList={setRomList}
+          emulator={emulator}
+          toggleOpenDialog={toggleOpenDialog}
+          loadRom={loadRomFromUserInput}
+          setRunMode={_setRunMode}
+          romName={title}
+          romList={romList}
+        />
+        <ErrorBoundary>
 
         {Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => dialogState[type] && (
           <DialogComponent

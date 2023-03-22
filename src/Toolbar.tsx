@@ -1,13 +1,13 @@
-import React, { useCallback, useState } from 'react';
+import React, { Dispatch, SetStateAction, useCallback, useState } from 'react';
 import styles from './Toolbar.module.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPowerOff, faFileAlt, faFile, faPause, faPlay, faRefresh, faSave, faTools } from '@fortawesome/free-solid-svg-icons'
+import { faPowerOff, faFileAlt, faFile, faPause, faPlay, faRefresh, faSave, faTools, faClose } from '@fortawesome/free-solid-svg-icons'
 import Dropdown from './Dropdown';
 import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
 import classNames from 'classnames';
 import EmulatorState from './emulator/EmulatorState';
-import { RomEntry } from './components/types';
+import { RomEntry, LOCAL_STORAGE_ROM_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST } from './components/types';
 import ROMList from './components/ROMList';
 import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './components/localStorageUtil';
 
@@ -18,6 +18,7 @@ type ToolbarProps = {
   setRunMode: (newRunMode: RunModeType) => void
   romName: string
   romList: RomEntry[]
+  setRomList: Dispatch<SetStateAction<RomEntry[]>>
 };
 
 enum DropdownMenu {
@@ -27,7 +28,7 @@ enum DropdownMenu {
   RomList = 4
 }
 
-const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, romName, romList } : ToolbarProps) => {
+const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, romName, romList, setRomList } : ToolbarProps) => {
   const [menuState, setMenuState] = useState<Record<number, boolean>>({});
   const toggleOpen = (menu: DropdownMenu) => setMenuState(oldState => ({ [menu]: !oldState[menu]}));
   const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);
@@ -53,36 +54,47 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, romName, rom
     }
   }, [loadRom]);
 
+  const clearLoadedRoms = () => {
+    Object.keys(localStorage).forEach(function(key){
+      if (key.startsWith(LOCAL_STORAGE_ROM_PREFIX) || key === LOCAL_STORAGE_KEY_ROM_LIST) {
+        localStorage.removeItem(key);
+      }
+   });
+   setRomList([]);
+   toggleOpen(DropdownMenu.RomList);
+  };
+
   return (
-    <div className={styles.toolbar}>
+    <div className={classNames(styles.toolbar)}>
       <div className={styles.item}>
         <div>
           <div><h1>NinJS</h1></div>  
           <div>{ romName }</div>
         </div>
       </div>
-      <div className={styles.item}>
-        <input id="file-upload" type="file" onChange={romFileChanged}/>
-        <label className="labelButton" htmlFor="file-upload"><FontAwesomeIcon icon={faFile}/><span>Open file...</span></label>
+      <div className={classNames(styles.buttonRow, styles.item)}>
+        <button onClick={() => setRunMode(RunModeType.RUNNING)}><FontAwesomeIcon icon={faPlay}/></button>
+        <button onClick={() => setRunMode(RunModeType.STOPPED)}><FontAwesomeIcon icon={faPause}/></button>
+        <button onClick={() => emulator.reset()}><FontAwesomeIcon icon={faRefresh}/></button>
+        <button onClick={() => emulator.reboot()}><FontAwesomeIcon icon={faPowerOff}/></button>
       </div>
       <div className={styles.item}>
+        <input id="file-upload" type="file" onChange={romFileChanged}/>
+        <label className="labelButton" htmlFor="file-upload"><FontAwesomeIcon icon={faFile}/><span>Open...</span></label>
+      </div>
+      <div className={classNames(styles.item)}>
         <button onClick={() => toggleOpen(DropdownMenu.RomList)} disabled={romList.length === 0}>
           <FontAwesomeIcon icon={faFileAlt}/>
-          <span>Recent games...</span>
+          <span>Recent...</span>
         </button>
         <Dropdown isOpen={menuState[DropdownMenu.RomList]}>
           <ROMList romList={romList} loadRom={(romBuffer: Uint8Array, filename: string) => {
             toggleOpen(DropdownMenu.RomList);
             loadRom(romBuffer, filename);
             setRunMode(RunModeType.RUNNING);
-          }}/>  
+          }}/>
+          <button onClick={clearLoadedRoms}><FontAwesomeIcon icon={faClose}/> Clear all</button>
         </Dropdown>
-      </div>
-      <div className={classNames(styles.buttonRow, styles.item)}>
-        <button onClick={() => setRunMode(RunModeType.RUNNING)}><FontAwesomeIcon icon={faPlay}/></button>
-        <button onClick={() => setRunMode(RunModeType.STOPPED)}><FontAwesomeIcon icon={faPause}/></button>
-        <button onClick={() => emulator.reset()}><FontAwesomeIcon icon={faRefresh}/></button>
-        <button onClick={() => emulator.reboot()}><FontAwesomeIcon icon={faPowerOff}/></button>
       </div>
       <div className={styles.item}>
         <button onClick={() => toggleOpen(DropdownMenu.Savegames)}>

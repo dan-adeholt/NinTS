@@ -1,5 +1,7 @@
 import React, { useCallback } from 'react';
 import { LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFile } from '@fortawesome/free-solid-svg-icons'
 
 type ROMListProps = {
   romList: RomEntry[]
@@ -20,7 +22,7 @@ const ROMList = ({ romList, loadRom } : ROMListProps) => {
     <>
       { romList.map((rom, idx) => (
         <button key={idx} onClick={() => _loadRom(rom)}>
-          { rom.filename }
+          <FontAwesomeIcon icon={faFile}/> { rom.filename }
         </button>
       ))}
     </>
