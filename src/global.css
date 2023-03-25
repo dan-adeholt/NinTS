@@ -63,3 +63,7 @@ button:disabled, button:disabled:hover {
   background-color: #bababa;
   cursor: default;
 }
+
+body {
+  touch-action: none;
+}

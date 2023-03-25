@@ -11,8 +11,15 @@
     flex-direction: column;
     margin-top: 5px;
     z-index: 2;
-    top: 46px;
+    bottom: 56px;
+    right: 10px;
 }
+
+.alignLeft {
+  left: 10px;
+  right: auto;
+}
+
 .open {
     visibility: visible;
     opacity: 1;
@@ -20,13 +27,16 @@
 
 .dropdown button {
     color: white;
+    font-size: 14px;
     text-align: left;
     border-bottom: 1px solid #444;
     background: transparent;
 }
 
-.dropdown button svg {
+.dropdown button svg, .dropdown button > input[type="checkbox"] {
   margin-right: 8px;
+  width: 18px;
+  font-size: 18px;
 }
 
 .dropdown button:last-child {

@@ -5,11 +5,12 @@ import styles from './Dropdown.module.css';
 type DropdownProps = {
   children: React.ReactNode,
   isOpen: boolean
+  alignLeft?: boolean
 }
 
-const Dropdown = ({ children, isOpen } : DropdownProps) => {
+const Dropdown = ({ children, isOpen, alignLeft = false } : DropdownProps) => {
   return (
-    <div className={classNames(styles.dropdown, isOpen && styles.open)}>
+    <div className={classNames(styles.dropdown, isOpen && styles.open, alignLeft && styles.alignLeft)}>
       { children }
     </div>
   );

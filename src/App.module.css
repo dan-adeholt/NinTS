@@ -15,8 +15,9 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  width: 100vw;
+    width: 100vw;
   align-items: center;
+  justify-content: center;
 }
 
 #root {
@@ -66,12 +67,6 @@ body {
   border: 1px solid gray;
 }
 
-.displayContainer {
-  height: 100%;
-  aspect-ratio: 256 / 240;
-  box-sizing: border-box;
-}
-
 .debugDisplayContainer {
   width: 770px;
   height: 40px;
@@ -79,9 +74,7 @@ body {
   border-bottom: 0;
 }
 
-.displayContainer canvas {
-  box-sizing: border-box;
-  transform-origin: 0% 0%;
+.mainContainer canvas {
   /* Firefox */
   image-rendering: crisp-edges;
   /* Chromium + Safari */
@@ -90,4 +83,33 @@ body {
 
 input[type="file"] {
   display: none;
+}
+
+.infoDiv {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 400px;
+  height: 400px;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  z-index: 1;
+  text-align: center;
+}
+.infoDiv h1 {
+  font-size: 50px;;
+}
+
+.header {
+  position: absolute;
+  top: 0px;
+  left: 0;
+  margin: auto;
+  width: 100%;
+  z-index: 2;
+  font-size: 3em;
+  padding: 25px;
+  padding-bottom: 40px;
+  background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent);
 }

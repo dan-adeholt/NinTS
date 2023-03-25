@@ -18,6 +18,8 @@ import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './De
 import ErrorBoundary from './ErrorBoundary';
 import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './components/types';
 import { localStorageAutoloadEnabled } from './components/localStorageUtil';
+import { Transition } from 'react-transition-group';
+import { animationDuration, transitionDefaultStyle, transitionStyles } from './components/AnimationConstants';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
@@ -107,25 +109,46 @@ const loadBreakpoints = (romSHA: string) => {
   }
 }
 
+type TitleProps = {
+  isOpen: boolean
+  text: string
+}
 
+function Title({ isOpen, text } : TitleProps) {
+  const nodeRef = useRef<HTMLDivElement>(null);
+  
+  return (
+    <Transition nodeRef={nodeRef} in={isOpen} timeout={animationDuration} unmountOnExit>
+      {state => (
+        <div className={styles.header} ref={nodeRef} style={{
+          ...transitionDefaultStyle,
+          ...transitionStyles[state]
+        }}>
+          { text }  
+        </div>
+      )}
+    </Transition>
+  );
+}
 
 function App() {
     // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
     const audioRef = useRef<AudioState | null>(null);
+    const mainContainerRef = useRef<HTMLDivElement>(null);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
-    const [title, setTitle] = useState(intialRomEntry?.filename ?? "No file selected");
+    const [title, setTitle] = useState<string | null>(intialRomEntry?.filename);
     const [romList, setRomList] = useState<RomEntry[]>(initialRomList);
     const [breakpoints, setBreakpoints] = useState<Map<number, boolean>>(loadBreakpoints(emulator.rom?.romSHA));
-
+    const [showInfoDiv, setShowInfoDiv] = useState(intialRomEntry?.filename == null);
     const startTime = useRef(performance.now());
-    const displayContainer = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(initialError);
     const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
     const display = useRef<Display | null>(null);
     const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
-
+    const [showControls, setShowControls] = useState(true);
+    const hideControlsTimer = useRef<number>(-1);
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
 
     // Sync breakpoints with emulator
@@ -136,9 +159,15 @@ function App() {
 
     useLayoutEffect(() => {
       const measure = () => {
-        if (displayContainer.current && display.current?.element) {
-          const newScale = (displayContainer.current?.clientHeight) / display.current?.element?.height;
-          display.current.element.style.transform = `scale(${newScale})`;
+        const mainContainer = mainContainerRef.current;
+        const canvas = display.current?.element;
+        if (mainContainer && canvas) {
+          let newScale = (mainContainer.clientHeight) / canvas.height;
+          if (mainContainer.clientHeight > mainContainer.clientWidth) {
+            newScale = (mainContainer.clientWidth) / canvas.width;  
+          }
+
+          canvas.style.transform = `scale(${newScale})`;
         }
       }
 
@@ -217,7 +246,7 @@ function App() {
                 setError(e.message);
             }
         }
-
+        setShowInfoDiv(false);
         setBreakpoints(loadBreakpoints(rom.romSHA));
         setTitle(filename);
         triggerRefresh();
@@ -228,10 +257,14 @@ function App() {
       localStorage.removeItem(LOCAL_STORAGE_BREAKPOINTS_PREFIX);
       const rom = loadRom(romBuffer, filename);
       const entry: RomEntry = { filename, sha: rom.romSHA };      
-      const newRomList = romList.filter(romEntry => romEntry.sha !== entry.sha);
-      newRomList.unshift(entry);
-      setRomList(newRomList);
-      localStorage.setItem(LOCAL_STORAGE_KEY_ROM_LIST, JSON.stringify(newRomList));
+      
+      setRomList(oldRomList => {
+        const newRomList = oldRomList.filter(romEntry => romEntry.sha !== entry.sha);
+        newRomList.unshift(entry);
+        localStorage.setItem(LOCAL_STORAGE_KEY_ROM_LIST, JSON.stringify(newRomList));
+        return newRomList;
+      });
+
       localStorage.setItem(LOCAL_STORAGE_ROM_PREFIX + entry.sha, JSON.stringify(Array.from(romBuffer)));
     }, [loadRom, romList]);
 
@@ -243,9 +276,11 @@ function App() {
         }
 
         if (newRunMode === RunModeType.RUNNING) {
-            initAudioContext();
+          hideControlsTimer.current = 60;
+          initAudioContext();
         } else {
-            stopAudioContext();
+          setShowControls(true);
+          stopAudioContext();
         }
 
         animationFrameRef.current = null;
@@ -337,9 +372,17 @@ function App() {
 
     const updateFrame = useCallback((timestamp: number) => {
         let stopped = false;
-
+        renderScreen(display.current, emulator);
+        
         while ((timestamp - startTime.current) >= ntscFrameLength) {
             startTime.current += ntscFrameLength;
+
+            if (hideControlsTimer.current > 0) {
+              hideControlsTimer.current--;
+              if (hideControlsTimer.current === 0) {
+                setShowControls(false);
+              }
+            }
 
             const gamepads = navigator.getGamepads();
 
@@ -349,15 +392,16 @@ function App() {
                 const a1 = gamepad.axes[1];
                 const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
 
+                
 
-                emulator.setInputController(INPUT_RIGHT, a0 > 0 && deg >= 0.125);
-                emulator.setInputController(INPUT_LEFT, a0 < 0 && deg >= 0.125);
-                emulator.setInputController(INPUT_UP, a1 < 0 && deg <= 0.325);
-                emulator.setInputController(INPUT_DOWN, a1 > 0 && deg <= 0.325);
+                emulator.setInputController(INPUT_RIGHT, (a0 > 0 && deg >= 0.125) || gamepad.buttons[15].pressed);
+                emulator.setInputController(INPUT_LEFT, (a0 < 0 && deg >= 0.125) || gamepad.buttons[14].pressed);
+                emulator.setInputController(INPUT_UP, (a1 < 0 && deg <= 0.325) || gamepad.buttons[12].pressed);
+                emulator.setInputController(INPUT_DOWN, (a1 > 0 && deg <= 0.325) || gamepad.buttons[13].pressed);
                 emulator.setInputController(INPUT_START, gamepad.buttons[8].pressed);
                 emulator.setInputController(INPUT_SELECT, gamepad.buttons[9].pressed);
                 emulator.setInputController(INPUT_A, gamepad.buttons[1].pressed);
-                emulator.setInputController(INPUT_B, gamepad.buttons[0].pressed);
+                emulator.setInputController(INPUT_B, gamepad.buttons[3].pressed);
             }
 
             if (emulator.stepFrame(false)) {
@@ -372,7 +416,7 @@ function App() {
             }
         }
         
-        renderScreen(display.current, emulator);
+        
 
         if (!stopped) {
             animationFrameRef.current = window.requestAnimationFrame(updateFrame);
@@ -389,48 +433,99 @@ function App() {
         }
 
         display.current = { imageData, framebuffer, context, element: ref };
-        context.fillStyle = '#2a2a2a';
+        context.fillStyle = '#1e1e1e';
         context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
       }
     }, []);
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      [...e.dataTransfer.files].forEach(file => {
+        // Read the data from firstFile into Uint8Array
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result != null) {
+            console.log('Result', file.name);
+            const rom = new Uint8Array(e.target.result as ArrayBuffer);
+            loadRomFromUserInput(rom, file.name);
+          }
+        }
+        reader.readAsArrayBuffer(file);
+      })
+    }
     
-    return (
-      <div className={styles.mainContainer}>
-        <Toolbar
+  const clearLoadedRoms = () => {
+    Object.keys(localStorage).forEach(function (key) {
+      if (key.startsWith(LOCAL_STORAGE_ROM_PREFIX) || key === LOCAL_STORAGE_KEY_ROM_LIST) {
+        localStorage.removeItem(key);
+      }
+    });
+    setShowInfoDiv(true);
+    setTitle(null);
+  };
+
+  return (
+    <>
+      <Title text={title ?? 'No file selected'} isOpen={showControls} />
+      <div
+        className={styles.mainContainer}
+        ref={mainContainerRef}
+        onMouseMove={e => {
+          setShowControls(true);
+          if (e.target === mainContainerRef.current || e.target === display.current?.element) {
+            hideControlsTimer.current = 60;
+          } else {
+            hideControlsTimer.current = -1;
+          }
+        }}
+        onDragOver={e => {
+          e.preventDefault();
+        }}
+        onDrop={handleDrop}>
+
+
+        {showInfoDiv && (
+          <div className={styles.infoDiv}>
+            <p>
+              Load a file using the menu or drop a file to start.
+            </p>
+          </div>)
+        }
+        <ErrorBoundary>
+          {Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => dialogState[type] && (
+            <DialogComponent
+              onClose={() => toggleOpenDialog(type)}
+              emulator={emulator}
+              runMode={runMode}
+              setRunMode={_setRunMode}
+              key={type + emulator.rom?.romSHA}
+              onRefresh={triggerRefresh}
+              refresh={refresh}
+              addKeyListener={addKeyListener}
+              removeKeyListener={removeKeyListener}
+              breakpoints={breakpoints}
+              setBreakpoints={setBreakpoints}
+            />
+          ))
+          }
+          {error}
+          {!error && (
+            <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRefCallback} />
+          )}
+        </ErrorBoundary>
+      </div>
+      <Toolbar
+          isOpen={showControls}
+          clearLoadedRoms={clearLoadedRoms}
           setRomList={setRomList}
           emulator={emulator}
           toggleOpenDialog={toggleOpenDialog}
           loadRom={loadRomFromUserInput}
           setRunMode={_setRunMode}
-          romName={title}
           romList={romList}
+          runMode={runMode}
         />
-        <ErrorBoundary>
-
-        {Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => dialogState[type] && (
-          <DialogComponent
-            onClose={() => toggleOpenDialog(type)}
-            emulator={emulator}
-            runMode={runMode}
-            setRunMode={_setRunMode}
-            key={type + emulator.rom?.romSHA}
-            onRefresh={triggerRefresh}
-            refresh={refresh}
-            addKeyListener={addKeyListener}
-            removeKeyListener={removeKeyListener}
-            breakpoints={breakpoints}
-            setBreakpoints={setBreakpoints}
-          />
-        ))
-          }
-          <div className={styles.displayContainer} ref={displayContainer}>
-            {error}
-            {!error && (
-                <canvas width={SCREEN_WIDTH} height={SCREEN_HEIGHT} ref={canvasRefCallback} />
-            )}
-        </div>
-      </ErrorBoundary>
-    </div>
+    </>
   );
 }
 
