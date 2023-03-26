@@ -4,6 +4,7 @@
   justify-content: center;
   border-bottom: 1px solid #333;
   width: 100vw;
+  max-width: 100%;
   position: absolute;
   bottom: 0px;
   left: 0;
@@ -81,7 +82,7 @@
     display: none;
   }  
 
-  .debugItem {
+  .debugItem, .debugItem div {
     display: none;
   }
 }

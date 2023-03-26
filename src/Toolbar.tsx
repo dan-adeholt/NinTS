@@ -42,8 +42,17 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
     setMenuState(oldState => ({ [menu]: !oldState[menu]}))
   };
 
-  const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);
-  const loadState = useCallback(() => emulator.loadEmulatorFromLocalStorage(), [emulator]);
+  const saveState = useCallback(() => {
+    emulator.saveEmulatorToLocalStorage();
+    setMenuState({});
+    setRunMode(RunModeType.RUNNING);
+  }, [emulator]);
+
+  const loadState = useCallback(() => {
+    emulator.loadEmulatorFromLocalStorage();
+    setMenuState({});
+    setRunMode(RunModeType.RUNNING);
+  }, [emulator]);
   const [autoloadEnabled, setAutoloadEnabled] = useState(localStorageAutoloadEnabled());
   
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
@@ -130,7 +139,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
             <button onClick={() => toggleOpen(DropdownMenu.Restart)}>
               <FontAwesomeIcon icon={faRefresh} />
             </button>
-            <Dropdown isOpen={menuState[DropdownMenu.Restart]} alignLeft>
+            <Dropdown isOpen={menuState[DropdownMenu.Restart]}>
               <button onClick={() => setShowDebugInfo(oldVal => !oldVal)}>
                 <input checked={showDebugInfo} type="checkbox" onChange={changeAutoloadEnabled} />
                 <span>Show debug info</span>
