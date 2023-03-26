@@ -20,6 +20,8 @@ import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STO
 import { localStorageAutoloadEnabled } from './components/localStorageUtil';
 import { Transition } from 'react-transition-group';
 import { animationDuration, transitionDefaultStyle, transitionStyles } from './components/AnimationConstants';
+import { drawStringBuffer, copyTextToBuffer, copyNumberToBuffer } from './components/CanvasTextDrawer';
+import FIFOBuffer from './components/FIFOBuffer';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
@@ -41,6 +43,29 @@ const KeyTable: Record<string, number> = {
 
 const ntscFrameLength = 1000.0 / FRAMES_PER_SECOND;
 
+// Unfortunately the timestamp in the requestAnimationFrame callback is not
+// as accurate as expected (I think due to Spectre/Meltdown mitigations).
+// This causes stutters after a while when using delta calculations, as the
+// error accumulates. To work around this, we use a lock table to determine
+// how many times we should update the emulator per frame by comparing the delta
+// to standard refresh rate deltas. If the diff is not close enough, i.e. for
+// 144hz displays or when the frame takes too long to
+// complete an emulation step, fall back to delta calculations.
+
+type FpsLockEntry = {
+  delta: number
+  framesPerIndex: (frameIndex: number) => number
+}
+
+const FPS_LOCK_TABLE: FpsLockEntry[] = [
+  { delta: 1000 / 30.0, framesPerIndex: () => 2 },
+  { delta: 1000 / 60.0, framesPerIndex: () => 1 },
+  { delta: 1000 / 120.0, framesPerIndex: (frameIndex: number) => (frameIndex % 2 === 0) ? 1 : 0 },
+  { delta: 1000 / 240.0, framesPerIndex: (frameIndex: number) => (frameIndex % 4 === 0) ? 1 : 0 }
+];
+
+const FPS_LOCK_EPSILON = 1;
+
 type AudioState = {
     scriptProcessor: ScriptProcessorNode
     audioContext: AudioContext
@@ -53,10 +78,21 @@ type Display = {
   framebuffer: Uint32Array
 }
 
-const renderScreen = (display: Display | null, emulator: EmulatorState | null ) => {
+const textBuffer = new Uint8Array(64)
+const stepTimingBuffer = new FIFOBuffer(30);
+const frameTimingBuffer = new FIFOBuffer(5, Math.max);
+
+const renderScreen = (display: Display | null, emulator: EmulatorState | null, showDebugInfo: boolean) => {
     if (display != null && emulator != null) {
         display.framebuffer.set(emulator.ppu.framebuffer, 0);
         display.context.putImageData(display.imageData, 0, 0);
+        if (showDebugInfo) {
+          let index = copyTextToBuffer(textBuffer, 0, 'Step  timing: ');
+          index = copyNumberToBuffer(textBuffer, index, stepTimingBuffer.maxValue);
+          index = copyTextToBuffer(textBuffer, index, '\nFrame timing: ');
+          index = copyNumberToBuffer(textBuffer, index, frameTimingBuffer.maxValue);
+          drawStringBuffer(textBuffer, display.context, 0, 0, index);
+        }
     }
 }
 
@@ -113,7 +149,6 @@ type TitleProps = {
   isOpen: boolean
   text: string
 }
-
 function Title({ isOpen, text } : TitleProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   
@@ -131,6 +166,102 @@ function Title({ isOpen, text } : TitleProps) {
   );
 }
 
+const updateFrame = (
+  timestamp: number,
+  display: Display,
+  onStopped: () => void,
+  runMode: RunModeType,
+  showDebugInfo: boolean,
+  setShowControls: React.Dispatch<React.SetStateAction<boolean>>,
+  hideControlsTimer: React.MutableRefObject<number>,
+  animationFrameRef: React.MutableRefObject<number | null>,
+  animationFrameIndex = 0,
+  emulatorTime = performance.now(),
+  lastTime = performance.now()
+) => {
+  let stopped = false;
+
+  const gamepads = navigator.getGamepads();
+
+  if (gamepads[0] != null) {
+    const gamepad = gamepads[0];
+    const a0 = gamepad.axes[0];
+    const a1 = gamepad.axes[1];
+    const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
+
+    emulator.setInputController(INPUT_RIGHT, (a0 > 0 && deg >= 0.125) || gamepad.buttons[15].pressed);
+    emulator.setInputController(INPUT_LEFT, (a0 < 0 && deg >= 0.125) || gamepad.buttons[14].pressed);
+    emulator.setInputController(INPUT_UP, (a1 < 0 && deg <= 0.325) || gamepad.buttons[12].pressed);
+    emulator.setInputController(INPUT_DOWN, (a1 > 0 && deg <= 0.325) || gamepad.buttons[13].pressed);
+    emulator.setInputController(INPUT_START, gamepad.buttons[8].pressed);
+    emulator.setInputController(INPUT_SELECT, gamepad.buttons[9].pressed);
+    emulator.setInputController(INPUT_A, gamepad.buttons[1].pressed);
+    emulator.setInputController(INPUT_B, gamepad.buttons[3].pressed);
+  }
+
+  const timeDelta = timestamp - lastTime;
+  
+  const tick = (): boolean => {
+    emulatorTime += ntscFrameLength;
+
+    if (hideControlsTimer.current > 0) {
+      hideControlsTimer.current--;
+      if (hideControlsTimer.current === 0) {
+        setShowControls(false);
+      }
+    }
+
+    const stepT0 = performance.now();
+    const _stopped = emulator.stepFrame(false);
+    stepTimingBuffer.push(performance.now() - stepT0);
+    return _stopped;
+  }
+  
+  let numFrames = 1;
+
+  for (const fpsLockConfig of FPS_LOCK_TABLE) {
+    const diffLast = Math.abs(timeDelta - fpsLockConfig.delta);
+    if (diffLast < FPS_LOCK_EPSILON) {
+      numFrames = fpsLockConfig.framesPerIndex(animationFrameIndex);
+      for (let i = 0; i < numFrames && !stopped; i++) {
+        stopped = tick();
+      }
+
+      break;
+    }
+  }
+
+  // Found no lock config, use standard delta time based frame updates      
+  if (numFrames === -1) {
+    while ((timestamp - emulatorTime) >= ntscFrameLength && !stopped) {
+      stopped = tick();
+    }
+  }
+
+  renderScreen(display, emulator, showDebugInfo);
+  animationFrameIndex = (animationFrameIndex + 1 % 8)
+
+  if (stopped) {
+    onStopped();
+  }
+  
+  frameTimingBuffer.push(numFrames);
+  lastTime = timestamp;
+
+  if (!stopped) {
+    if (animationFrameRef.current != null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    animationFrameRef.current = window.requestAnimationFrame((_newTimestamp) => {
+      updateFrame(_newTimestamp, display, onStopped, runMode, showDebugInfo, setShowControls, hideControlsTimer, animationFrameRef, animationFrameIndex, emulatorTime, lastTime);
+    });
+  }
+}
+
+
+
+
 function App() {
     // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
@@ -142,7 +273,6 @@ function App() {
     const [romList, setRomList] = useState<RomEntry[]>(initialRomList);
     const [breakpoints, setBreakpoints] = useState<Map<number, boolean>>(loadBreakpoints(emulator.rom?.romSHA));
     const [showInfoDiv, setShowInfoDiv] = useState(intialRomEntry?.filename == null);
-    const startTime = useRef(performance.now());
     const [error, setError] = useState<string | null>(initialError);
     const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
     const display = useRef<Display | null>(null);
@@ -150,6 +280,7 @@ function App() {
     const [showControls, setShowControls] = useState(true);
     const hideControlsTimer = useRef<number>(-1);
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
+    const [showDebugInfo, setShowDebugInfo] = useState(false);
 
     // Sync breakpoints with emulator
     useEffect(() => {
@@ -294,16 +425,33 @@ function App() {
             }
             setRunMode(RunModeType.STOPPED);
             setIsSteppingScanline(false);
-        } else if (newRunMode !== RunModeType.STOPPED) {
+        } else if (newRunMode !== RunModeType.STOPPED && display.current) {
             setRunMode(newRunMode);
-            startTime.current = performance.now();
-            updateFrame(startTime.current);
+
+            updateFrame(
+              performance.now(), 
+              display.current,
+              () => {
+                // Hit breakpoint
+                stopAudioContext();
+                setShowControls(true);
+                setRunMode(RunModeType.STOPPED);
+                setDialogState(oldState => {
+                  return { ...oldState, [DebugDialog.CPUDebugger]: true };
+                });
+              },
+              runMode,
+              showDebugInfo,
+              setShowControls,
+              hideControlsTimer, 
+              animationFrameRef);
+            
         } else {
             setRunMode(newRunMode);
         }
 
         triggerRefresh();
-    }, [triggerRefresh]);
+    }, [triggerRefresh, showDebugInfo, runMode, emulator, initAudioContext, stopAudioContext, display, setRunMode, setIsSteppingScanline]);
 
 
     const handleKeyEvent = useCallback((e : KeyboardEvent) => {
@@ -369,60 +517,6 @@ function App() {
         }
     }, [handleKeyEvent, handleGamepad, handleFocus])
 
-
-    const updateFrame = useCallback((timestamp: number) => {
-        let stopped = false;
-        renderScreen(display.current, emulator);
-        
-        while ((timestamp - startTime.current) >= ntscFrameLength) {
-            startTime.current += ntscFrameLength;
-
-            if (hideControlsTimer.current > 0) {
-              hideControlsTimer.current--;
-              if (hideControlsTimer.current === 0) {
-                setShowControls(false);
-              }
-            }
-
-            const gamepads = navigator.getGamepads();
-
-            if (gamepads[0] != null) {
-                const gamepad = gamepads[0];
-                const a0 = gamepad.axes[0];
-                const a1 = gamepad.axes[1];
-                const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
-
-                
-
-                emulator.setInputController(INPUT_RIGHT, (a0 > 0 && deg >= 0.125) || gamepad.buttons[15].pressed);
-                emulator.setInputController(INPUT_LEFT, (a0 < 0 && deg >= 0.125) || gamepad.buttons[14].pressed);
-                emulator.setInputController(INPUT_UP, (a1 < 0 && deg <= 0.325) || gamepad.buttons[12].pressed);
-                emulator.setInputController(INPUT_DOWN, (a1 > 0 && deg <= 0.325) || gamepad.buttons[13].pressed);
-                emulator.setInputController(INPUT_START, gamepad.buttons[8].pressed);
-                emulator.setInputController(INPUT_SELECT, gamepad.buttons[9].pressed);
-                emulator.setInputController(INPUT_A, gamepad.buttons[1].pressed);
-                emulator.setInputController(INPUT_B, gamepad.buttons[3].pressed);
-            }
-
-            if (emulator.stepFrame(false)) {
-                // Hit breakpoint
-                _setRunMode(RunModeType.STOPPED);
-                setDialogState(oldState => {
-                  return { ...oldState, [DebugDialog.CPUDebugger]: true };
-                });
-
-                stopped = true;
-                break;
-            }
-        }
-        
-        
-
-        if (!stopped) {
-            animationFrameRef.current = window.requestAnimationFrame(updateFrame);
-        }
-    }, [runMode, emulator, display, _setRunMode, setDialogState]);
-
     const canvasRefCallback = useCallback((ref: HTMLCanvasElement | null) => {
       const context = ref?.getContext("2d");
       if (context != null) {
@@ -434,6 +528,7 @@ function App() {
 
         display.current = { imageData, framebuffer, context, element: ref };
         context.fillStyle = '#1e1e1e';
+        context.imageSmoothingEnabled = false;
         context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
       }
     }, []);
@@ -473,7 +568,7 @@ function App() {
         onMouseMove={e => {
           setShowControls(true);
           if (e.target === mainContainerRef.current || e.target === display.current?.element) {
-            hideControlsTimer.current = 60;
+            hideControlsTimer.current = 120;
           } else {
             hideControlsTimer.current = -1;
           }
@@ -524,6 +619,8 @@ function App() {
           setRunMode={_setRunMode}
           romList={romList}
           runMode={runMode}
+          showDebugInfo={showDebugInfo}
+          setShowDebugInfo={setShowDebugInfo}
         />
     </>
   );

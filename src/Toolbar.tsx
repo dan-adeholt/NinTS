@@ -1,4 +1,4 @@
-import React, { Dispatch, SetStateAction, useCallback, useRef, useState } from 'react';
+import React, { Dispatch, SetStateAction, useCallback, useRef, useState, useEffect } from 'react';
 import styles from './Toolbar.module.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPowerOff, faFileAlt, faPause, faPlay, faRefresh, faSave, faTools, faClose, faFolderOpen, faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
@@ -23,6 +23,8 @@ type ToolbarProps = {
   setRomList: Dispatch<SetStateAction<RomEntry[]>>
   clearLoadedRoms: () => void
   isOpen: boolean
+  showDebugInfo: boolean
+  setShowDebugInfo: Dispatch<SetStateAction<boolean>>
 };
 
 enum DropdownMenu {
@@ -33,11 +35,13 @@ enum DropdownMenu {
   Restart = 5
 }
 
-const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedRoms, romList, setRomList, runMode, isOpen } : ToolbarProps) => {
+const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedRoms, romList, setRomList, runMode, isOpen, showDebugInfo, setShowDebugInfo } : ToolbarProps) => {
   const [menuState, setMenuState] = useState<Record<number, boolean>>({});
   const toggleOpen = (menu: DropdownMenu) => {
+    setRunMode(RunModeType.STOPPED);
     setMenuState(oldState => ({ [menu]: !oldState[menu]}))
   };
+
   const saveState = useCallback(() => emulator.saveEmulatorToLocalStorage(), [emulator]);
   const loadState = useCallback(() => emulator.loadEmulatorFromLocalStorage(), [emulator]);
   const [autoloadEnabled, setAutoloadEnabled] = useState(localStorageAutoloadEnabled());
@@ -47,8 +51,6 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
     setPrevIsOpen(isOpen);
     setMenuState({});
   }
-
-  console.log('Menu state', menuState, isOpen);
 
   const changeAutoloadEnabled = useCallback(() => {
     setAutoloadEnabled(!autoloadEnabled);
@@ -75,6 +77,19 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
     toggleOpen(DropdownMenu.RomList);
   }
 
+  useEffect(() => {
+    const listener = (e: MouseEvent) => {
+      if (e.target instanceof Node && !nodeRef.current?.contains(e.target)) {
+        setMenuState({});
+      }
+    }
+
+    document.addEventListener('mousedown', listener)
+    return () => {
+      document.removeEventListener('mousedown', listener);
+    }
+  }, []);
+
   const nodeRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -83,7 +98,8 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
         <div className={classNames(styles.toolbar)} ref={nodeRef} style={{
           ...transitionDefaultStyle,
           ...transitionStyles[state]
-        }}>
+        }}
+        >
           <div className={classNames(styles.buttonRow, styles.item)}>
             <button onClick={() => setRunMode(runMode === RunModeType.RUNNING ? RunModeType.STOPPED : RunModeType.RUNNING)}><FontAwesomeIcon icon={runMode === RunModeType.RUNNING ? faPause : faPlay} /></button>
             <div className={styles.tooltipText}>{ runMode === RunModeType.RUNNING ? 'Pause' : 'Play' }</div>
@@ -115,6 +131,11 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
               <FontAwesomeIcon icon={faRefresh} />
             </button>
             <Dropdown isOpen={menuState[DropdownMenu.Restart]} alignLeft>
+              <button onClick={() => setShowDebugInfo(oldVal => !oldVal)}>
+                <input checked={showDebugInfo} type="checkbox" onChange={changeAutoloadEnabled} />
+                <span>Show debug info</span>
+              </button>
+
               <button
                 onClick={() => {
                   toggleOpen(DropdownMenu.Restart);
