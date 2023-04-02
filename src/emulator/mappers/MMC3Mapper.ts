@@ -90,7 +90,6 @@ class MMC3Mapper extends Mapper {
 
       if (this.irqCounter === 0 && !this.disableIrq) {
         this.irq = true;
-        console.log('IRQ', scanline, scanlineCycle);
       }
 
       this.irqReload = false;
