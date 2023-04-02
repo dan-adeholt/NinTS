@@ -6,6 +6,8 @@ import CPUMemorySpace from './CPUMemorySpace';
 import PPUMemorySpace from './PPUMemorySpace';
 import CNROMMapper from './CNROMMapper';
 import UNROMMapper from './UNROMMapper';
+import AxROMMapper from './AxROMMapper';
+import MMC3Mapper from './MMC3Mapper';
 
 const parseMapper = (rom: Rom, cpuMemory: CPUMemorySpace, ppuMemory: PPUMemorySpace): Mapper => {
   switch (rom.settings.mapper) {
@@ -17,6 +19,10 @@ const parseMapper = (rom: Rom, cpuMemory: CPUMemorySpace, ppuMemory: PPUMemorySp
       return new UNROMMapper(rom, cpuMemory, ppuMemory);
     case 3:
       return new CNROMMapper(rom, cpuMemory, ppuMemory);
+    case 4: 
+      return new MMC3Mapper(rom, cpuMemory, ppuMemory);
+    case 7:
+      return new AxROMMapper(rom, cpuMemory, ppuMemory);
     default:
       throw new Error('Unsupported mapper specified: ' + rom.settings.mapper);
   }

@@ -17,9 +17,9 @@ enum MMCVariant {
 const registerToMirroringMode = (register: number) => {
   switch (register) {
     case 0:
-      return MirroringMode.SingleScreenLower;
+      return MirroringMode.SingleScreenA;
     case 1:
-      return MirroringMode.SingleScreenUpper;
+      return MirroringMode.SingleScreenB;
     case 2:
       return MirroringMode.Vertical;
     case 3:

@@ -531,7 +531,7 @@ class EmulatorState {
     //
     // APU Frame interrupt occurred. Like with the NMI; trigger after current cycle, but keep feeding values even if there
     // is no state transition
-    this.irqDelayedFlag.updateWithNewValue((this.apu.frameInterrupt || this.apu.dmc.irq.interrupt) && ((this.P & P_REG_INTERRUPT) === 0));
+    this.irqDelayedFlag.updateWithNewValue((this.apu.frameInterrupt || this.apu.dmc.irq.interrupt || this.mapper.irq) && ((this.P & P_REG_INTERRUPT) === 0));
   }
 
   dummyReadTick() {

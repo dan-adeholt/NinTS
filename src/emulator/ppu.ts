@@ -144,6 +144,8 @@ class PPU {
   colorLatch1 = 0;
   colorLatch2 = 0;
 
+  spriteIndex = 0;
+
   minSpriteCycle = 8;
   minBackgroundCycle = 8;
   oamMemory = (new Uint8Array(256)).fill(0xFF);
@@ -196,6 +198,7 @@ class PPU {
 
   incrementVRAMAddress() {
     this.V = (this.V + this.controlVramIncrement) % (1 << 16);
+    this.mapper.handleVRAMAddressChange(this.V & 0x3FFF, this.scanline, this.scanlineCycle);
   }
 
   writePPUPaletteMem(paletteAddress: number, value: number) {
@@ -220,7 +223,7 @@ class PPU {
     if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF) {
       return this.paletteRAM[ppuAddress & 0x1F];
     } else {
-      return this.mapper.ppuMemory.read(ppuAddress);
+      return this.mapper.readPPUMemory(ppuAddress, this.scanline, this.scanlineCycle);
     }
   }
 
@@ -228,7 +231,7 @@ class PPU {
     if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF) {
       this.writePPUPaletteMem(ppuAddress & 0x1F, value);
     } else {
-      this.mapper.ppuMemory.write(ppuAddress, value);
+      this.mapper.writePPUMemory(ppuAddress, value, this.scanline, this.scanlineCycle);
     }
   }
 
@@ -284,13 +287,13 @@ class PPU {
         if (!peek) {
           // From: https://wiki.nesdev.com/w/index.php/PPU_registers#Data_.28.242007.29_.3C.3E_read.2Fwrite
           // Reading the palettes still updates the internal buffer though, but the data placed in it is the mirrored nametable data that would appear "underneath" the palette.
-          this.dataBuffer = this.mapper.ppuMemory.read(ppuAddress - 0x1000);
+          this.dataBuffer = this.mapper.readPPUMemory(ppuAddress - 0x1000, this.scanline, this.scanlineCycle);
           this.incrementVRAMAddress();
         }
       } else {
         ret = this.dataBuffer;
         if (!peek) {
-          this.dataBuffer = this.mapper.ppuMemory.read(ppuAddress);
+          this.dataBuffer = this.mapper.readPPUMemory(ppuAddress, this.scanline, this.scanlineCycle);
           this.incrementVRAMAddress();
         }
       }
@@ -435,6 +438,10 @@ class PPU {
           this.W = 0;
         }
 
+        if (!this.maskRenderingEnabled || this.scanline >= POST_RENDER_SCANLINE) {
+          this.mapper.handleVRAMAddressChange(this.V & 0x3FFF, this.scanline, this.scanlineCycle);
+        } 
+
         break;
       case PPUDATA: {
         const ppuAddress = this.V & 0x3FFF;
@@ -497,7 +504,7 @@ class PPU {
     if (secondaryIndex >= this.secondaryOamMemory.length) {
       for (let m = 0; (n+m) < this.oamMemory.length; n+=4) {
         const y = this.oamMemory[n];
-        if (scanline >= y && scanline < (y + this.controlSpriteSize)) {
+        if (scanline >= y && scanline < (y + this.controlSpriteSize) && y < SCREEN_HEIGHT) {
           this.spriteOverflow = true;
           break;
         }
@@ -507,14 +514,9 @@ class PPU {
     }
   }
 
-  copyToSpriteUnits() {
-    let oamAddress = 0;
+  copySpriteToUnit() {
+    let oamAddress = this.spriteIndex * 4;
 
-    for (let i = 0; i < SCREEN_WIDTH; i++) {
-      this.spriteScanline[i] = 0;
-    }
-
-    for (let i = 0; i < 8; i++) {
       const y = this.secondaryOamMemory[oamAddress++];
       let tileIndex = this.secondaryOamMemory[oamAddress++];
       const attributes = this.secondaryOamMemory[oamAddress++];
@@ -525,8 +527,9 @@ class PPU {
         pixelRow = this.controlSpriteSize - 1 - pixelRow;
       }
 
+      let nametable = 0;
       if (this.controlSpriteSize === 16) {
-        const nametable = tileIndex & 0b1;
+        nametable = tileIndex & 0b1;
         tileIndex = (nametable << 8) | (tileIndex & 0b11111110);
 
         if (pixelRow >= 8) {
@@ -537,15 +540,15 @@ class PPU {
         tileIndex = (this.controlSpritePatternAddress) | tileIndex;
       }
 
-      const chrIndex = tileIndex * 8 * 2 + pixelRow;
-
-      const flipHorizontal = attributes & SPRITE_ATTRIB_FLIP_HORIZONTAL;
-      const spritePriority = (attributes & SPRITE_ATTRIB_PRIORITY) >>> 5;
-      const paletteIndex = attributes & SPRITE_ATTRIBS_PALETTE;
-
+      const chrIndex = tileIndex * 8 * 2;
+      
       if (y !== 0xFF) {
-        let shiftRegister1 = this.mapper.ppuMemory.read(chrIndex);
-        let shiftRegister2 = this.mapper.ppuMemory.read(chrIndex + 8);
+        const flipHorizontal = attributes & SPRITE_ATTRIB_FLIP_HORIZONTAL;
+        const spritePriority = (attributes & SPRITE_ATTRIB_PRIORITY) >>> 5;
+        const paletteIndex = attributes & SPRITE_ATTRIBS_PALETTE;
+        
+        let shiftRegister1 = this.mapper.readPPUMemory(chrIndex + pixelRow, this.scanline, this.scanlineCycle);
+        let shiftRegister2 = this.mapper.readPPUMemory(chrIndex + 8 + pixelRow, this.scanline, this.scanlineCycle);
 
         for (let xp = x; xp < x + 8; xp++) {
           let c1;
@@ -566,11 +569,16 @@ class PPU {
           const color = (c2 << 1) | c1;
 
           if (this.spriteScanline[xp] === 0 && color !== 0) {
-            this.spriteScanline[xp] = color | (spritePriority << 2) | (paletteIndex << 3) | (i << 5);
+            this.spriteScanline[xp] = color | (spritePriority << 2) | (paletteIndex << 3) | (this.spriteIndex << 5);
           }
         }
+      } else {
+        this.mapper.readPPUMemory(chrIndex, this.scanline, this.scanlineCycle);
+        this.mapper.readPPUMemory(chrIndex + 8, this.scanline, this.scanlineCycle);
       }
-    }
+
+      this.spriteIndex++;
+    // }
   }
 
   incrementHorizontalV() {
@@ -637,7 +645,7 @@ class PPU {
           this.tileScanlineIndex = 0;
         }
 
-        const tileIndex = (this.controlBgPatternAddress) | this.mapper.ppuMemory.read(0x2000 | (this.V & 0x0FFF));
+        const tileIndex = (this.controlBgPatternAddress) | this.mapper.readPPUMemory(this.getNameTableAddress(), this.scanline, this.scanlineCycle);
         const fineY = (this.V & POINTER_FINE_Y_MASK) >> 12;
         this.pendingBackgroundTileIndex = (tileIndex * 8 * 2) + fineY;      
 
@@ -648,44 +656,68 @@ class PPU {
         break;
       }
       case 3: {
-        const nametable = (this.V & 0x0C00);
-        const y = ((this.V >>> 4) & 0b111000);  // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
-        const x = ((this.V >>> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
-
-        const attributeAddress = 0x23C0 | nametable | y | x;
-        const attribute = this.mapper.ppuMemory.read(attributeAddress);
+        const attribute = this.mapper.readPPUMemory(this.getAttributeAddress(), this.scanline, this.scanlineCycle);
         this.pendingBackgroundPalette = getPaletteFromByte(this.V, attribute);
         break;
       }
       case 5: {
-        this.pendingTileLowByte = this.mapper.ppuMemory.read(this.pendingBackgroundTileIndex);
+        this.pendingTileLowByte = this.mapper.readPPUMemory(this.pendingBackgroundTileIndex, this.scanline, this.scanlineCycle);
         break;
       }
       case 7: {
-        this.pendingTileHighByte = this.mapper.ppuMemory.read(this.pendingBackgroundTileIndex + 8);
+        this.pendingTileHighByte = this.mapper.readPPUMemory(this.pendingBackgroundTileIndex + 8, this.scanline, this.scanlineCycle);
         break;
       }
     }
   }
 
-  updateSpriteScanning() {
-    if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320) {
-      this.oamAddress = 0;
-    }
+  getAttributeAddress() {
+    const nametable = (this.V & 0x0C00);
+    const y = ((this.V >>> 4) & 0b111000);  // Since each entry in the palette table handles 4x4 tiles, we drop 2 bits of
+    const x = ((this.V >>> 2) & 0b000111);  // precision from the X & Y components so that they increment every 4 tiles
 
+    return 0x23C0 | nametable | y | x;
+  }
+
+  getNameTableAddress() {
+    return 0x2000 | (this.V & 0x0FFF)
+  }
+
+  updateSpriteScanning() {
     switch (this.scanlineCycle) {
       case 1:
         this.clearSecondaryOAM();  
         break;  
       case 257: 
         this.initializeSecondaryOAM();
-        break;
-      case 321: 
-        this.copyToSpriteUnits();
+        this.spriteIndex = 0;
+
+        for (let i = 0; i < SCREEN_WIDTH; i++) {
+          this.spriteScanline[i] = 0;
+        }
+
         break;
       default:
         break;
     }
+
+    if (this.scanlineCycle >= 257 && this.scanlineCycle <= 320) {
+      this.oamAddress = 0;
+
+      const cycleMod = (this.scanlineCycle - 257) % 8;
+
+      switch(cycleMod) {
+        case 0:
+          this.mapper.readPPUMemory(this.getNameTableAddress(), this.scanline, this.scanlineCycle);
+          break;
+        case 2:
+          this.mapper.readPPUMemory(this.getAttributeAddress(), this.scanline, this.scanlineCycle);
+          break;
+        case 4:
+          this.copySpriteToUnit();  
+          break;
+      }
+    }    
   }
 
   // Reset vertical part (Y scroll) of current VRAM address
@@ -790,6 +822,8 @@ class PPU {
 
   handlePrerenderScanline() {
     if (this.maskRenderingEnabled) {
+      this.updateSpriteScanning();
+  
       if (this.scanlineCycle != 0 && (this.scanlineCycle <= 257 || (this.scanlineCycle >= 321 && this.scanlineCycle <= 336))) {
         this.updateBackgroundRegisters();
       }  
@@ -829,6 +863,8 @@ class PPU {
       this.scanlineCycle = 0;
 
       if (this.scanline === POST_RENDER_SCANLINE) {
+        // During VBlank and when rendering is disabled, the value on the PPU address bus is the current value of the v register.
+        this.mapper.handleVRAMAddressChange(this.V, this.scanline, this.scanlineCycle)  
         this.frameCount++;
       }
 

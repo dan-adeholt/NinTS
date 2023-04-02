@@ -58,7 +58,7 @@ class PPUMemorySpace {
     this.mirroringMode = mirroringMode;
 
     switch(mirroringMode) {
-      case MirroringMode.SingleScreenUpper:
+      case MirroringMode.SingleScreenB:
         for (let mirrorOffset = 0; mirrorOffset <= 0x1000; mirrorOffset += 0x1000) {
           this.memory.map(this.namespaceRam, 0x2000 + mirrorOffset, 0x0400, 0x0800);
           this.memory.map(this.namespaceRam, 0x2400 + mirrorOffset, 0x0400, 0x0800);
@@ -66,7 +66,7 @@ class PPUMemorySpace {
           this.memory.map(this.namespaceRam, 0x2C00 + mirrorOffset, 0x0400, 0x0800);
         }
         break;
-      case MirroringMode.SingleScreenLower:
+      case MirroringMode.SingleScreenA:
         for (let mirrorOffset = 0; mirrorOffset <= 0x1000; mirrorOffset += 0x1000) {
           this.memory.map(this.namespaceRam, 0x2000 + mirrorOffset, 0x0000, 0x0400);
           this.memory.map(this.namespaceRam, 0x2400 + mirrorOffset, 0x0000, 0x0400);
