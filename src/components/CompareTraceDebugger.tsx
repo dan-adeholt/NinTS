@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog from './Dialog';
 import styles from './PPUDebugging.module.css';
 import classNames from 'classnames';
 import { hex } from '../emulator/stateLogging';

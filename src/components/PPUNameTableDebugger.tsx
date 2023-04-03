@@ -4,8 +4,8 @@ import { BIT_7 } from '../emulator/instructions/util';
 import { mirroringModeToString } from '../emulator/MirroringMode';
 import styles from './PPUDebugging.module.css';
 import EmulatorState from '../emulator/EmulatorState';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog, { DialogHorizontalPosition } from './Dialog';
 
 const NAME_TABLE_WIDTH = 256;
 const NAME_TABLE_HEIGHT = 240;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { hex } from '../emulator/stateLogging';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog, { DialogHorizontalPosition } from './Dialog';
 import classNames from 'classnames';
 import styles from './APUDebugger.module.css';
 import SquareWaveGenerator from '../emulator/apu/SquareWaveGenerator';

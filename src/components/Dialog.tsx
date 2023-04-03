@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
-import { DragOffset, useDrag } from './hooks/useDrag';
+import { DragOffset, useDrag } from '../hooks/useDrag';
 
 export type BaseDialogProps = {
   onClose: () => void

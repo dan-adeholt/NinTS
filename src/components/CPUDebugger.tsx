@@ -4,12 +4,12 @@ import { faCaretSquareRight, faPause, faPlay, faStepForward } from '@fortawesome
 import { disassemble, DisassembledLine, disassembleLine, hex, hex16 } from '../emulator/stateLogging';
 import classNames from 'classnames';
 import { opcodeMetadata } from '../emulator/cpu';
-import { RunModeType } from '../App';
+import { RunModeType } from './App';
 import SegmentControl from './SegmentControl';
 import styles from './CPUDebugger.module.css';
 import EmulatorState from '../emulator/EmulatorState';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog, { DialogHorizontalPosition } from './Dialog';
 import EmulatorBreakState from '../emulator/EmulatorBreakState';
 
 const allOpcodeNames = new Set(Object.values(opcodeMetadata).map(opcode => opcode.name));

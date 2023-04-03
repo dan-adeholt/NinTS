@@ -1,16 +1,16 @@
 import { Dispatch, NamedExoticComponent, SetStateAction } from 'react';
 import { BaseDialogProps } from './Dialog';
-import EmulatorState from './emulator/EmulatorState';
+import EmulatorState from '../emulator/EmulatorState';
 import { KeyListener, RunModeType } from './App';
-import CPUDebugger from './components/CPUDebugger';
-import PPUNameTableDebugger from './components/PPUNameTableDebugger';
-import PPUSpritesDebugger from './components/PPUSpritesDebugger';
-import PPUOAMDebugger from './components/PPUOAMDebugger';
-import PPUVRAMDebugger from './components/PPUVRAMDebugger';
-import PPUScanlineDebugger from './components/PPUScanlineDebugger';
-import CompareTraceDebugger from './components/CompareTraceDebugger';
-import Profiler from './components/Profiler';
-import APUDebugger from './components/APUDebugger';
+import CPUDebugger from '../components/CPUDebugger';
+import PPUNameTableDebugger from '../components/PPUNameTableDebugger';
+import PPUSpritesDebugger from '../components/PPUSpritesDebugger';
+import PPUOAMDebugger from '../components/PPUOAMDebugger';
+import PPUVRAMDebugger from '../components/PPUVRAMDebugger';
+import PPUScanlineDebugger from '../components/PPUScanlineDebugger';
+import CompareTraceDebugger from '../components/CompareTraceDebugger';
+import Profiler from '../components/Profiler';
+import APUDebugger from '../components/APUDebugger';
 
 export enum DebugDialog {
   CPUDebugger = 'CPU Debugger',

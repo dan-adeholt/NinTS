@@ -1,4 +1,4 @@
-import { AUDIO_BUFFER_SIZE } from './emulator/apu';
+import { AUDIO_BUFFER_SIZE } from '../emulator/apu';
 
 class AudioBuffer {
   writePosition = 0;

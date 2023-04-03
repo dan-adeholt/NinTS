@@ -6,12 +6,12 @@ import Dropdown from './Dropdown';
 import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
 import classNames from 'classnames';
-import EmulatorState from './emulator/EmulatorState';
-import { RomEntry } from './components/types';
-import ROMList from './components/ROMList';
-import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './components/localStorageUtil';
+import EmulatorState from '../emulator/EmulatorState';
+import { RomEntry } from '../components/types';
+import ROMList from './ROMList';
+import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './localStorageUtil';
 import { Transition } from 'react-transition-group';
-import { animationDuration, transitionDefaultStyle, transitionStyles } from './components/AnimationConstants';
+import { animationDuration, transitionDefaultStyle, transitionStyles } from './AnimationConstants';
 
 type ToolbarProps = {
   emulator: EmulatorState

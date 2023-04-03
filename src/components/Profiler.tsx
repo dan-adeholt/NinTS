@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog from './Dialog';
 import EmulatorState from '../emulator/EmulatorState';
 import { EmptyRom, parseROM } from '../emulator/parseROM';
 import PPUMemorySpace from '../emulator/mappers/PPUMemorySpace';

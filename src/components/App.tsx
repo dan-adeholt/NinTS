@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './App.module.css';
-import './global.css';
-import { parseROM } from './emulator/parseROM';
+import '../global.css';
+import { parseROM } from '../emulator/parseROM';
 import EmulatorState, {
     INPUT_A,
     INPUT_B,
@@ -9,19 +9,19 @@ import EmulatorState, {
     INPUT_LEFT,
     INPUT_RIGHT, INPUT_SELECT, INPUT_START,
     INPUT_UP
-} from './emulator/EmulatorState';
-import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from './emulator/ppu';
+} from '../emulator/EmulatorState';
+import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from '../emulator/ppu';
 import AudioBuffer from './AudioBuffer';
-import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from './emulator/apu';
+import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from '../emulator/apu';
 import Toolbar from './Toolbar';
 import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
-import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './components/types';
-import { localStorageAutoloadEnabled } from './components/localStorageUtil';
+import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from '../components/types';
+import { localStorageAutoloadEnabled } from '../components/localStorageUtil';
 import { Transition } from 'react-transition-group';
-import { animationDuration, transitionDefaultStyle, transitionStyles } from './components/AnimationConstants';
-import { drawStringBuffer, copyTextToBuffer, copyNumberToBuffer } from './components/CanvasTextDrawer';
-import FIFOBuffer from './components/FIFOBuffer';
+import { animationDuration, transitionDefaultStyle, transitionStyles } from '../components/AnimationConstants';
+import { drawStringBuffer, copyTextToBuffer, copyNumberToBuffer } from '../components/CanvasTextDrawer';
+import FIFOBuffer from '../components/FIFOBuffer';
 
 export enum RunModeType {
     STOPPED = 'Stopped',

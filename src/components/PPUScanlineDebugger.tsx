@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import styles from './PPUDebugging.module.css';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog, { DialogHorizontalPosition } from './Dialog';
 import classNames from 'classnames';
 
 const PPUScanlineDebugger = ({ emulator, refresh, onClose } : DebugDialogProps) => {

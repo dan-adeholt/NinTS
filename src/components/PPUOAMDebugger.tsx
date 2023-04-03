@@ -7,8 +7,8 @@ import {
 } from '../emulator/ppu';
 import { hex } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog, { DialogHorizontalPosition } from './Dialog';
 import classNames from 'classnames';
 
 type OAMLine = {

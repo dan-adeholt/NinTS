@@ -2,8 +2,8 @@ import React, { useLayoutEffect, useRef } from 'react';
 import { BIT_7 } from '../emulator/instructions/util';
 import styles from './PPUDebugging.module.css';
 import PPU from '../emulator/ppu';
-import { DebugDialogProps } from '../DebugDialog';
-import Dialog, { DialogHorizontalPosition } from '../Dialog';
+import { DebugDialogProps } from './DebugDialog';
+import Dialog, { DialogHorizontalPosition } from './Dialog';
 
 const PATTERN_TABLE_WIDTH = 256;
 const PATTERN_TABLE_HEIGHT = 128;

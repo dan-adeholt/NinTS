@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { hex, hex16 } from '../emulator/stateLogging';
 import styles from './PPUDebugging.module.css';
-import Dialog, { DialogHorizontalPosition } from '../Dialog';
-import { DebugDialogProps } from '../DebugDialog';
+import Dialog, { DialogHorizontalPosition } from './Dialog';
+import { DebugDialogProps } from './DebugDialog';
 
 const PPUVRAMDebugger = ({ emulator, refresh, onClose } : DebugDialogProps) => {
   const lines = useMemo<string[]>(() => {
