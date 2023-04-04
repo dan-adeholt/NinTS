@@ -7,11 +7,13 @@ import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
 import classNames from 'classnames';
 import EmulatorState from '../emulator/EmulatorState';
-import { RomEntry } from '../components/types';
 import ROMList from './ROMList';
 import { localStorageAutoloadEnabled, setLocalStorageAutoloadEnabled } from './localStorageUtil';
 import { Transition } from 'react-transition-group';
 import { animationDuration, transitionDefaultStyle, transitionStyles } from './AnimationConstants';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
+import { ApplicationStorageContext } from './ApplicationStorage';
 
 type ToolbarProps = {
   emulator: EmulatorState
@@ -19,8 +21,6 @@ type ToolbarProps = {
   loadRom: (rom: Uint8Array, filename: string) => void,
   setRunMode: (newRunMode: RunModeType) => void
   runMode: RunModeType
-  romList: RomEntry[]
-  setRomList: Dispatch<SetStateAction<RomEntry[]>>
   clearLoadedRoms: () => void
   isOpen: boolean
   showDebugInfo: boolean
@@ -35,24 +35,43 @@ enum DropdownMenu {
   Restart = 5
 }
 
-const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedRoms, romList, setRomList, runMode, isOpen, showDebugInfo, setShowDebugInfo } : ToolbarProps) => {
+const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedRoms, runMode, isOpen, showDebugInfo, setShowDebugInfo } : ToolbarProps) => {
   const [menuState, setMenuState] = useState<Record<number, boolean>>({});
+  const appStorage = useContextWithErrorIfNull(ApplicationStorageContext);  
+
+  const { mutate: saveGame } = useMutation(appStorage.saveEmulator, {
+    onSuccess: () => {
+      setMenuState({});
+      setRunMode(RunModeType.RUNNING);
+    }
+  });
+
+  const { mutate: loadGame } = useMutation(appStorage.loadEmulator, {
+    onSuccess: (romEntry) => {
+      if (romEntry != null) {
+        emulator.loadEmulator(JSON.parse(romEntry.data))
+        setMenuState({});
+        setRunMode(RunModeType.RUNNING);
+      }
+    }
+  });
+
   const toggleOpen = (menu: DropdownMenu) => {
     setRunMode(RunModeType.STOPPED);
     setMenuState(oldState => ({ [menu]: !oldState[menu]}))
   };
 
   const saveState = useCallback(() => {
-    emulator.saveEmulatorToLocalStorage();
-    setMenuState({});
-    setRunMode(RunModeType.RUNNING);
+    if (emulator.rom != null) {
+      const state = JSON.stringify(emulator.saveEmulator());
+      saveGame({ data: state, index: 0, sha: emulator.rom.romSHA });
+    }
   }, [emulator]);
 
   const loadState = useCallback(() => {
-    emulator.loadEmulatorFromLocalStorage();
-    setMenuState({});
-    setRunMode(RunModeType.RUNNING);
+    loadGame(emulator.rom?.romSHA);
   }, [emulator]);
+
   const [autoloadEnabled, setAutoloadEnabled] = useState(localStorageAutoloadEnabled());
   
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
@@ -74,6 +93,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
       fileReader.onloadend = (event) => {
         if (event.target != null) {
           loadRom(new Uint8Array(event.target.result as ArrayBuffer), file.name);
+          setRunMode(RunModeType.RUNNING);
         }
       }
       fileReader.readAsArrayBuffer(file);
@@ -82,7 +102,6 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
 
   const _clearLoadedRoms = () => {
     clearLoadedRoms();
-    setRomList([]);
     toggleOpen(DropdownMenu.RomList);
   }
 
@@ -99,7 +118,15 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
     }
   }, []);
 
+  
+  const romNamesQuery = useQuery(['roms'], () => {
+    return appStorage.getRomNames();
+  });
+  
   const nodeRef = useRef<HTMLDivElement>(null);
+  const handleFileClick = () => {
+    setRunMode(RunModeType.STOPPED);
+  }
 
   return (
     <Transition nodeRef={nodeRef} in={isOpen} timeout={animationDuration} unmountOnExit>
@@ -111,7 +138,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
         >
           <div className={classNames(styles.buttonRow, styles.item)}>
             <button onClick={() => setRunMode(runMode === RunModeType.RUNNING ? RunModeType.STOPPED : RunModeType.RUNNING)}><FontAwesomeIcon icon={runMode === RunModeType.RUNNING ? faPause : faPlay} /></button>
-            <div className={styles.tooltipText}>{ runMode === RunModeType.RUNNING ? 'Pause' : 'Play' }</div>
+            <div className={styles.tooltipText}>{runMode === RunModeType.RUNNING ? 'Pause' : 'Play'}</div>
           </div>
           <div className={styles.item}>
             <button onClick={() => toggleOpen(DropdownMenu.Savegames)}>
@@ -156,7 +183,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
               </button>
               <button
                 onClick={() => {
-                  toggleOpen(DropdownMenu.Restart);  
+                  toggleOpen(DropdownMenu.Restart);
                   emulator.reboot();
                 }}
               >
@@ -175,25 +202,27 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
             <div className={styles.tooltipText}>Restart game</div>
           </div>
           <div className={styles.item}>
-            <input id="file-upload" type="file" onChange={romFileChanged} />
+            <input id="file-upload" type="file" onClick={handleFileClick} onChange={romFileChanged} />
             <label className="labelButton" htmlFor="file-upload"><FontAwesomeIcon icon={faFolderOpen} /></label>
             <div className={styles.tooltipText}>Open file</div>
           </div>
           <div className={classNames(styles.item)}>
-            <button onClick={() => toggleOpen(DropdownMenu.RomList)} disabled={romList.length === 0}>
+            <button onClick={() => toggleOpen(DropdownMenu.RomList)} disabled={romNamesQuery == null || romNamesQuery.data?.length === 0}>
               <FontAwesomeIcon icon={faFileAlt} />
             </button>
             <Dropdown isOpen={menuState[DropdownMenu.RomList]}>
-              <ROMList romList={romList} loadRom={(romBuffer: Uint8Array, filename: string) => {
-                toggleOpen(DropdownMenu.RomList);
-                loadRom(romBuffer, filename);
-                setRunMode(RunModeType.RUNNING);
-              }} />
+              {romNamesQuery.data && (
+                <ROMList romList={romNamesQuery.data} loadRom={(romBuffer: Uint8Array, filename: string) => {
+                  toggleOpen(DropdownMenu.RomList);
+                  loadRom(romBuffer, filename);
+                  setRunMode(RunModeType.RUNNING);
+                }} />
+              )}
               <button onClick={_clearLoadedRoms}><FontAwesomeIcon icon={faClose} /> Clear all</button>
             </Dropdown>
             <div className={styles.tooltipTextRight}>Recent games</div>
           </div>
-         
+
           <div className={classNames(styles.item, styles.debugItem)}>
             <button onClick={() => toggleOpen(DropdownMenu.Settings)}><FontAwesomeIcon icon={faTools} /></button>
             <Dropdown isOpen={menuState[DropdownMenu.Settings]}>
@@ -212,4 +241,4 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
   );
 };
 
-export default  React.memo(Toolbar);
+export default React.memo(Toolbar);

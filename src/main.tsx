@@ -1,9 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './components/App'
+import AppContainer from './components/AppContainer'
 
-ReactDOM.createRoot(document.body).render(
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <AppContainer />
   </React.StrictMode>
 )

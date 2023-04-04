@@ -16,12 +16,15 @@ import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from '../emulator/a
 import Toolbar from './Toolbar';
 import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
-import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_ROM_LIST, LOCAL_STORAGE_ROM_PREFIX, RomEntry } from '../components/types';
+import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_LAST_ROM } from '../components/types';
 import { localStorageAutoloadEnabled } from '../components/localStorageUtil';
 import { Transition } from 'react-transition-group';
 import { animationDuration, transitionDefaultStyle, transitionStyles } from '../components/AnimationConstants';
 import { drawStringBuffer, copyTextToBuffer, copyNumberToBuffer } from '../components/CanvasTextDrawer';
 import FIFOBuffer from '../components/FIFOBuffer';
+import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
+import { ApplicationStorageContext } from './ApplicationStorage';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
@@ -99,35 +102,7 @@ const renderScreen = (display: Display | null, emulator: EmulatorState | null, s
 export type KeyListener = (event: KeyboardEvent) => void
 const audioBuffer = new AudioBuffer();
 
-let initialError: (string | null) = null;
-
-const initialRomList: RomEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_ROM_LIST) ?? '[]') ?? [];
-
 const emulator = new EmulatorState();
-let lastRomArray = null;
-const intialRomEntry = initialRomList?.[0];
-
-if (intialRomEntry != null) {
-  lastRomArray = localStorage.getItem(LOCAL_STORAGE_ROM_PREFIX + intialRomEntry.sha);
-}
-
-if (lastRomArray != null) {
-  const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
-  const rom = parseROM(romBuffer);
-  try {
-    emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
-
-    if (localStorageAutoloadEnabled()) {
-      emulator.loadEmulatorFromLocalStorage();
-    }
-  } catch (e) {
-    if (typeof e === "string") {
-      initialError = e;
-    } else if (e instanceof Error) {
-      initialError = e.message;
-    }
-  }
-}
 
 const breakpointsToJSON = (breakpoints: Map<number, boolean>) => {  
   return JSON.stringify(Array.from(breakpoints.entries()));
@@ -180,7 +155,6 @@ const updateFrame = (
   lastTime = performance.now()
 ) => {
   let stopped = false;
-
   const gamepads = navigator.getGamepads();
 
   if (gamepads[0] != null) {
@@ -259,28 +233,67 @@ const updateFrame = (
   }
 }
 
-
-
+const lastRomSha = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM) ?? '';
 
 function App() {
+  const appStorage = useContextWithErrorIfNull(ApplicationStorageContext);
+  const [error, setError] = useState<string | null>(null);
+  const [title, setTitle] = useState<string | null>(null);
+  const initialRomLoaded = useRef(false);
+
+  const firstRomQuery = useQuery(['firstRom'], () => appStorage.getRomDataAndSavegame(lastRomSha), {
+    enabled: lastRomSha != '' && !initialRomLoaded.current,
+    onSuccess: ([romData, romSaveData]) => {
+      initialRomLoaded.current = true;  
+      if (romData.status === "rejected" || romData.value == null) {
+        return;
+      }
+
+      try {
+        const data = parseROM(romData.value.data);
+        emulator.initMachine(data, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+        setTitle(romData.value.filename);
+
+        if (localStorageAutoloadEnabled() && romSaveData.status !== 'rejected' && romSaveData.value != null) {
+          emulator.loadEmulator(JSON.parse(romSaveData.value.data));
+        }
+      } catch (e) {
+        if (typeof e === "string") {
+          setError(e);
+        } else if (e instanceof Error) {
+          setError(e.message);
+        }
+      }
+    }
+  });
+
     // Store it as memo inside component so that HMR works properly.
     const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
     const audioRef = useRef<AudioState | null>(null);
     const mainContainerRef = useRef<HTMLDivElement>(null);
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
-    const [title, setTitle] = useState<string | null>(intialRomEntry?.filename);
-    const [romList, setRomList] = useState<RomEntry[]>(initialRomList);
+    
     const [breakpoints, setBreakpoints] = useState<Map<number, boolean>>(loadBreakpoints(emulator.rom?.romSHA));
-    const [showInfoDiv, setShowInfoDiv] = useState(intialRomEntry?.filename == null);
-    const [error, setError] = useState<string | null>(initialError);
+    const [showInfoDiv, setShowInfoDiv] = useState(lastRomSha == null || lastRomSha === '');
+    
     const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
     const display = useRef<Display | null>(null);
     const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
     const [showControls, setShowControls] = useState(true);
+    const queryClient = useQueryClient();
     const hideControlsTimer = useRef<number>(-1);
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
     const [showDebugInfo, setShowDebugInfo] = useState(false);
+  
+    const { mutate: addRom } = useMutation(appStorage.addRoms, {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['roms']);
+      },
+      onError: (error) => {
+        console.error('Failed to add rom', error);
+      }
+    });
 
     // Sync breakpoints with emulator
     useEffect(() => {
@@ -361,207 +374,219 @@ function App() {
     }, [stopAudioContext, audioBuffer, emulator]);
 
     const loadRom = useCallback((romBuffer : Uint8Array, filename: string) => {
-        const rom = parseROM(romBuffer);
-        setError(null);
-        try {
-            emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
-
-          if (localStorageAutoloadEnabled()) {
-            emulator.loadEmulatorFromLocalStorage();
-          }
-
-        } catch (e) {
-            if (typeof e === "string") {
-                setError(e);
-            } else if (e instanceof Error) {
-                setError(e.message);
+      initialRomLoaded.current = true;
+      const rom = parseROM(romBuffer);
+      setError(null);
+      try {
+        emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+        if (localStorageAutoloadEnabled()) {
+          appStorage.getRomSavegame(rom.romSHA).then((savegame) => {
+            if (savegame) {
+              emulator.loadEmulator(JSON.parse(savegame.data));
             }
+          });
         }
-        setShowInfoDiv(false);
-        setBreakpoints(loadBreakpoints(rom.romSHA));
-        setTitle(filename);
-        triggerRefresh();
-        return rom;
+      } catch (e) {
+        if (typeof e === "string") {
+          setError(e);
+        } else if (e instanceof Error) {
+          setError(e.message);
+        }
+      }
+      setShowInfoDiv(false);
+      setBreakpoints(loadBreakpoints(rom.romSHA));
+      setTitle(filename);
+      triggerRefresh();
+      
+      if (display.current) {
+        display.current.context.fillStyle = '#1e1e1e';
+        display.current.context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)  
+      }  
+
+      return rom;
     }, [audioBuffer, emulator, triggerRefresh]);
 
-    const loadRomFromUserInput = useCallback((romBuffer: Uint8Array, filename: string) => {
-      localStorage.removeItem(LOCAL_STORAGE_BREAKPOINTS_PREFIX);
-      const rom = loadRom(romBuffer, filename);
-      const entry: RomEntry = { filename, sha: rom.romSHA };      
-      
-      setRomList(oldRomList => {
-        const newRomList = oldRomList.filter(romEntry => romEntry.sha !== entry.sha);
-        newRomList.unshift(entry);
-        localStorage.setItem(LOCAL_STORAGE_KEY_ROM_LIST, JSON.stringify(newRomList));
-        return newRomList;
-      });
+  const animationFrameRef = useRef<number | null>(null);
 
-      localStorage.setItem(LOCAL_STORAGE_ROM_PREFIX + entry.sha, JSON.stringify(Array.from(romBuffer)));
-    }, [loadRom, romList]);
+  const _setRunMode = useCallback((newRunMode: RunModeType) => {
+    if (animationFrameRef.current != null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+    }
 
-    const animationFrameRef = useRef<number | null>(null);
+    if (newRunMode === RunModeType.RUNNING) {
+      hideControlsTimer.current = 60;
+      initAudioContext();
+    } else {
+      setShowControls(true);
+      stopAudioContext();
+    }
 
-    const _setRunMode = useCallback((newRunMode: RunModeType) => {
-        if (animationFrameRef.current != null) {
-            window.cancelAnimationFrame(animationFrameRef.current);
-        }
+    animationFrameRef.current = null;
 
-        if (newRunMode === RunModeType.RUNNING) {
-          hideControlsTimer.current = 60;
-          initAudioContext();
-        } else {
-          setShowControls(true);
+    if (newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE || newRunMode === RunModeType.RUNNING_SINGLE_FRAME) {
+      setIsSteppingScanline(newRunMode == RunModeType.RUNNING_SINGLE_SCANLINE);
+      emulator.stepFrame(newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE);
+      if (display.current != null && emulator) {
+        display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
+        display.current.context.putImageData(display.current.imageData, 0, 0);
+      }
+      setRunMode(RunModeType.STOPPED);
+      setIsSteppingScanline(false);
+    } else if (newRunMode !== RunModeType.STOPPED && display.current) {
+      setRunMode(newRunMode);
+
+      updateFrame(
+        performance.now(),
+        display.current,
+        () => {
+          // Hit breakpoint
           stopAudioContext();
-        }
+          setShowControls(true);
+          setRunMode(RunModeType.STOPPED);
+          setDialogState(oldState => {
+            return { ...oldState, [DebugDialog.CPUDebugger]: true };
+          });
+        },
+        runMode,
+        showDebugInfo,
+        setShowControls,
+        hideControlsTimer,
+        animationFrameRef);
 
-        animationFrameRef.current = null;
+    } else {
+      setRunMode(newRunMode);
+    }
 
-        if (newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE || newRunMode === RunModeType.RUNNING_SINGLE_FRAME) {
-            setIsSteppingScanline(newRunMode == RunModeType.RUNNING_SINGLE_SCANLINE);
-            emulator.stepFrame(newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE);
-            if (display.current != null && emulator) {
-                display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
-                display.current.context.putImageData(display.current.imageData, 0, 0);
-            }
-            setRunMode(RunModeType.STOPPED);
-            setIsSteppingScanline(false);
-        } else if (newRunMode !== RunModeType.STOPPED && display.current) {
-            setRunMode(newRunMode);
+    triggerRefresh();
+  }, [triggerRefresh, showDebugInfo, runMode, emulator, initAudioContext, stopAudioContext, display, setRunMode, setIsSteppingScanline]);
 
-            updateFrame(
-              performance.now(), 
-              display.current,
-              () => {
-                // Hit breakpoint
-                stopAudioContext();
-                setShowControls(true);
-                setRunMode(RunModeType.STOPPED);
-                setDialogState(oldState => {
-                  return { ...oldState, [DebugDialog.CPUDebugger]: true };
-                });
-              },
-              runMode,
-              showDebugInfo,
-              setShowControls,
-              hideControlsTimer, 
-              animationFrameRef);
-            
-        } else {
-            setRunMode(newRunMode);
-        }
+  const loadRomFromUserInput = useCallback((romBuffer: Uint8Array, filename: string) => {
+    const rom = loadRom(romBuffer, filename);
+    localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, rom.romSHA);
+    addRom([{ sha: rom.romSHA, data: romBuffer, filename }]);
+    //_setRunMode(RunModeType.RUNNING)
+  }, [loadRom, addRom, _setRunMode]);
 
-        triggerRefresh();
-    }, [triggerRefresh, showDebugInfo, runMode, emulator, initAudioContext, stopAudioContext, display, setRunMode, setIsSteppingScanline]);
+  const handleKeyEvent = useCallback((e: KeyboardEvent) => {
+    if ((e.target as HTMLInputElement)?.type === 'text') {
+      return;
+    }
 
-
-    const handleKeyEvent = useCallback((e : KeyboardEvent) => {
-      if ((e.target as HTMLInputElement)?.type === 'text') {
-          return;
-      }
-
-      if (e.type === 'keydown') {
-        if(e.key in HotkeyToDebugDialog) {
-          toggleOpenDialog(HotkeyToDebugDialog[e.key]);
-        } else {
-          switch (e.key) {
-            case 'r':
-              if (!e.metaKey) {
-                if (runMode === RunModeType.RUNNING) {
-                  _setRunMode(RunModeType.STOPPED);
-                } else {
-                  _setRunMode(RunModeType.RUNNING);
-                }
+    if (e.type === 'keydown') {
+      if (e.key in HotkeyToDebugDialog) {
+        toggleOpenDialog(HotkeyToDebugDialog[e.key]);
+      } else {
+        switch (e.key) {
+          case 'r':
+            if (!e.metaKey) {
+              if (runMode === RunModeType.RUNNING) {
+                _setRunMode(RunModeType.STOPPED);
+              } else {
+                _setRunMode(RunModeType.RUNNING);
               }
-              break;
-            case 'f':
-              _setRunMode(RunModeType.RUNNING_SINGLE_FRAME);
-              break;
-            case 'l':
-              _setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
-              break;
-            default:
-              break;
-          }
+            }
+            break;
+          case 'f':
+            _setRunMode(RunModeType.RUNNING_SINGLE_FRAME);
+            break;
+          case 'l':
+            _setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
+            break;
+          default:
+            break;
         }
       }
+    }
 
-      if (e.key in KeyTable) {
-          emulator?.setInputController(KeyTable[e.key], e.type === 'keydown');
-          e.preventDefault();
-      }
+    if (e.key in KeyTable) {
+      emulator?.setInputController(KeyTable[e.key], e.type === 'keydown');
+      e.preventDefault();
+    }
 
-      for (const listener of keyListeners) {
-          listener(e);
-      }
+    for (const listener of keyListeners) {
+      listener(e);
+    }
   }, [keyListeners, emulator, _setRunMode, runMode]);
 
 
 
-    const handleFocus = useCallback(() => {
-        if (document.visibilityState === 'hidden') {
-            _setRunMode(RunModeType.STOPPED);
-        }
-    }, [_setRunMode]);
-
-    useEffect(() => {
-        document.addEventListener('keydown', handleKeyEvent);
-        document.addEventListener('keyup', handleKeyEvent);
-        document.addEventListener('visibilitychange', handleFocus);
-        window.addEventListener('gamepadconnected', handleGamepad);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleFocus);
-            document.removeEventListener('keydown', handleKeyEvent);
-            document.removeEventListener('keyup', handleKeyEvent);
-            window.removeEventListener('gamepadconnected', handleGamepad);
-        }
-    }, [handleKeyEvent, handleGamepad, handleFocus])
-
-    const canvasRefCallback = useCallback((ref: HTMLCanvasElement | null) => {
-      const context = ref?.getContext("2d");
-      if (context != null) {
-        const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
-        const framebuffer = new Uint32Array(imageData.data.buffer);
-        for (let i = 0; i < framebuffer.length; i++) {
-          framebuffer[i] = 0xdadada;
-        }
-
-        display.current = { imageData, framebuffer, context, element: ref };
-        context.fillStyle = '#1e1e1e';
-        context.imageSmoothingEnabled = false;
-        context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
-      }
-    }, []);
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      [...e.dataTransfer.files].forEach(file => {
-        // Read the data from firstFile into Uint8Array
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result != null) {
-            console.log('Result', file.name);
-            const rom = new Uint8Array(e.target.result as ArrayBuffer);
-            loadRomFromUserInput(rom, file.name);
-          }
-        }
-        reader.readAsArrayBuffer(file);
-      })
+  const handleFocus = useCallback(() => {
+    if (document.visibilityState === 'hidden') {
+      _setRunMode(RunModeType.STOPPED);
     }
-    
-  const clearLoadedRoms = () => {
-    Object.keys(localStorage).forEach(function (key) {
-      if (key.startsWith(LOCAL_STORAGE_ROM_PREFIX) || key === LOCAL_STORAGE_KEY_ROM_LIST) {
-        localStorage.removeItem(key);
+  }, [_setRunMode]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyEvent);
+    document.addEventListener('keyup', handleKeyEvent);
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('gamepadconnected', handleGamepad);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleFocus);
+      document.removeEventListener('keydown', handleKeyEvent);
+      document.removeEventListener('keyup', handleKeyEvent);
+      window.removeEventListener('gamepadconnected', handleGamepad);
+    }
+  }, [handleKeyEvent, handleGamepad, handleFocus])
+
+  const canvasRefCallback = useCallback((ref: HTMLCanvasElement | null) => {
+    const context = ref?.getContext("2d");
+    if (context != null) {
+      const imageData = context.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+      const framebuffer = new Uint32Array(imageData.data.buffer);
+      for (let i = 0; i < framebuffer.length; i++) {
+        framebuffer[i] = 0xdadada;
       }
-    });
+
+      display.current = { imageData, framebuffer, context, element: ref };
+      context.fillStyle = '#1e1e1e';
+      context.imageSmoothingEnabled = false;
+      context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+    }
+  }, []);
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    [...e.dataTransfer.files].forEach(file => {
+      // Read the data from firstFile into Uint8Array
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result != null) {
+          const rom = new Uint8Array(e.target.result as ArrayBuffer);
+          loadRomFromUserInput(rom, file.name);
+        }
+      }
+      reader.readAsArrayBuffer(file);
+    })
+  }
+
+  const clearQuery = useMutation(appStorage.clearRoms, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['roms']);
+      window.location.reload();
+    }
+  });
+
+
+  const clearLoadedRoms = () => {
+    localStorage.removeItem(LOCAL_STORAGE_KEY_LAST_ROM);
+    clearQuery.mutate();
     setShowInfoDiv(true);
     setTitle(null);
   };
 
+  let titleText: string;
+
+  if (lastRomSha != '' && firstRomQuery.isFetching) {
+    titleText = '';
+  } else {
+    titleText = title ?? 'No file selected'
+  }
+
   return (
     <>
-      <Title text={title ?? 'No file selected'} isOpen={showControls} />
+      <Title text={titleText} isOpen={showControls} />
       <div
         className={styles.mainContainer}
         ref={mainContainerRef}
@@ -579,7 +604,7 @@ function App() {
         onDrop={handleDrop}>
 
 
-        {showInfoDiv && (
+        {!firstRomQuery.isFetching && showInfoDiv && (
           <div className={styles.infoDiv}>
             <p>
               Load a file using the menu or drop a file to start.
@@ -610,18 +635,16 @@ function App() {
         </ErrorBoundary>
       </div>
       <Toolbar
-          isOpen={showControls}
-          clearLoadedRoms={clearLoadedRoms}
-          setRomList={setRomList}
-          emulator={emulator}
-          toggleOpenDialog={toggleOpenDialog}
-          loadRom={loadRomFromUserInput}
-          setRunMode={_setRunMode}
-          romList={romList}
-          runMode={runMode}
-          showDebugInfo={showDebugInfo}
-          setShowDebugInfo={setShowDebugInfo}
-        />
+        isOpen={showControls}
+        clearLoadedRoms={clearLoadedRoms}
+        emulator={emulator}
+        toggleOpenDialog={toggleOpenDialog}
+        loadRom={loadRomFromUserInput}
+        setRunMode={_setRunMode}
+        runMode={runMode}
+        showDebugInfo={showDebugInfo}
+        setShowDebugInfo={setShowDebugInfo}
+      />
     </>
   );
 }

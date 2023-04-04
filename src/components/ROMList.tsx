@@ -1,22 +1,29 @@
 import React, { useCallback } from 'react';
-import { LOCAL_STORAGE_ROM_PREFIX, RomEntry } from './types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFile } from '@fortawesome/free-solid-svg-icons'
+import { RomFilenameEntry, ApplicationStorageContext } from './ApplicationStorage';
+import { useMutation } from '@tanstack/react-query';
+import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
 
 type ROMListProps = {
-  romList: RomEntry[]
+  romList: RomFilenameEntry[]
   loadRom: (rom: Uint8Array, filename: string) => void,
 }
 
 const ROMList = ({ romList, loadRom } : ROMListProps) => {
-  const _loadRom = useCallback((romEntry: RomEntry) => {
-    const lastRomArray = localStorage.getItem(LOCAL_STORAGE_ROM_PREFIX + romEntry.sha);
-
-    if (lastRomArray != null) {
-      const romBuffer = new Uint8Array(JSON.parse(lastRomArray));
-      loadRom(romBuffer, romEntry.filename);
-    }
-  }, []);
+  const appStorage = useContextWithErrorIfNull(ApplicationStorageContext);
+  const { mutate: loadRomFromBackend } = useMutation(appStorage.getRomData,
+    {
+      onSuccess: (romEntry) => {
+        if (romEntry != null) {
+          loadRom(romEntry.data, romEntry.filename);
+        }
+      }
+    });
+  
+  const _loadRom = useCallback((romEntry: RomFilenameEntry) => {
+    loadRomFromBackend(romEntry.sha);  
+  }, [loadRomFromBackend]);
 
   return (
     <>

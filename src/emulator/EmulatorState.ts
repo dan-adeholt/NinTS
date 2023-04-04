@@ -258,25 +258,6 @@ class EmulatorState {
     return dumpObjectState(this);
   }
 
-  saveEmulatorToLocalStorage() {
-    if (this.rom != null) {
-      const key = 'save-' + this.rom.romSHA;
-      localStorage.setItem(key, JSON.stringify(this.saveEmulator()));
-    }
-  }
-
-  loadEmulatorFromLocalStorage() {
-    if (this.rom != null) {
-      const key = 'save-' + this.rom.romSHA;
-      const savegame = localStorage.getItem(key);
-
-      if (savegame != null) {
-        const parsed = JSON.parse(savegame);
-        this.loadEmulator(parsed);
-      }
-    }
-  }
-
   setInputController(button: number, isDown: boolean) {
     const mask = ~button;
     this.controller1 &= mask;
