@@ -17,10 +17,12 @@
   background: transparent;
   color: white;  
   font-size: 16px;
+  border: 0;
 }
 
 .toolbar button svg, .toolbar :global(.labelButton) svg {
   font-size: 22px;
+  margin: 0;
     width: auto;
 }
 
@@ -30,6 +32,7 @@
 }
 
 .item .tooltipText, .item .tooltipTextRight {
+  pointer-events: none;  
   visibility: hidden;
   background-color: black;
   color: #fff;
@@ -41,7 +44,11 @@
   /* Position the tooltip text - see examples below! */
   position: absolute;
   z-index: 1;
-  top: -30px;
+  top: -40px;
+}
+
+.item {
+    width: 64px;
 }
 
 .item .tooltipTextRight {
@@ -54,10 +61,20 @@
 }
 
 .item {
-    padding: 10px;
     position: relative;
     display: flex;
     align-items: center;
+    border-bottom: 2px solid transparent;
+}
+
+.activeItem {
+  border-bottom: 2px solid white;
+}
+
+.item > button {
+  width: 64px;
+  display: flex;
+  justify-content: center;
 }
 
 .item:first-child {

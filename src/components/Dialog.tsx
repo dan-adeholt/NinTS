@@ -25,6 +25,7 @@ export enum DialogVerticalPosition {
 type DialogProps = BaseDialogProps & {
   children: React.ReactNode,
   title: string,
+  fullScreen?: boolean
   withoutPadding?: boolean
   horizontalPosition?: DialogHorizontalPosition
   verticalPosition?: DialogVerticalPosition
@@ -38,6 +39,7 @@ const Dialog = (
     children,
     title,
     onClose,
+    fullScreen = false,
     withoutPadding = false,
     horizontalPosition = DialogHorizontalPosition.CENTER,
     verticalPosition = DialogVerticalPosition.CENTER
@@ -50,12 +52,12 @@ const Dialog = (
   const [zIndex, setZIndex] = useState(curZIndex+1);
   const transform = 'translate(calc(-' + horizontalPosition + ' + ' + offset.x + 'px), calc(-' + verticalPosition + ' + ' + offset.y + 'px)';
 
-  const { onMouseDown } = useDrag(offset, setOffset);
+  const { onMouseDown } = useDrag(offset, setOffset, !fullScreen);
 
   // Used to add fade-in effect immediately after node has been added to DOM.
   useEffect(() => {
     if (dialogRef.current) {
-      dialogRef.current.className = classNames(styles.dialog, styles.isOpen);
+      dialogRef.current.className = classNames(styles.dialog, styles.isOpen, fullScreen && styles.fullScreen);
     }
   }, []);
 
@@ -64,7 +66,7 @@ const Dialog = (
       ref={dialogRef}
       style={{ transform, zIndex, left: horizontalPosition, top: verticalPosition }}
       onMouseDown={() => setZIndex(curZIndex++)}
-      className={classNames(styles.dialog)}>
+      className={classNames(styles.dialog, fullScreen && styles.fullScreen)}>
       <div
         className={styles.header}
         onMouseDown={onMouseDown}

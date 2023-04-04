@@ -5,27 +5,7 @@ export type DragOffset = {
   y: number
 }
 
-type DragMinMax = {
-  minX?: number,
-  maxX?: number,
-  minY?: number,
-  maxY?: number
-}
-
-export const useDrag = (offset: DragOffset, setOffset: Dispatch<SetStateAction<DragOffset>>, minMax: DragMinMax | null = null, enabled = true) => {
-  const clamp = (val: number, min: number | null = null, max: number | null = null) => {
-    let ret = val;
-    if (min != null) {
-      ret = Math.max(ret, min);
-    }
-
-    if (max != null) {
-      ret = Math.min(ret, max ?? Number.MIN_VALUE);
-    }
-
-    return ret;
-  }
-
+export const useDrag = (offset: DragOffset, setOffset: Dispatch<SetStateAction<DragOffset>>, enabled = true) => {
   const dragState = useRef({
     isDragging: false,
     dragStartX: 0,
@@ -44,8 +24,8 @@ export const useDrag = (offset: DragOffset, setOffset: Dispatch<SetStateAction<D
         e.preventDefault();
 
         setOffset({
-          x: clamp(e.screenX - dragState.current.dragStartX + dragState.current.curOffsetX, minMax?.minX, minMax?.maxX),
-          y: clamp(e.screenY - dragState.current.dragStartY + dragState.current.curOffsetY, minMax?.minY, minMax?.maxY)
+          x: e.screenX - dragState.current.dragStartX + dragState.current.curOffsetX,
+          y: e.screenY - dragState.current.dragStartY + dragState.current.curOffsetY,
         });
       }
     }
@@ -57,7 +37,7 @@ export const useDrag = (offset: DragOffset, setOffset: Dispatch<SetStateAction<D
       document.removeEventListener('mouseup', endListener);
       document.removeEventListener('mousemove', moveListener);
     }
-  }, [minMax]);
+  }, []);
 
   const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent> | React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     if (enabled) {
