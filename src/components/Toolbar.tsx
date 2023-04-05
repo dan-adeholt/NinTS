@@ -226,9 +226,10 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
             <div className={classNames(styles.item, showROMList && styles.activeItem)}>
               <button onClick={() => {
                 setMenuState({});
+                setRunMode(RunModeType.STOPPED);
                 setShowROMList(s => !s)
               }}
-              disabled={romNamesQuery == null || romNamesQuery.data?.length === 0}>
+              >
                 <FontAwesomeIcon icon={faFolderOpen} />
               </button>
               <div className={styles.tooltipTextRight}>Open game</div>
