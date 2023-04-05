@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction, useCallback, useRef, useState, useEffect } from 'react';
 import styles from './Toolbar.module.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPowerOff, faPause, faPlay, faRefresh, faSave, faTools, faFloppyDisk, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
+import { faPowerOff, faPause, faPlay, faRefresh, faSave, faTools, faFloppyDisk, faFolderOpen, faCog, faRemove } from '@fortawesome/free-solid-svg-icons';
 import Dropdown from './Dropdown';
 import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
@@ -28,10 +28,11 @@ type ToolbarProps = {
 };
 
 enum DropdownMenu {
-  Settings = 1,
+  DebugTools = 1,
   Profile = 2,
   Savegames = 3,
-  Restart = 4
+  Restart = 4,
+  Settings = 5
 }
 
 const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedRoms, runMode, isOpen, showDebugInfo, setShowDebugInfo } : ToolbarProps) => {
@@ -131,6 +132,12 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
     setRunMode(RunModeType.STOPPED);
   }
 
+  const promptClearRoms = useCallback(() => {
+    if (window.confirm('Are you sure you want to clear all loaded ROMs?')) {
+      _clearLoadedRoms();
+    }  
+  }, []);  
+  
   return (
     <>
       <Transition nodeRef={nodeRef} in={isOpen} timeout={animationDuration} unmountOnExit>
@@ -164,18 +171,11 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
               </Dropdown>
               <div className={styles.tooltipText}>Save games</div>
             </div>
-            <div className={styles.flexSpace} />
-
             <div className={classNames(styles.item, menuState[DropdownMenu.Restart] && styles.activeItem)}>
               <button onClick={() => toggleOpen(DropdownMenu.Restart)}>
                 <FontAwesomeIcon icon={faRefresh} />
               </button>
-              <Dropdown isOpen={menuState[DropdownMenu.Restart]}>
-                <button onClick={() => setShowDebugInfo(oldVal => !oldVal)}>
-                  <input checked={showDebugInfo} type="checkbox" onChange={changeAutoloadEnabled} />
-                  <span>Show debug info</span>
-                </button>
-
+              <Dropdown alignLeft isOpen={menuState[DropdownMenu.Restart]}>
                 <button
                   onClick={() => {
                     toggleOpen(DropdownMenu.Restart);
@@ -205,10 +205,27 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
               </Dropdown>
               <div className={styles.tooltipText}>Restart game</div>
             </div>
+            <div className={styles.flexSpace} />
+
+            <div className={classNames(styles.item, menuState[DropdownMenu.Settings] && styles.activeItem)}>
+              <button onClick={() => toggleOpen(DropdownMenu.Settings)}>
+                <FontAwesomeIcon icon={faCog} />
+              </button>
+              <Dropdown isOpen={menuState[DropdownMenu.Settings]}>
+                <button onClick={() => setShowDebugInfo(oldVal => !oldVal)}>
+                  <input checked={showDebugInfo} type="checkbox" onChange={changeAutoloadEnabled} />
+                  <span>Show debug info</span>
+                </button>
+                <button onClick={promptClearRoms}>
+                  <FontAwesomeIcon icon={faRemove} />
+                  <span>Clear cached roms</span>
+                </button>
+              </Dropdown>
+              <div className={styles.tooltipText}>Settings</div>
+            </div>
             <div className={classNames(styles.item, showROMList && styles.activeItem)}>
               <button onClick={() => {
                 setMenuState({});
-                console.log('Toggling!');
                 setShowROMList(s => !s)
               }}
               disabled={romNamesQuery == null || romNamesQuery.data?.length === 0}>
@@ -217,12 +234,12 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
               <div className={styles.tooltipTextRight}>Open game</div>
             </div>
 
-            <div className={classNames(styles.item, styles.debugItem, menuState[DropdownMenu.Settings] && styles.activeItem)}>
-              <button onClick={() => toggleOpen(DropdownMenu.Settings)}><FontAwesomeIcon icon={faTools} /></button>
-              <Dropdown isOpen={menuState[DropdownMenu.Settings]}>
+            <div className={classNames(styles.item, styles.debugItem, menuState[DropdownMenu.DebugTools] && styles.activeItem)}>
+              <button onClick={() => toggleOpen(DropdownMenu.DebugTools)}><FontAwesomeIcon icon={faTools} /></button>
+              <Dropdown isOpen={menuState[DropdownMenu.DebugTools]}>
                 {Object.values(DebugDialog).map(dialog => (
                   <button onClick={() => {
-                    toggleOpen(DropdownMenu.Settings);
+                    toggleOpen(DropdownMenu.DebugTools);
                     toggleOpenDialog(dialog);
                   }} key={dialog}>{dialog} <div className={styles.buttonSpace} /> {DebugDialogToHotkey[dialog]} </button>
                 ))}
@@ -243,7 +260,6 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
             loadRom(romBuffer, filename);
             setRunMode(RunModeType.RUNNING);
           }}
-          onClearRoms={_clearLoadedRoms}
         />
       )}
     </>

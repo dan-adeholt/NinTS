@@ -58,6 +58,11 @@
 /* Show the tooltip text when you mouse over the tooltip container */
 .item:hover .tooltipText, .item:hover .tooltipTextRight {
   visibility: visible;
+  z-index: 20;
+}
+
+.activeItem:hover .tooltipText, .activeItem:hover .tooltipTextRight {
+  visibility: hidden;
 }
 
 .item {

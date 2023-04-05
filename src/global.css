@@ -10,10 +10,9 @@ button, .labelButton {
     background: #222;
 
     font-size: 0.85rem;
-    display: flex;
+    justify-content: flex-start;
     align-items: center;
 }
-
 
 button svg + span, .labelButton svg + span, button>input + span {
     margin-left: 10px;

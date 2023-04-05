@@ -26,9 +26,9 @@ type DialogProps = BaseDialogProps & {
   children: React.ReactNode,
   title: string,
   fullScreen?: boolean
-  withoutPadding?: boolean
   horizontalPosition?: DialogHorizontalPosition
   verticalPosition?: DialogVerticalPosition
+  withoutPadding?: boolean
 }
 
 let curZIndex = 10;
