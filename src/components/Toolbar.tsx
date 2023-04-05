@@ -123,9 +123,9 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
 
   
   const romNamesQuery = useQuery(['roms'], () => {
-    return appStorage.getRomNames();
+    return appStorage.getRomNames().then(res => res.sort((a, b) => a.filename.localeCompare(b.filename)));
   });
-  
+
   const nodeRef = useRef<HTMLDivElement>(null);
   const handleFileClick = () => {
     setRunMode(RunModeType.STOPPED);
@@ -208,6 +208,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
             <div className={classNames(styles.item, showROMList && styles.activeItem)}>
               <button onClick={() => {
                 setMenuState({});
+                console.log('Toggling!');
                 setShowROMList(s => !s)
               }}
               disabled={romNamesQuery == null || romNamesQuery.data?.length === 0}>

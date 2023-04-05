@@ -14,9 +14,6 @@ button, .labelButton {
     align-items: center;
 }
 
-.labelButton {
-  margin-bottom: 10px;
-}
 
 button svg + span, .labelButton svg + span, button>input + span {
     margin-left: 10px;

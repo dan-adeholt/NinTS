@@ -274,6 +274,7 @@ function App() {
     const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
     const [runMode, setRunMode] = useState(RunModeType.STOPPED);
     
+    const [loadingString, setLoadingString] = useState<string | null>(null);
     const [breakpoints, setBreakpoints] = useState<Map<number, boolean>>(loadBreakpoints(emulator.rom?.romSHA));
     const [showInfoDiv, setShowInfoDiv] = useState(lastRomSha == null || lastRomSha === '');
     
@@ -286,14 +287,6 @@ function App() {
     const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
     const [showDebugInfo, setShowDebugInfo] = useState(false);
   
-    const { mutate: addRom } = useMutation(appStorage.addRoms, {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['roms']);
-      },
-      onError: (error) => {
-        console.error('Failed to add rom', error);
-      }
-    });
 
     // Sync breakpoints with emulator
     useEffect(() => {
@@ -460,11 +453,24 @@ function App() {
     triggerRefresh();
   }, [triggerRefresh, showDebugInfo, runMode, emulator, initAudioContext, stopAudioContext, display, setRunMode, setIsSteppingScanline]);
 
+  const { mutate: addRom } = useMutation(appStorage.addRoms, {
+    onSuccess: (_res, args) => {
+      const lastRom = args[args.length - 1];
+      loadRom(lastRom.data, lastRom.filename);
+      setLoadingString(null);
+      localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, lastRom.sha);
+      _setRunMode(RunModeType.RUNNING);
+      queryClient.invalidateQueries(['roms']);
+    },
+    onError: (error) => {
+      console.error('Failed to add rom', error);
+    }
+  });
+
   const loadRomFromUserInput = useCallback((romBuffer: Uint8Array, filename: string) => {
-    const rom = loadRom(romBuffer, filename);
+    const rom = parseROM(romBuffer);
     localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, rom.romSHA);
     addRom([{ sha: rom.romSHA, data: romBuffer, filename }]);
-    //_setRunMode(RunModeType.RUNNING)
   }, [loadRom, addRom, _setRunMode]);
 
   const handleKeyEvent = useCallback((e: KeyboardEvent) => {
@@ -548,13 +554,25 @@ function App() {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    let numLoaded = 0;
+    const totalAmount = e.dataTransfer.files.length;
+    const romsToAdd: { sha: string, data: Uint8Array, filename: string }[] = [];
+    setLoadingString(`Loading ${totalAmount} roms...`);
+
     [...e.dataTransfer.files].forEach(file => {
       // Read the data from firstFile into Uint8Array
       const reader = new FileReader();
       reader.onload = (e) => {
+        numLoaded++;
+        
         if (e.target?.result != null) {
-          const rom = new Uint8Array(e.target.result as ArrayBuffer);
-          loadRomFromUserInput(rom, file.name);
+          const romBuffer = new Uint8Array(e.target.result as ArrayBuffer);
+          const parsedRom = parseROM(romBuffer);
+          romsToAdd.push({ sha: parsedRom.romSHA, data: romBuffer, filename: file.name });
+
+          if (numLoaded === totalAmount) {
+            addRom(romsToAdd);
+          }
         }
       }
       reader.readAsArrayBuffer(file);
@@ -577,7 +595,7 @@ function App() {
   };
 
   let titleText: string;
-
+  
   if (lastRomSha != '' && firstRomQuery.isFetching) {
     titleText = '';
   } else {
@@ -603,11 +621,10 @@ function App() {
         }}
         onDrop={handleDrop}>
 
-
         {!firstRomQuery.isFetching && showInfoDiv && (
           <div className={styles.infoDiv}>
             <p>
-              Load a file using the menu or drop a file to start.
+              { loadingString ? loadingString : <span>Load a file using the menu or drop a file to start.</span>}  
             </p>
           </div>)
         }
