@@ -258,12 +258,21 @@ class EmulatorState {
     return dumpObjectState(this);
   }
 
-  setInputController(button: number, isDown: boolean) {
+  setInputController(button: number, isDown: boolean, buttonIndex: number) {
     const mask = ~button;
-    this.controller1 &= mask;
 
-    if (isDown) {
-      this.controller1 |= button;
+    if (buttonIndex === 0) {
+      this.controller1 &= mask;
+
+      if (isDown) {
+        this.controller1 |= button;
+      }
+    } else {
+      this.controller2 &= mask;
+
+      if (isDown) {
+        this.controller2 |= button;
+      }
     }
   }
 

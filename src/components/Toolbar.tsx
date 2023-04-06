@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction, useCallback, useRef, useState, useEffect } from 'react';
 import styles from './Toolbar.module.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPowerOff, faPause, faPlay, faRefresh, faSave, faTools, faFloppyDisk, faFolderOpen, faCog, faRemove } from '@fortawesome/free-solid-svg-icons';
+import { faPowerOff, faPause, faPlay, faRefresh, faSave, faTools, faFloppyDisk, faFolderOpen, faCog, faRemove, faGamepad } from '@fortawesome/free-solid-svg-icons';
 import Dropdown from './Dropdown';
 import { DebugDialog, DebugDialogToHotkey } from './DebugDialog';
 import { RunModeType } from './App';
@@ -14,6 +14,8 @@ import { animationDuration, transitionDefaultStyle, transitionStyles } from './A
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
 import { ApplicationStorageContext } from './ApplicationStorage';
+import ConfigureControls from './ConfigureControls';
+import { InputConfig } from './Integration/InputHandler';
 
 type ToolbarProps = {
   emulator: EmulatorState
@@ -25,6 +27,8 @@ type ToolbarProps = {
   isOpen: boolean
   showDebugInfo: boolean
   setShowDebugInfo: Dispatch<SetStateAction<boolean>>
+  inputConfig: InputConfig
+  setInputConfig: Dispatch<SetStateAction<InputConfig>>
 };
 
 enum DropdownMenu {
@@ -35,9 +39,27 @@ enum DropdownMenu {
   Settings = 5
 }
 
-const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedRoms, runMode, isOpen, showDebugInfo, setShowDebugInfo } : ToolbarProps) => {
+enum Dialogs {
+  ROMList = 1,
+  ConfigureControls = 2
+}
+
+const Toolbar = ({
+  emulator,
+  toggleOpenDialog,
+  loadRom,
+  setRunMode,
+  clearLoadedRoms,
+  runMode,
+  isOpen,
+  showDebugInfo,
+  setShowDebugInfo,
+  inputConfig,
+  setInputConfig
+} : ToolbarProps) => {
   const [menuState, setMenuState] = useState<Record<number, boolean>>({});
-  const [showROMList, setShowROMList] = useState(false);
+  const [dialogState, setDialogState] = useState<Record<number, boolean>>({});
+
 
   const appStorage = useContextWithErrorIfNull(ApplicationStorageContext);  
 
@@ -59,7 +81,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
   });
 
   const toggleOpen = (menu: DropdownMenu) => {
-    setShowROMList(false);
+    setDialogState({});
     setRunMode(RunModeType.STOPPED);
     setMenuState(oldState => ({ [menu]: !oldState[menu]}))
   };
@@ -97,7 +119,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
         if (event.target != null) {
           loadRom(new Uint8Array(event.target.result as ArrayBuffer), file.name);
           setRunMode(RunModeType.RUNNING);
-          setShowROMList(false);
+          setDialogState({});
         }
       }
       fileReader.readAsArrayBuffer(file);
@@ -106,7 +128,7 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
 
   const _clearLoadedRoms = () => {
     clearLoadedRoms();
-    setShowROMList(false);
+    setDialogState({});
   }
 
   useEffect(() => {
@@ -212,22 +234,29 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
                 <FontAwesomeIcon icon={faCog} />
               </button>
               <Dropdown isOpen={menuState[DropdownMenu.Settings]}>
-                <button onClick={() => setShowDebugInfo(oldVal => !oldVal)}>
-                  <input checked={showDebugInfo} type="checkbox" onChange={changeAutoloadEnabled} />
-                  <span>Show debug info</span>
+                <button onClick={() => {
+                  setMenuState({});
+                  setDialogState({ [Dialogs.ConfigureControls]: true });
+                }}>
+                  <FontAwesomeIcon icon={faGamepad} />
+                  <span>Configure controls</span>
                 </button>
                 <button onClick={promptClearRoms}>
                   <FontAwesomeIcon icon={faRemove} />
                   <span>Clear cached roms</span>
                 </button>
+                <button onClick={() => setShowDebugInfo(oldVal => !oldVal)}>
+                  <input checked={showDebugInfo} type="checkbox" onChange={changeAutoloadEnabled} />
+                  <span>Show debug info</span>
+                </button>
               </Dropdown>
               <div className={styles.tooltipText}>Settings</div>
             </div>
-            <div className={classNames(styles.item, showROMList && styles.activeItem)}>
+            <div className={classNames(styles.item, dialogState[Dialogs.ROMList] && styles.activeItem)}>
               <button onClick={() => {
                 setMenuState({});
                 setRunMode(RunModeType.STOPPED);
-                setShowROMList(s => !s)
+                setDialogState(s => ({ [Dialogs.ROMList]: !s[Dialogs.ROMList] }));
               }}
               >
                 <FontAwesomeIcon icon={faFolderOpen} />
@@ -250,14 +279,22 @@ const Toolbar = ({ emulator, toggleOpenDialog, loadRom, setRunMode, clearLoadedR
           </div>
         )}
       </Transition>
-      {romNamesQuery.data && showROMList && (
+      { 
+        dialogState[Dialogs.ConfigureControls] && (
+          <ConfigureControls
+            inputConfig={inputConfig}
+            setInputConfig={setInputConfig}
+            onClose={() => setDialogState({})} 
+          />
+        )}
+      {romNamesQuery.data && dialogState[Dialogs.ROMList] && (
         <ROMList
           handleFileSelected={romFileChanged}
           handleFileClick={handleFileClick}
-          onClose={() => setShowROMList(false)}
+          onClose={() => setDialogState({})}
           romList={romNamesQuery.data}
           loadRom={(romBuffer: Uint8Array, filename: string) => {
-            setShowROMList(false);
+            setDialogState({});
             loadRom(romBuffer, filename);
             setRunMode(RunModeType.RUNNING);
           }}

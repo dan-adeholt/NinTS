@@ -1,0 +1,29 @@
+.tableContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tableContainer table + table {
+  margin-left: 20px;  
+}
+
+.tableContainer table {
+  width: 100%;
+}
+
+.binding.active {
+  background: #555;
+}
+
+.binding {
+  background: #333;
+  color: white;
+  text-align: center;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}

@@ -3,11 +3,9 @@ import styles from './App.module.css';
 import '../global.css';
 import { parseROM } from '../emulator/parseROM';
 import EmulatorState, {
-    INPUT_A,
-    INPUT_B,
     INPUT_DOWN,
     INPUT_LEFT,
-    INPUT_RIGHT, INPUT_SELECT, INPUT_START,
+    INPUT_RIGHT,
     INPUT_UP
 } from '../emulator/EmulatorState';
 import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from '../emulator/ppu';
@@ -16,7 +14,7 @@ import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from '../emulator/a
 import Toolbar from './Toolbar';
 import { HotkeyToDebugDialog, getDebugDialogComponents, DebugDialog } from './DebugDialog';
 import ErrorBoundary from './ErrorBoundary';
-import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_LAST_ROM } from '../components/types';
+import { LOCAL_STORAGE_BREAKPOINTS_PREFIX, LOCAL_STORAGE_KEY_LAST_ROM, LOCAL_STORAGE_KEY_INPUT_CONFIG } from '../components/types';
 import { localStorageAutoloadEnabled } from '../components/localStorageUtil';
 import { Transition } from 'react-transition-group';
 import { animationDuration, transitionDefaultStyle, transitionStyles } from '../components/AnimationConstants';
@@ -25,6 +23,7 @@ import FIFOBuffer from '../components/FIFOBuffer';
 import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
 import { ApplicationStorageContext } from './ApplicationStorage';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { InputConfig, defaultInputConfig } from './Integration/InputHandler';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
@@ -32,17 +31,6 @@ export enum RunModeType {
     RUNNING_SINGLE_FRAME = 'RunningSingleFrame',
     RUNNING_SINGLE_SCANLINE = 'RunningSingleScanline'
 }
-
-const KeyTable: Record<string, number> = {
-    'w': INPUT_UP,
-    'a': INPUT_LEFT,
-    's': INPUT_DOWN,
-    'd': INPUT_RIGHT,
-    ' ': INPUT_A,
-    'm': INPUT_B,
-    '.': INPUT_SELECT,
-    '-': INPUT_START
-};
 
 const ntscFrameLength = 1000.0 / FRAMES_PER_SECOND;
 
@@ -146,6 +134,7 @@ const updateFrame = (
   display: Display,
   onStopped: () => void,
   runMode: RunModeType,
+  inputConfig: InputConfig,
   showDebugInfo: boolean,
   setShowControls: React.Dispatch<React.SetStateAction<boolean>>,
   hideControlsTimer: React.MutableRefObject<number>,
@@ -157,20 +146,41 @@ const updateFrame = (
   let stopped = false;
   const gamepads = navigator.getGamepads();
 
-  if (gamepads[0] != null) {
-    const gamepad = gamepads[0];
+  for (let i = 0; i < Math.min(gamepads.length, 2); i++) {
+    const gamepad = gamepads[i];
+    const gamepadConfig = inputConfig.gamepadBindings[i];
+    if (gamepad == null || gamepadConfig == null) {
+      continue;
+    }
+
     const a0 = gamepad.axes[0];
     const a1 = gamepad.axes[1];
     const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
 
-    emulator.setInputController(INPUT_RIGHT, (a0 > 0 && deg >= 0.125) || gamepad.buttons[15].pressed);
-    emulator.setInputController(INPUT_LEFT, (a0 < 0 && deg >= 0.125) || gamepad.buttons[14].pressed);
-    emulator.setInputController(INPUT_UP, (a1 < 0 && deg <= 0.325) || gamepad.buttons[12].pressed);
-    emulator.setInputController(INPUT_DOWN, (a1 > 0 && deg <= 0.325) || gamepad.buttons[13].pressed);
-    emulator.setInputController(INPUT_START, gamepad.buttons[8].pressed);
-    emulator.setInputController(INPUT_SELECT, gamepad.buttons[9].pressed);
-    emulator.setInputController(INPUT_A, gamepad.buttons[1].pressed);
-    emulator.setInputController(INPUT_B, gamepad.buttons[3].pressed);
+    
+    for (let buttonIndex = 0; buttonIndex < gamepad.buttons.length; buttonIndex++) {
+      if (gamepadConfig[buttonIndex] != null){
+        let isPressed = gamepad.buttons[buttonIndex].pressed;
+
+        // Handle dpad automatically
+        switch (gamepadConfig[buttonIndex].button) {
+          case INPUT_RIGHT:
+            isPressed = isPressed || (a0 > 0 && deg >= 0.125);  
+            break;
+          case INPUT_LEFT:
+            isPressed = isPressed || (a0 < 0 && deg >= 0.125);
+            break;
+          case INPUT_UP:
+            isPressed = isPressed || (a1 < 0 && deg <= 0.325);
+            break;  
+          case INPUT_DOWN:
+            isPressed = isPressed || (a1 > 0 && deg <= 0.325);
+            break;
+        }
+
+        emulator.setInputController(gamepadConfig[buttonIndex].button, gamepad.buttons[buttonIndex].pressed, i);
+      }
+    }
   }
 
   const timeDelta = timestamp - lastTime;
@@ -228,12 +238,17 @@ const updateFrame = (
     }
 
     animationFrameRef.current = window.requestAnimationFrame((_newTimestamp) => {
-      updateFrame(_newTimestamp, display, onStopped, runMode, showDebugInfo, setShowControls, hideControlsTimer, animationFrameRef, animationFrameIndex, emulatorTime, lastTime);
+      updateFrame(_newTimestamp, display, onStopped, runMode, inputConfig, showDebugInfo, setShowControls, hideControlsTimer, animationFrameRef, animationFrameIndex, emulatorTime, lastTime);
     });
   }
 }
 
 const lastRomSha = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ROM) ?? '';
+
+const getInitialInputConfig = () => {
+  const savedConfig = localStorage.getItem(LOCAL_STORAGE_KEY_INPUT_CONFIG)  
+  return savedConfig ? JSON.parse(savedConfig) : defaultInputConfig;
+}
 
 function App() {
   const appStorage = useContextWithErrorIfNull(ApplicationStorageContext);
@@ -267,137 +282,139 @@ function App() {
     }
   });
 
-    // Store it as memo inside component so that HMR works properly.
-    const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
-    const audioRef = useRef<AudioState | null>(null);
-    const mainContainerRef = useRef<HTMLDivElement>(null);
-    const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
-    const [runMode, setRunMode] = useState(RunModeType.STOPPED);
-    
-    const [loadingString, setLoadingString] = useState<string | null>(null);
-    const [breakpoints, setBreakpoints] = useState<Map<number, boolean>>(loadBreakpoints(emulator.rom?.romSHA));
-    const [showInfoDiv, setShowInfoDiv] = useState(lastRomSha == null || lastRomSha === '');
-    
-    const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
-    const display = useRef<Display | null>(null);
-    const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
-    const [showControls, setShowControls] = useState(true);
-    const queryClient = useQueryClient();
-    const hideControlsTimer = useRef<number>(-1);
-    const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog]}));
-    const [showDebugInfo, setShowDebugInfo] = useState(false);
-  
+  const [inputConfig, setInputConfig] = useState<InputConfig>(getInitialInputConfig);
 
-    // Sync breakpoints with emulator
-    useEffect(() => {
-      emulator.breakpoints = breakpoints;
-      localStorage.setItem(LOCAL_STORAGE_BREAKPOINTS_PREFIX + emulator.rom.romSHA, breakpointsToJSON(breakpoints));
-    }, [breakpoints, emulator]);
+  // Store it as memo inside component so that HMR works properly.
+  const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
+  const audioRef = useRef<AudioState | null>(null);
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+  const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
+  const [runMode, setRunMode] = useState(RunModeType.STOPPED);
 
-    useLayoutEffect(() => {
-      const measure = () => {
-        const mainContainer = mainContainerRef.current;
-        const canvas = display.current?.element;
-        if (mainContainer && canvas) {
-          let newScale = (mainContainer.clientHeight) / canvas.height;
-          if (mainContainer.clientHeight > mainContainer.clientWidth) {
-            newScale = (mainContainer.clientWidth) / canvas.width;  
-          }
+  const [loadingString, setLoadingString] = useState<string | null>(null);
+  const [breakpoints, setBreakpoints] = useState<Map<number, boolean>>(loadBreakpoints(emulator.rom?.romSHA));
+  const [showInfoDiv, setShowInfoDiv] = useState(lastRomSha == null || lastRomSha === '');
 
-          canvas.style.transform = `scale(${newScale})`;
+  const [dialogState, setDialogState] = useState<Record<string, boolean>>({});
+  const display = useRef<Display | null>(null);
+  const [keyListeners, setKeyListeners] = useState<KeyListener[]>([]);
+  const [showControls, setShowControls] = useState(true);
+  const queryClient = useQueryClient();
+  const hideControlsTimer = useRef<number>(-1);
+  const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog] }));
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+
+
+  // Sync breakpoints with emulator
+  useEffect(() => {
+    emulator.breakpoints = breakpoints;
+    localStorage.setItem(LOCAL_STORAGE_BREAKPOINTS_PREFIX + emulator.rom.romSHA, breakpointsToJSON(breakpoints));
+  }, [breakpoints, emulator]);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const mainContainer = mainContainerRef.current;
+      const canvas = display.current?.element;
+      if (mainContainer && canvas) {
+        let newScale = (mainContainer.clientHeight) / canvas.height;
+        if (mainContainer.clientHeight > mainContainer.clientWidth) {
+          newScale = (mainContainer.clientWidth) / canvas.width;
         }
-      }
 
-      
-      measure();
-      window.addEventListener('resize', measure);
-
-      return () => {
-        window.removeEventListener('resize', measure);
+        canvas.style.transform = `scale(${newScale})`;
       }
+    }
+
+
+    measure();
+    window.addEventListener('resize', measure);
+
+    return () => {
+      window.removeEventListener('resize', measure);
+    }
+  });
+
+  const addKeyListener = useCallback((listener: KeyListener) => {
+    setKeyListeners(oldListeners => {
+      return [...oldListeners, listener];
+    })
+  }, []);
+
+  const removeKeyListener = useCallback((listener: KeyListener) => {
+    setKeyListeners(oldListeners => {
+      return oldListeners.filter(oldListener => oldListener !== listener);
+    });
+  }, []);
+
+  const handleGamepad = useCallback((e: GamepadEvent) => {
+    console.log(e);
+  }, []);
+
+  const stopAudioContext = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.scriptProcessor.disconnect(audioRef.current.audioContext.destination);
+      audioRef.current = null;
+    }
+  }, []);
+
+  const initAudioContext = useCallback(() => {
+    stopAudioContext();
+    // Setup audio.
+    const audioContext = new window.AudioContext({
+      sampleRate: SAMPLE_RATE
     });
 
-    const addKeyListener = useCallback((listener : KeyListener) => {
-        setKeyListeners(oldListeners => {
-            return [...oldListeners, listener];
-        })
-    }, []);
+    const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
+    scriptProcessor.onaudioprocess = event => {
+      audioBuffer.writeToDestination(event.outputBuffer, () => {
+        // We are missing a few samples. The emulator stops right after vblank is hit,
+        // we can try to do a few more cycles before the pre-render scanline so that the
+        // audio buffer can be filled
+        while (audioRef.current && emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
+          emulator.step();
+        }
+      });
+    }
+    scriptProcessor.connect(audioContext.destination);
 
-    const removeKeyListener = useCallback((listener : KeyListener) => {
-        setKeyListeners(oldListeners => {
-            return oldListeners.filter(oldListener => oldListener !== listener);
+    audioRef.current = {
+      scriptProcessor,
+      audioContext
+    };
+  }, [stopAudioContext, audioBuffer, emulator]);
+
+  const loadRom = useCallback((romBuffer: Uint8Array, filename: string) => {
+    initialRomLoaded.current = true;
+    const rom = parseROM(romBuffer);
+    setError(null);
+    try {
+      emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+      if (localStorageAutoloadEnabled()) {
+        appStorage.getRomSavegame(rom.romSHA).then((savegame) => {
+          if (savegame) {
+            emulator.loadEmulator(JSON.parse(savegame.data));
+          }
         });
-    }, []);
-
-    const handleGamepad = useCallback((e : GamepadEvent) => {
-        console.log(e);
-    }, []);
-    
-    const stopAudioContext = useCallback(() => {
-        if (audioRef.current) {
-            audioRef.current.scriptProcessor.disconnect(audioRef.current.audioContext.destination);
-            audioRef.current = null;
-        }
-    }, []);
-
-    const initAudioContext = useCallback(() => {
-        stopAudioContext();
-        // Setup audio.
-        const audioContext = new window.AudioContext({
-            sampleRate: SAMPLE_RATE
-        });
-
-        const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
-        scriptProcessor.onaudioprocess = event => {
-            audioBuffer.writeToDestination(event.outputBuffer, () => {
-                // We are missing a few samples. The emulator stops right after vblank is hit,
-                // we can try to do a few more cycles before the pre-render scanline so that the
-                // audio buffer can be filled
-                while (audioRef.current && emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
-                    emulator.step();
-                }
-            });
-        }
-        scriptProcessor.connect(audioContext.destination);
-
-        audioRef.current = {
-            scriptProcessor,
-            audioContext
-        };
-    }, [stopAudioContext, audioBuffer, emulator]);
-
-    const loadRom = useCallback((romBuffer : Uint8Array, filename: string) => {
-      initialRomLoaded.current = true;
-      const rom = parseROM(romBuffer);
-      setError(null);
-      try {
-        emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
-        if (localStorageAutoloadEnabled()) {
-          appStorage.getRomSavegame(rom.romSHA).then((savegame) => {
-            if (savegame) {
-              emulator.loadEmulator(JSON.parse(savegame.data));
-            }
-          });
-        }
-      } catch (e) {
-        if (typeof e === "string") {
-          setError(e);
-        } else if (e instanceof Error) {
-          setError(e.message);
-        }
       }
-      setShowInfoDiv(false);
-      setBreakpoints(loadBreakpoints(rom.romSHA));
-      setTitle(filename);
-      triggerRefresh();
-      
-      if (display.current) {
-        display.current.context.fillStyle = '#1e1e1e';
-        display.current.context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)  
-      }  
+    } catch (e) {
+      if (typeof e === "string") {
+        setError(e);
+      } else if (e instanceof Error) {
+        setError(e.message);
+      }
+    }
+    setShowInfoDiv(false);
+    setBreakpoints(loadBreakpoints(rom.romSHA));
+    setTitle(filename);
+    triggerRefresh();
 
-      return rom;
-    }, [audioBuffer, emulator, triggerRefresh]);
+    if (display.current) {
+      display.current.context.fillStyle = '#1e1e1e';
+      display.current.context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+    }
+
+    return rom;
+  }, [audioBuffer, emulator, triggerRefresh]);
 
   const animationFrameRef = useRef<number | null>(null);
 
@@ -441,6 +458,7 @@ function App() {
           });
         },
         runMode,
+        inputConfig,
         showDebugInfo,
         setShowControls,
         hideControlsTimer,
@@ -451,7 +469,7 @@ function App() {
     }
 
     triggerRefresh();
-  }, [triggerRefresh, showDebugInfo, runMode, emulator, initAudioContext, stopAudioContext, display, setRunMode, setIsSteppingScanline]);
+  }, [triggerRefresh, showDebugInfo, runMode, inputConfig, emulator, initAudioContext, stopAudioContext, display, setRunMode, setIsSteppingScanline]);
 
   const { mutate: addRom } = useMutation(appStorage.addRoms, {
     onSuccess: (_res, args) => {
@@ -504,8 +522,9 @@ function App() {
       }
     }
 
-    if (e.key in KeyTable) {
-      emulator?.setInputController(KeyTable[e.key], e.type === 'keydown');
+    if (e.key in inputConfig.keyboardBindings) {
+      const binding = inputConfig.keyboardBindings[e.key];
+      emulator?.setInputController(binding.button, e.type === 'keydown', binding.controller);
       e.preventDefault();
     }
 
@@ -564,7 +583,7 @@ function App() {
       const reader = new FileReader();
       reader.onload = (e) => {
         numLoaded++;
-        
+
         if (e.target?.result != null) {
           const romBuffer = new Uint8Array(e.target.result as ArrayBuffer);
           const parsedRom = parseROM(romBuffer);
@@ -595,7 +614,7 @@ function App() {
   };
 
   let titleText: string;
-  
+
   if (lastRomSha != '' && firstRomQuery.isFetching) {
     titleText = '';
   } else {
@@ -624,7 +643,7 @@ function App() {
         {!firstRomQuery.isFetching && showInfoDiv && (
           <div className={styles.infoDiv}>
             <p>
-              { loadingString ? loadingString : <span>Load a file using the menu or drop a file to start.</span>}  
+              {loadingString ? loadingString : <span>Load a file using the menu or drop a file to start.</span>}
             </p>
           </div>)
         }
@@ -652,6 +671,8 @@ function App() {
         </ErrorBoundary>
       </div>
       <Toolbar
+        inputConfig={inputConfig}
+        setInputConfig={setInputConfig}
         isOpen={showControls}
         clearLoadedRoms={clearLoadedRoms}
         emulator={emulator}
