@@ -1,6 +1,6 @@
 import React, { useMemo, Dispatch, SetStateAction, useState, useEffect } from 'react';
 import Dialog, { DialogVerticalPosition } from './Dialog';
-import { GamepadControllerBinding, InputConfig, KeyboardBinding } from './Integration/InputHandler';
+import { GamepadControllerBinding, InputConfig, KeyboardBinding } from './Integration/InputTypes';
 import { INPUT_A, INPUT_LEFT, INPUT_RIGHT, INPUT_UP, INPUT_SELECT, INPUT_DOWN, INPUT_B, INPUT_START } from '../emulator/EmulatorState';
 import styles from './ConfigureControls.module.css';
 import classNames from 'classnames';
@@ -15,21 +15,13 @@ type ConfigureControlsProps = {
   setInputConfig: Dispatch<SetStateAction<InputConfig>>
 }
 
-type GamepadControllerExtendedBinding = GamepadControllerBinding & {
-  gamepadButton: number
-}
-
-type KeyboardExtendedBinding = KeyboardBinding & {
-  character: string  
-}
-
 type InputConfigLookupController = {
-  gamepad: Record<number, GamepadControllerExtendedBinding>
-  keyboard: Record<string, KeyboardExtendedBinding>
+  gamepad: Record<number, GamepadControllerBinding>
+  keyboard: Record<string, KeyboardBinding>
 }  
 
 type KeyboardBindingViewProps = {
-  binding?: KeyboardExtendedBinding
+  binding?: KeyboardBinding
   onClick: () => void
   active: boolean
 }
@@ -49,7 +41,7 @@ const KeyboardBindingView = ({ binding, onClick, active }: KeyboardBindingViewPr
 
 type GamepadBindingViewProps = {
   onClick: () => void
-  binding?: GamepadControllerExtendedBinding
+  binding?: GamepadControllerBinding
   active: boolean
 }
 
@@ -134,29 +126,18 @@ const ConfigureControls = ({ onClose, inputConfig, setInputConfig } : ConfigureC
     const controllers: InputConfigLookupController[] = [];
 
     for (let controllerConfig = 0; controllerConfig < 2; controllerConfig++) {
-      const gamepadBindings: Record<number, GamepadControllerExtendedBinding> = {}
-      const keyboardBindings: Record<string, KeyboardExtendedBinding> = {}
+      const gamepadBindings: Record<number, GamepadControllerBinding> = {}
+      const keyboardBindings: Record<string, KeyboardBinding> = {}
 
-      for (let gamepadIndex = 0; gamepadIndex < inputConfig.gamepadBindings.length; gamepadIndex++) {
-        const entries = Object.entries(inputConfig.gamepadBindings[gamepadIndex]);
-
-        for (const [gamepadButton, binding] of entries) {
-          if (binding.controller === controllerConfig) {
-            gamepadBindings[binding.button] = {
-              ...binding,
-              gamepadButton: parseInt(gamepadButton)
-            }
-          }
-        }            
+      for (const binding of inputConfig.gamepadBindings) {
+        if (binding.controller === controllerConfig) {
+          gamepadBindings[binding.button] = binding;
+        }
       }
 
-      const keyboardEntries = Object.entries(inputConfig.keyboardBindings);
-      for (const [character, binding] of keyboardEntries) {
+      for (const binding of inputConfig.keyboardBindings) {
         if (binding.controller === controllerConfig) {
-          keyboardBindings[binding.button] = {
-            ...binding,
-            character
-          }
+          keyboardBindings[binding.button] = binding;
         }
       }
 
@@ -184,23 +165,16 @@ const ConfigureControls = ({ onClose, inputConfig, setInputConfig } : ConfigureC
               setGamepadTarget(null)
               setInputConfig((oldInputConfig: InputConfig) => {
                 const newInputConfig: InputConfig = {
-                  gamepadBindings: oldInputConfig.gamepadBindings.map((bindings) => {
-                    const newBindings: Record<number, GamepadControllerBinding> = {};
-
-                    for (const [gamepadButton, binding] of Object.entries(bindings)) {
-                      if (binding.controller !== gamepadTarget.controller || binding.button !== gamepadTarget.button) {
-                        newBindings[parseInt(gamepadButton)] = binding;
-                      }
-                    }
-                    return newBindings;
+                  gamepadBindings: oldInputConfig.gamepadBindings.filter((binding) => {
+                    return binding.controller !== gamepadTarget.controller || binding.button !== gamepadTarget.button;
+                  }).concat({
+                    button: gamepadTarget.button,
+                    controller: gamepadTarget.controller,
+                    gamepad: padIndex,
+                    gamepadButton: buttonIndex
                   }),
                   keyboardBindings: oldInputConfig.keyboardBindings
                 };
-
-                newInputConfig.gamepadBindings[padIndex][buttonIndex] = {
-                  button: gamepadTarget.button,
-                  controller: gamepadTarget.controller
-                }
 
                 localStorage.setItem(LOCAL_STORAGE_KEY_INPUT_CONFIG, JSON.stringify(newInputConfig));
 
@@ -212,7 +186,6 @@ const ConfigureControls = ({ onClose, inputConfig, setInputConfig } : ConfigureC
           }
         }
       }
-    
 
       currentId = window.requestAnimationFrame(gamepadCallback);
     }
@@ -225,19 +198,13 @@ const ConfigureControls = ({ onClose, inputConfig, setInputConfig } : ConfigureC
       setInputConfig(oldInputConfig => {
         const newInputConfig: InputConfig = {
           gamepadBindings: oldInputConfig.gamepadBindings,
-          keyboardBindings: {}
-        }
-        
-        for (const [bindingKey, binding] of Object.entries(oldInputConfig.keyboardBindings)) {
-          if (binding.button === keyboardTarget?.button && binding.controller === keyboardTarget?.controller) {
-            // This is the binding we want to change
-            newInputConfig.keyboardBindings[e.key] = {
-              button: binding.button,
-              controller: binding.controller
-            }
-          } else {
-            newInputConfig.keyboardBindings[bindingKey] = binding;
-          }
+          keyboardBindings: oldInputConfig.keyboardBindings.filter((binding) => {
+            return binding.controller !== keyboardTarget.controller || binding.button !== keyboardTarget.button;
+          }).concat({
+            button: keyboardTarget.button,
+            controller: keyboardTarget.controller,
+            character: e.key,
+          })
         }
 
         localStorage.setItem(LOCAL_STORAGE_KEY_INPUT_CONFIG, JSON.stringify(newInputConfig));

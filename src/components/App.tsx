@@ -23,13 +23,18 @@ import FIFOBuffer from '../components/FIFOBuffer';
 import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
 import { ApplicationStorageContext } from './ApplicationStorage';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { InputConfig, defaultInputConfig } from './Integration/InputHandler';
+import { GamepadControllerBinding, InputConfig, KeyboardBinding, defaultInputConfig, getGamepadIndexFromButton } from './Integration/InputTypes';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
     RUNNING = 'Running',
     RUNNING_SINGLE_FRAME = 'RunningSingleFrame',
     RUNNING_SINGLE_SCANLINE = 'RunningSingleScanline'
+}
+
+type InputConfigLookup = {
+  keyboardLookup:  Map<string, KeyboardBinding>;
+  gamepadLookup: Map<number, GamepadControllerBinding>
 }
 
 const ntscFrameLength = 1000.0 / FRAMES_PER_SECOND;
@@ -134,7 +139,7 @@ const updateFrame = (
   display: Display,
   onStopped: () => void,
   runMode: RunModeType,
-  inputConfig: InputConfig,
+  inputConfigLookup: InputConfigLookup,
   showDebugInfo: boolean,
   setShowControls: React.Dispatch<React.SetStateAction<boolean>>,
   hideControlsTimer: React.MutableRefObject<number>,
@@ -146,10 +151,8 @@ const updateFrame = (
   let stopped = false;
   const gamepads = navigator.getGamepads();
 
-  for (let i = 0; i < Math.min(gamepads.length, 2); i++) {
-    const gamepad = gamepads[i];
-    const gamepadConfig = inputConfig.gamepadBindings[i];
-    if (gamepad == null || gamepadConfig == null) {
+  for (const gamepad of gamepads) {
+    if (gamepad == null) {
       continue;
     }
 
@@ -157,13 +160,14 @@ const updateFrame = (
     const a1 = gamepad.axes[1];
     const deg = Math.atan2(Math.abs(a0), Math.abs(a1)) / Math.PI;
 
-    
     for (let buttonIndex = 0; buttonIndex < gamepad.buttons.length; buttonIndex++) {
-      if (gamepadConfig[buttonIndex] != null){
+      const buttonAndPadIndex = getGamepadIndexFromButton(buttonIndex, gamepad.index);
+      const config = inputConfigLookup.gamepadLookup.get(buttonAndPadIndex);
+      if (config != null){
         let isPressed = gamepad.buttons[buttonIndex].pressed;
 
         // Handle dpad automatically
-        switch (gamepadConfig[buttonIndex].button) {
+        switch (config.button) {
           case INPUT_RIGHT:
             isPressed = isPressed || (a0 > 0 && deg >= 0.125);  
             break;
@@ -178,7 +182,7 @@ const updateFrame = (
             break;
         }
 
-        emulator.setInputController(gamepadConfig[buttonIndex].button, gamepad.buttons[buttonIndex].pressed, i);
+        emulator.setInputController(config.button, isPressed, config.controller);
       }
     }
   }
@@ -238,7 +242,7 @@ const updateFrame = (
     }
 
     animationFrameRef.current = window.requestAnimationFrame((_newTimestamp) => {
-      updateFrame(_newTimestamp, display, onStopped, runMode, inputConfig, showDebugInfo, setShowControls, hideControlsTimer, animationFrameRef, animationFrameIndex, emulatorTime, lastTime);
+      updateFrame(_newTimestamp, display, onStopped, runMode, inputConfigLookup, showDebugInfo, setShowControls, hideControlsTimer, animationFrameRef, animationFrameIndex, emulatorTime, lastTime);
     });
   }
 }
@@ -283,6 +287,23 @@ function App() {
   });
 
   const [inputConfig, setInputConfig] = useState<InputConfig>(getInitialInputConfig);
+  const inputConfigLookup: InputConfigLookup = useMemo(() => {
+    const keyboardLookup = new Map<string, KeyboardBinding>();
+    const gamepadLookup = new Map<number, GamepadControllerBinding>();
+
+    for (const binding of inputConfig.keyboardBindings) {
+      keyboardLookup.set(binding.character, binding);
+    }
+
+    for (const binding of inputConfig.gamepadBindings) {
+      gamepadLookup.set(getGamepadIndexFromButton(binding.gamepadButton, binding.gamepad), binding);
+    }
+
+    return {
+      keyboardLookup,
+      gamepadLookup
+    }    
+  }, [inputConfig]);
 
   // Store it as memo inside component so that HMR works properly.
   const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
@@ -458,7 +479,7 @@ function App() {
           });
         },
         runMode,
-        inputConfig,
+        inputConfigLookup,
         showDebugInfo,
         setShowControls,
         hideControlsTimer,
@@ -521,9 +542,10 @@ function App() {
         }
       }
     }
+    
+    const binding = inputConfigLookup.keyboardLookup.get(e.key);
 
-    if (e.key in inputConfig.keyboardBindings) {
-      const binding = inputConfig.keyboardBindings[e.key];
+    if (binding != null) {
       emulator?.setInputController(binding.button, e.type === 'keydown', binding.controller);
       e.preventDefault();
     }
@@ -531,9 +553,7 @@ function App() {
     for (const listener of keyListeners) {
       listener(e);
     }
-  }, [keyListeners, emulator, _setRunMode, runMode]);
-
-
+  }, [keyListeners, emulator, _setRunMode, runMode, inputConfigLookup]);
 
   const handleFocus = useCallback(() => {
     if (document.visibilityState === 'hidden') {

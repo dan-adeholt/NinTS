@@ -15,7 +15,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
 import { ApplicationStorageContext } from './ApplicationStorage';
 import ConfigureControls from './ConfigureControls';
-import { InputConfig } from './Integration/InputHandler';
+import { InputConfig } from './Integration/InputTypes';
 
 type ToolbarProps = {
   emulator: EmulatorState
