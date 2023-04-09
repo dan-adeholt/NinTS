@@ -1,3 +1,5 @@
+import EmulatorBreakState from '../EmulatorBreakState';
+
 const BANK_SIZE = 1024;
 const BANK_INDEX_MASK = 0b1111111111;
 const BANK_INDEX_SIZE = 10;
@@ -23,6 +25,12 @@ class MemorySpace {
     console.assert(size % BANK_SIZE === 0);
     console.assert(targetAddress % BANK_SIZE === 0);
     console.assert(size > 0);
+
+    if (end > source.length) {
+      console.error('Mapper tried to map beyond available memory', end, '>', source.length);
+      EmulatorBreakState.break = true;
+    }
+
     console.assert(end <= source.length);
 
     const startIndex = targetAddress / BANK_SIZE;
@@ -46,6 +54,7 @@ class MemorySpace {
 
     if (ret === undefined) {
       console.error('Got error while reading memory bank', bankIndex, ',', subIndex)
+      EmulatorBreakState.break = true;
     }
 
     return ret;

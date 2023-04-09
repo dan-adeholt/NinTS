@@ -406,9 +406,10 @@ function App() {
 
   const loadRom = useCallback((romBuffer: Uint8Array, filename: string) => {
     initialRomLoaded.current = true;
-    const rom = parseROM(romBuffer);
+    
     setError(null);
     try {
+      const rom = parseROM(romBuffer);
       emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
       if (localStorageAutoloadEnabled()) {
         appStorage.getRomSavegame(rom.romSHA).then((savegame) => {
@@ -417,6 +418,7 @@ function App() {
           }
         });
       }
+      setBreakpoints(loadBreakpoints(rom.romSHA));
     } catch (e) {
       if (typeof e === "string") {
         setError(e);
@@ -424,8 +426,8 @@ function App() {
         setError(e.message);
       }
     }
+
     setShowInfoDiv(false);
-    setBreakpoints(loadBreakpoints(rom.romSHA));
     setTitle(filename);
     triggerRefresh();
 
@@ -433,8 +435,6 @@ function App() {
       display.current.context.fillStyle = '#1e1e1e';
       display.current.context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
     }
-
-    return rom;
   }, [audioBuffer, emulator, triggerRefresh]);
 
   const animationFrameRef = useRef<number | null>(null);
