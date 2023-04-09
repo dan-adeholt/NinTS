@@ -201,7 +201,7 @@ const updateFrame = (
     return _stopped;
   }
   
-  let numFrames = 1;
+  let numFrames = -1;
 
   for (const fpsLockConfig of FPS_LOCK_TABLE) {
     const diffLast = Math.abs(timeDelta - fpsLockConfig.delta);
