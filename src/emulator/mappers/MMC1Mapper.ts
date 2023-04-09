@@ -92,7 +92,7 @@ class MMC1Mapper extends Mapper {
     if (chrSwitch8kb) {
       // If 8Kb mode is used, the lower byte is ignored
       lowerChrBank = lowerChrBank & (~0b1);
-      this.ppuMemory.mapChr(0x0000, lowerChrBank * 0x2000, (lowerChrBank + 1) * 0x2000);
+      this.ppuMemory.mapChr(0x0000, lowerChrBank * 0x1000, (lowerChrBank + 2) * 0x1000);
     } else {
       this.ppuMemory.mapChr(0x0000, lowerChrBank * 0x1000, (lowerChrBank + 1) * 0x1000);
       this.ppuMemory.mapChr(0x1000, upperChrBank * 0x1000, (upperChrBank + 1) * 0x1000);
