@@ -124,8 +124,8 @@ const logFormatters: Record<number, (state: EmulatorState, pc: number) => string
 };
 
 export const bin8 = (num: number) => num.toString(2).padStart(8, '0');
-export const hex = (num: number, prefix = '') => prefix + num.toString(16).toUpperCase().padStart(2, '0');
-export const hex16 = (num: number, prefix = '') => prefix + num.toString(16).toUpperCase().padStart(4, '0');
+export const hex = (num: number, prefix = '') => prefix + num?.toString(16).toUpperCase().padStart(2, '0');
+export const hex16 = (num: number, prefix = '') => prefix + num?.toString(16).toUpperCase().padStart(4, '0');
 
 export const procFlagsToString = (P: number) => {
   const toBinary = (flag: number) => (P & flag) ? '1' : '0';

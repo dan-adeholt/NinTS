@@ -22,6 +22,12 @@ class MemorySpace {
 
   map(source: Uint8Array, targetAddress: number, start: number, end: number) {
     const size = end - start;
+    
+    // Handle ROM:s that tries to do bank switches outside the available range
+    // TODO: Perhaps use index arguments here instead of raw address ranges
+    start = start % source.length;
+    end = start + size;
+
     console.assert(size % BANK_SIZE === 0);
     console.assert(targetAddress % BANK_SIZE === 0);
     console.assert(size > 0);
