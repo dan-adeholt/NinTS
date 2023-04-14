@@ -4,8 +4,15 @@ import EmulatorState from './EmulatorState';
 import { NTSC_CPU_CYCLES_PER_SECOND } from './apu';
 import { PPUMASK } from './ppu';
 
+if (process.argv.length < 3) {
+  console.error('Usage: yarn perfTest <path-to-rom>');
+  process.exit(1);
+}
+
+const romPath = process.argv[2];
+
 const runTest = () => {
-  const data = fs.readFileSync('/Users/dadeholt/ParallelsShare/smb.nes');
+  const data = fs.readFileSync(romPath);
   const rom = parseROM(data);
   const state = new EmulatorState();
   state.initMachine(rom, false, null);

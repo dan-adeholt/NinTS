@@ -10,8 +10,7 @@
     "test": "vitest run",
     "lint": "yarn tsc --noEmit && eslint . --ext .ts,.tsx,.js --max-warnings=0",
     "gendb": "yarn esbuild tools/gendatabase.ts --platform=node --bundle --outfile=/tmp/gendatabase.js && node /tmp/gendatabase.js",
-    "perfTest": "yarn esbuild src/emulator/perfTest.ts --platform=node --bundle --outfile=/tmp/out.js && node /tmp/out.js",
-    "profile": "yarn perfTest && node --prof --no-logfile-per-isolate /tmp/out.js && node --prof-process --preprocess v8.log > v8.json"
+    "perfTest": "yarn esbuild src/emulator/perfTest.ts --platform=node --bundle --outfile=/tmp/out.js && node /tmp/out.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.2.0",
