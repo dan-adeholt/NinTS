@@ -1,6 +1,12 @@
 # NinTS
 
-This is a cycle accurate NES emulator written in Typescript. It is fairly accurate (it passes around 93% of TASVideos accuracy tests, see accuracy section). However, it has pretty basic mapper support (NROM, MMC1, UNROM, CNROM, MMC3 and AxROM) and only supports NTSC at the moment.
+This is a cycle accurate NES emulator written in Typescript.
+
+It is fairly accurate (it passes around 93% of TASVideos accuracy tests, see accuracy section). However, it has pretty basic mapper support (NROM, MMC1, UNROM, CNROM, MMC3 and AxROM) and only supports NTSC at the moment.
+
+## Hosting
+
+You can try out the emulator at [https://nin-ts.vercel.app/](https://nin-ts.vercel.app/)
 
 ## Development
 
