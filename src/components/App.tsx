@@ -39,6 +39,32 @@ type InputConfigLookup = {
 
 const ntscFrameLength = 1000.0 / FRAMES_PER_SECOND;
 
+// Unfortunately the timestamp in the requestAnimationFrame callback is not
+// as accurate as expected (I think due to Spectre/Meltdown mitigations).
+// This causes stutters after a while when using delta calculations, as the
+// error accumulates. To work around this, we use a lock table to determine
+// how many times we should update the emulator per frame by comparing the delta
+// to standard refresh rate deltas. If the diff is not close enough, i.e. for
+// 144hz displays or when the frame takes too long to
+// complete an emulation step, fall back to delta calculations.
+
+// For some browsers, we can get access to the high precision timers again by
+// specifying Cross-Origin-Embedder-Policy and Cross-Origin-Opener-Policy in
+// the response headers, but it doesn't seem to work on iOS.
+type FpsLockEntry = {
+  delta: number
+  framesPerIndex: (frameIndex: number) => number
+}
+
+const FPS_LOCK_TABLE: FpsLockEntry[] = [
+  { delta: 1000 / 30.0, framesPerIndex: () => 2 },
+  { delta: 1000 / 60.0, framesPerIndex: () => 1 },
+  { delta: 1000 / 120.0, framesPerIndex: (frameIndex: number) => (frameIndex % 2 === 0) ? 1 : 0 },
+  { delta: 1000 / 240.0, framesPerIndex: (frameIndex: number) => (frameIndex % 4 === 0) ? 1 : 0 }
+];
+
+const FPS_LOCK_EPSILON = 1;
+
 type AudioState = {
     scriptProcessor: ScriptProcessorNode
     audioContext: AudioContext
@@ -164,6 +190,8 @@ const updateFrame = (
     }
   }
 
+  const timeDelta = timestamp - lastTime;
+  
   const tick = (): boolean => {
     emulatorTime += ntscFrameLength;
 
@@ -180,11 +208,25 @@ const updateFrame = (
     return _stopped;
   }
   
-  let numFrames = 0;
+  let numFrames = -1;
 
-  while ((timestamp - emulatorTime) >= ntscFrameLength && !stopped) {
-    stopped = tick();
-    numFrames++;
+  for (const fpsLockConfig of FPS_LOCK_TABLE) {
+    const diffLast = Math.abs(timeDelta - fpsLockConfig.delta);
+    if (diffLast < FPS_LOCK_EPSILON) {
+      numFrames = fpsLockConfig.framesPerIndex(animationFrameIndex);
+      for (let i = 0; i < numFrames && !stopped; i++) {
+        stopped = tick();
+      }
+
+      break;
+    }
+  }
+
+  // Found no lock config, use standard delta time based frame updates      
+  if (numFrames === -1) {
+    while ((timestamp - emulatorTime) >= ntscFrameLength && !stopped) {
+      stopped = tick();
+    }
   }
 
   renderScreen(display, emulator, showDebugInfo);
