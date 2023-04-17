@@ -24,6 +24,7 @@ import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
 import { ApplicationStorageContext } from './ApplicationStorage';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { GamepadControllerBinding, InputConfig, KeyboardBinding, defaultInputConfig, getGamepadIndexFromButton } from './Integration/InputTypes';
+import TouchControls from './TouchControls';
 
 export enum RunModeType {
     STOPPED = 'Stopped',
@@ -257,11 +258,15 @@ const getInitialInputConfig = () => {
   return savedConfig ? JSON.parse(savedConfig) : defaultInputConfig;
 }
 
+const deviceHasGamepads = () => navigator.getGamepads().filter(x => x!= null).length > 0;
+
 function App() {
   const appStorage = useContextWithErrorIfNull(ApplicationStorageContext);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState<string | null>(null);
   const initialRomLoaded = useRef(false);
+
+  const [hasGamepads, setHasGamepads] = useState(deviceHasGamepads);
 
   const firstRomQuery = useQuery(['firstRom'], () => appStorage.getRomDataAndSavegame(lastRomSha), {
     enabled: lastRomSha != '' && !initialRomLoaded.current,
@@ -327,7 +332,7 @@ function App() {
   const hideControlsTimer = useRef<number>(-1);
   const toggleOpenDialog = (dialog: string) => setDialogState(oldState => ({ ...oldState, [dialog]: !oldState[dialog] }));
   const [showDebugInfo, setShowDebugInfo] = useState(false);
-
+  const [sideWidth, setSideWidth] = useState(0);
 
   // Sync breakpoints with emulator
   useEffect(() => {
@@ -345,6 +350,7 @@ function App() {
           newScale = (mainContainer.clientWidth) / canvas.width;
         }
 
+        setSideWidth(Math.max(0.15 * mainContainer.clientWidth, (mainContainer.clientWidth - (canvas.width * newScale)) * 0.5));
         canvas.style.transform = `scale(${newScale})`;
       }
     }
@@ -356,7 +362,7 @@ function App() {
     return () => {
       window.removeEventListener('resize', measure);
     }
-  });
+  }, []);
 
   const addKeyListener = useCallback((listener: KeyListener) => {
     setKeyListeners(oldListeners => {
@@ -370,8 +376,8 @@ function App() {
     });
   }, []);
 
-  const handleGamepad = useCallback((e: GamepadEvent) => {
-    console.log(e);
+  const handleGamepad = useCallback(() => {
+    setHasGamepads(true);
   }, []);
 
   const stopAudioContext = useCallback(() => {
@@ -501,7 +507,6 @@ function App() {
       loadRom(lastRom.data, lastRom.filename);
       setLoadingString(null);
       localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ROM, lastRom.sha);
-      _setRunMode(RunModeType.RUNNING);
       queryClient.invalidateQueries(['roms']);
     },
     onError: (error) => {
@@ -569,12 +574,14 @@ function App() {
     document.addEventListener('keyup', handleKeyEvent);
     document.addEventListener('visibilitychange', handleFocus);
     window.addEventListener('gamepadconnected', handleGamepad);
+    window.addEventListener('gamepaddisconnected', handleGamepad);
 
     return () => {
       document.removeEventListener('visibilitychange', handleFocus);
       document.removeEventListener('keydown', handleKeyEvent);
       document.removeEventListener('keyup', handleKeyEvent);
       window.removeEventListener('gamepadconnected', handleGamepad);
+      window.removeEventListener('gamepaddisconnected', handleGamepad);
     }
   }, [handleKeyEvent, handleGamepad, handleFocus])
 
@@ -643,7 +650,7 @@ function App() {
   } else {
     titleText = title ?? 'No file selected'
   }
-
+  
   return (
     <>
       <Title text={titleText} isOpen={showControls} />
@@ -670,6 +677,9 @@ function App() {
             </p>
           </div>)
         }
+
+        { !hasGamepads && <TouchControls emulator={emulator} sideWidth={sideWidth}/> }
+
         <ErrorBoundary>
           {Object.entries(DebugDialogComponents).map(([type, DialogComponent]) => dialogState[type] && (
             <DialogComponent

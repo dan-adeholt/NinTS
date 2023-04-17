@@ -1,0 +1,106 @@
+
+.leftSide {
+  left: 0;
+}
+
+.rightSide {
+  position: absolute;
+  right: 0;
+}
+
+.leftSide, .rightSide {
+  padding: 7vw 1vw 7vw 1vw;
+  position: absolute;  
+  height: 100%;  
+  z-index: 9;
+  flex-direction: column;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.space {
+  height: 1px;
+  flex-grow: 1;
+}
+
+.directionControls {
+  width: 100%;
+  aspect-ratio: 1;
+  margin-top: auto;
+  margin-bottom: auto;
+  display: grid;
+  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas: 
+    "up up"
+    "left right"
+    "down down";
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+}
+
+.directionControls svg {
+  font-size: 3.5vw;
+}
+
+.select, .start {
+  font-size: 3.0vw;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1vw;
+  border-radius: 1vw;
+}
+
+.primaryButtons > div {
+  background: #e4001f;
+  width: calc(100%);
+  border-radius: 2vw;
+  margin-bottom: 1vw;
+  padding: 1.5vw 0 1.5vw 0;
+  border: 0.25vw solid #888;
+}
+
+.select, .start, .directionControls {
+  border: 0.25vw solid #555;
+}
+
+.primaryButtons > div:last-child { 
+  margin-bottom: 0;
+}
+
+.primaryButtons {
+  width: 100%;
+  font-size: 5vw;
+}
+
+.directionControls > div, .primaryButtons > div, .select, .start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.up {
+  grid-area: up;
+}
+
+.left {
+  grid-area: left;
+}
+
+.right {
+  grid-area: right;
+}
+
+.down {
+  grid-area: down;
+}
+
+.leftSide, .rightSide {
+  display: none;
+}
+
+@media (pointer:coarse) and (orientation:landscape) {
+  .leftSide, .rightSide {
+    display: flex;  
+  }
+}
