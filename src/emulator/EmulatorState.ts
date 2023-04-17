@@ -140,7 +140,20 @@ class Controller {
   }
 
   setLatch() {
-    this.latch = this.value;
+    let filteredValue = this.value;
+
+    // Invalid button combinations - if both set, clear both  
+    if (filteredValue & INPUT_LEFT && filteredValue & INPUT_RIGHT) {
+      filteredValue &= ~INPUT_LEFT;
+      filteredValue &= ~INPUT_RIGHT;
+    }
+
+    if (filteredValue & INPUT_UP && filteredValue & INPUT_DOWN) {
+      filteredValue &= ~INPUT_UP;
+      filteredValue &= ~INPUT_DOWN;
+    }
+
+    this.latch = filteredValue;
   }
 
   resetReadBits() {
