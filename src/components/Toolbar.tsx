@@ -66,7 +66,6 @@ const Toolbar = ({
   const { mutate: saveGame } = useMutation(appStorage.saveEmulator, {
     onSuccess: () => {
       setMenuState({});
-      setRunMode(RunModeType.RUNNING);
     }
   });
 
@@ -75,7 +74,6 @@ const Toolbar = ({
       if (romEntry != null) {
         emulator.loadEmulator(JSON.parse(romEntry.data))
         setMenuState({});
-        setRunMode(RunModeType.RUNNING);
       }
     }
   });
@@ -88,14 +86,16 @@ const Toolbar = ({
 
   const saveState = useCallback(() => {
     if (emulator.rom != null) {
+      setRunMode(RunModeType.RUNNING);  
       const state = JSON.stringify(emulator.saveEmulator());
       saveGame({ data: state, index: 0, sha: emulator.rom.romSHA });
     }
-  }, [emulator]);
+  }, [emulator, setRunMode]);
 
   const loadState = useCallback(() => {
     loadGame(emulator.rom?.romSHA);
-  }, [emulator]);
+    setRunMode(RunModeType.RUNNING);
+  }, [emulator, setRunMode]);
 
   const [autoloadEnabled, setAutoloadEnabled] = useState(localStorageAutoloadEnabled());
   
@@ -292,11 +292,11 @@ const Toolbar = ({
           handleFileSelected={romFileChanged}
           handleFileClick={handleFileClick}
           onClose={() => setDialogState({})}
+          setRunMode={setRunMode}
           romList={romNamesQuery.data}
           loadRom={(romBuffer: Uint8Array, filename: string) => {
             setDialogState({});
             loadRom(romBuffer, filename);
-            setRunMode(RunModeType.RUNNING);
           }}
         />
       )}

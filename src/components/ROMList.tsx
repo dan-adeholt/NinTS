@@ -7,6 +7,7 @@ import { useContextWithErrorIfNull } from '../hooks/useSafeContext';
 import styles from './ROMList.module.css';
 import Dialog, { DialogVerticalPosition } from './Dialog';
 import classNames from 'classnames';
+import { RunModeType } from './App';
 
 type ROMListProps = {
   romList: RomFilenameEntry[]
@@ -14,9 +15,10 @@ type ROMListProps = {
   loadRom: (rom: Uint8Array, filename: string) => void,
   handleFileClick: () => void
   handleFileSelected: (e : React.ChangeEvent<HTMLInputElement>) => void
+  setRunMode: (runMode: RunModeType) => void
 }
 
-const ROMList = ({ romList, loadRom, onClose, handleFileClick, handleFileSelected } : ROMListProps) => {
+const ROMList = ({ romList, loadRom, onClose, handleFileClick, handleFileSelected, setRunMode } : ROMListProps) => {
   const appStorage = useContextWithErrorIfNull(ApplicationStorageContext);
   const [endIndex, setEndIndex] = useState(100);
   const [searchFilter, setSearchFilter] = useState('');
@@ -32,7 +34,8 @@ const ROMList = ({ romList, loadRom, onClose, handleFileClick, handleFileSelecte
   
   const _loadRom = useCallback((romEntry: RomFilenameEntry) => {
     loadRomFromBackend(romEntry.sha);  
-  }, [loadRomFromBackend]);
+    setRunMode(RunModeType.RUNNING);
+  }, [loadRomFromBackend, setRunMode]);
 
   const listToUse = useMemo(() => {
     if (searchFilter.length > 0) {
