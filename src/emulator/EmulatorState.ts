@@ -109,6 +109,49 @@ class DelayedFlag {
   }
 }
 
+class Controller {
+  constructor() {
+    this.value = 0
+    this.latch = 0
+    this.numReadBits = 0
+  }
+  
+  setButton(button: number, isDown: boolean) {
+    const mask = ~button;
+
+    this.value &= mask;
+
+    if (isDown) {
+      this.value |= button;
+    }
+  }
+
+  peek()  {
+    if (this.numReadBits >= 8) {
+      return 1;
+    } else {
+      return this.latch & 0x1;
+    }
+  }
+
+  consumeBit() {
+    this.latch >>= 1;
+    this.numReadBits++;
+  }
+
+  setLatch() {
+    this.latch = this.value;
+  }
+
+  resetReadBits() {
+    this.numReadBits = 0;
+  }
+
+  value: number
+  latch: number
+  numReadBits: number
+}
+
 class EmulatorState {
   A = 0;
   X = 0;
@@ -125,12 +168,8 @@ class EmulatorState {
   apu: APU;
   ppu: PPU;
   traceLogLines: string[] = [];
-  controller1 = 0;
-  controller2 = 0;
-  controller1Latch = 0;
-  controller2Latch =  0;
-  controller1NumReadBits = 0;
-  controller2NumReadBits = 0;
+  controller1 = new Controller();
+  controller2 = new Controller();
   controllerStrobe = false;
 
   enableTraceLogging = false;
@@ -196,12 +235,8 @@ class EmulatorState {
     this.addressOperand = 0
     this.addressSpriteDMA = 0
 
-    this.controller1 = 0;
-    this.controller2 = 0;
-    this.controller1Latch = 0;
-    this.controller2Latch = 0;
-    this.controller1NumReadBits = 0;
-    this.controller2NumReadBits = 0;
+    this.controller1 = new Controller();
+    this.controller2 = new Controller();    
     this.controllerStrobe = false;
     this.nmiDelayedFlag.reset();
     this.irqDelayedFlag.reset();
@@ -259,20 +294,10 @@ class EmulatorState {
   }
 
   setInputController(button: number, isDown: boolean, buttonIndex: number) {
-    const mask = ~button;
-
     if (buttonIndex === 0) {
-      this.controller1 &= mask;
-
-      if (isDown) {
-        this.controller1 |= button;
-      }
+      this.controller1.setButton(button, isDown);
     } else {
-      this.controller2 &= mask;
-
-      if (isDown) {
-        this.controller2 |= button;
-      }
+      this.controller2.setButton(button, isDown);
     }
   }
 
@@ -287,26 +312,16 @@ class EmulatorState {
     let value;
 
     if (addr === 0x4016) {
-      if (this.controller1NumReadBits >= 8) {
-        value = 1;
-      } else {
-        value = this.controller1Latch & 0x1;
-      }
-      
-      if (!peek && !this.controllerStrobe) {
-        this.controller1Latch >>= 1;
-        this.controller1NumReadBits++;
-      }
-    } else {
-      if (this.controller2NumReadBits >= 8) {
-        value = 1;
-      } else {
-        value = this.controller2Latch & 0x1;
-      }
+      value = this.controller1.peek();
 
       if (!peek && !this.controllerStrobe) {
-        this.controller2Latch >>= 1;
-        this.controller2NumReadBits++;
+        this.controller1.consumeBit();
+      }
+    } else {
+      value = this.controller2.peek();  
+
+      if (!peek && !this.controllerStrobe) {
+        this.controller1.consumeBit();
       }
     }
 
@@ -343,14 +358,14 @@ class EmulatorState {
 
     if (value & 0b1) {
       if (addr === 0x4016) {
-        this.controller1Latch = this.controller1;
+        this.controller1.setLatch();
       } else {
-        this.controller2Latch = this.controller2;
+        this.controller2.setLatch();  
       }
     }
 
-    this.controller1NumReadBits = 0;
-    this.controller2NumReadBits = 0;
+    this.controller1.resetReadBits();
+    this.controller2.resetReadBits();
   }
 
   tickDMCWaitCycle() {
