@@ -73,7 +73,6 @@ class MMC1Mapper extends Mapper {
   }
 
   update(target: number, setting: number) {
-    // console.log('Updating because', target, 'changed with value', setting)
     this.registers[target] = setting;
     const mirroringMode = registerToMirroringMode(this.registers[0] & 0b11);
     const prgSetting = (this.registers[0] & 0b01100) >> 2;
@@ -142,7 +141,6 @@ class MMC1Mapper extends Mapper {
   }
 
   handleROMWrite(address: number, value: number) {
-    // console.log('Handle ROM write', hex(address), hex(value), cycle, this.shiftRegister);
     if (value & BIT_7) {
       this.resetRegister();
     } else {

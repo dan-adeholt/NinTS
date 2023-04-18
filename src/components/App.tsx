@@ -8,7 +8,7 @@ import EmulatorState, {
     INPUT_RIGHT,
     INPUT_UP
 } from '../emulator/EmulatorState';
-import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH, setIsSteppingScanline } from '../emulator/ppu';
+import { PRE_RENDER_SCANLINE, SCREEN_HEIGHT, SCREEN_WIDTH } from '../emulator/ppu';
 import AudioBuffer from './AudioBuffer';
 import { AUDIO_BUFFER_SIZE, SAMPLE_RATE, FRAMES_PER_SECOND } from '../emulator/apu';
 import Toolbar from './Toolbar';
@@ -464,14 +464,12 @@ function App() {
     animationFrameRef.current = null;
 
     if (newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE || newRunMode === RunModeType.RUNNING_SINGLE_FRAME) {
-      setIsSteppingScanline(newRunMode == RunModeType.RUNNING_SINGLE_SCANLINE);
       emulator.stepFrame(newRunMode === RunModeType.RUNNING_SINGLE_SCANLINE);
       if (display.current != null && emulator) {
         display.current.framebuffer.set(emulator.ppu.framebuffer, 0);
         display.current.context.putImageData(display.current.imageData, 0, 0);
       }
       setRunMode(RunModeType.STOPPED);
-      setIsSteppingScanline(false);
     } else if (newRunMode !== RunModeType.STOPPED && display.current) {
       setRunMode(newRunMode);
 
@@ -499,7 +497,7 @@ function App() {
     }
 
     triggerRefresh();
-  }, [triggerRefresh, showDebugInfo, runMode, inputConfig, emulator, initAudioContext, stopAudioContext, display, setRunMode, setIsSteppingScanline]);
+  }, [triggerRefresh, showDebugInfo, runMode, inputConfig, emulator, initAudioContext, stopAudioContext, display, setRunMode]);
 
   const { mutate: addRom } = useMutation(appStorage.addRoms, {
     onSuccess: (_res, args) => {

@@ -110,16 +110,6 @@ export default class SquareWaveGenerator {
         this.envelope.constantVolume = constantVolume === 1;
         this.envelope.envelopePeriodOrVolume = volumeEnvelope;
 
-        // if (print) {
-        //   console.log('1SEQ', dutyCycle, 'HC:', haltCounterOrEnvelopeLoop, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
-        // }
-
-        // if (this.volumeOrEnvelopePeriod != 0) {
-        //   if (--debug) console.log('Sq lc', this.index, this.lengthCounter, this.volumeOrEnvelopePeriod);
-        // }
-        // if (this.index === 0) {
-        //   console.log('SEQ', dutyCycle, 'HC:', haltCounterOrEnvelopeLoop, 'CV:', this.constantVolume, 'VE', volumeEnvelope);
-        // }
         break;
       } case 1: { // Sweep setup
         const sweepEnabled = ((value & 0b10000000) >> 7) === 1;
@@ -131,11 +121,6 @@ export default class SquareWaveGenerator {
         this.sweepShift = (value & 0b00000111);
         this.updateSweepTargetPeriod();
         this.sweepReloadFlag = true;
-
-
-        // if (print) {
-        //   console.log('2SWEEP', this.sweepEnabled, this.sweepPeriod, this.sweepNegate, this.sweepShift);
-        // }
 
         break;
       }
@@ -154,11 +139,6 @@ export default class SquareWaveGenerator {
         }
 
         this.envelope.envelopeStartFlag = true;
-
-        // console.log('Set square', this.index, timerIndex, this.lengthCounter);
-        // if (this.index === 0) console.log('TH, TS:', this.timerSetting, 'LC:', this.lengthCounter);
-        // console.log('TH', this.timerHigh, 'TV', this.timerValue);
-        // console.log('LC', this.lengthCounter);
         break;
       }
       default:

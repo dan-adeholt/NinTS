@@ -53,11 +53,9 @@ class TriangleWaveGenerator {
       this.linearCounterHaltFlag = ((value & 0b10000000) >> 7) === 1;
       this.lengthCounter.setHalt(this.linearCounterHaltFlag);
       this.linearCounterReload = value & 0b01111111;
-      // console.log('0x4008 Halt', this.linearCounterHaltFlag, 'Reload', this.linearCounterReload);
     } else if (address === 0x400A) {
       this.timerSetting &= 0b11100000000;
       this.timerSetting |= value;
-      // console.log('0x400A timer', this.timerSetting);
     } else if (address === 0x400B) {
       const timerHigh =    (value & 0b00000111);
 
@@ -69,7 +67,6 @@ class TriangleWaveGenerator {
       this.timerSetting |= (timerHigh << 8);
       this.timerValue = this.timerSetting;
       this.linearReloadFlag = true;
-      // console.log('0x400B', this.timerSetting, this.lengthCounter.lengthCounter);
     }
   }
 

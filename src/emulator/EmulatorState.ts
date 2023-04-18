@@ -471,10 +471,6 @@ class EmulatorState {
   }
 
   setMem(address: number, value: number) {
-    // if (address === 0xF0) {
-    //   console.log('WRITE f0', value);
-    // }
-
     // TODO: Add mirroring here
     if (address === OAM_DMA) {
       this.initSpriteDMA(value);

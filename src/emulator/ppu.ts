@@ -50,21 +50,6 @@ const VRAM_SPRITE_PALETTE_1_ADDRESS = 0x3F11;
 export const SCREEN_WIDTH = 256;
 export const SCREEN_HEIGHT = 240;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let isSteppingScanline = false;
-
-export function setIsSteppingScanline(_isSteppingScanline: boolean) {
-  isSteppingScanline = _isSteppingScanline;
-}
-
-// const dumpScrollPointer = pointer => {
-//   const FY = (pointer & 0b111000000000000) >> 12;
-//   const NT = (pointer & 0b000110000000000) >> 10;
-//   const CY = (pointer & 0b000001111100000) >> 5;
-//   const CX = (pointer & 0b000000000011111);
-//   return '[FineY: ' + FY + ', NTable: ' + NT + ', CoarseY: ' + CY + ', CoarseX: ' + CX + ']';
-// }
-
 export function greyScaleColorForIndexedColor(indexedColor: number) {
   switch (indexedColor) {
     case 0x0:
@@ -462,20 +447,12 @@ class PPU {
   }
 
   clearSecondaryOAM() {
-    // if (isSteppingScanline) {
-    //   this.scanlineLogger.log('Clearing secondary OAM');
-    // }
-
     for (let i = 0; i < this.secondaryOamMemory.length; i++) {
       this.secondaryOamMemory[i] = 0xFF;
     }
   }
 
   initializeSecondaryOAM() {
-    // if (isSteppingScanline) {
-    //   this.scanlineLogger.log('Init secondary OAM');
-    // }
-
     let secondaryIndex = 0;
     const scanline = this.scanline;
 
@@ -485,10 +462,6 @@ class PPU {
     for (; n < (this.oamMemory.length - 3) && secondaryIndex < this.secondaryOamMemory.length; n+=4) {
       const y = this.oamMemory[n];
       if (scanline >= y && scanline < (y + this.controlSpriteSize)) {
-        // if (isSteppingScanline) {
-        //   this.scanlineLogger.log(i + ' - Adding sprite to secondary OAM at ' + this.oamMemory[i+3] + ',' + y + ' - ' + this.oamMemory[i+1] + ' ' + this.oamMemory[i+2]);
-        // }
-
         this.secondaryOamMemory[secondaryIndex++] = y;
         this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[n+1];
         this.secondaryOamMemory[secondaryIndex++] = this.oamMemory[n+2];
@@ -834,10 +807,6 @@ class PPU {
       this.spriteOverflow = false;
       this.updateNMIFlag();
     }
-
-    // if (isSteppingScanline) {
-    //   this.scanlineLogger.clear();
-    // }
 
     if (this.scanlineCycle === 0) {
       this.spriteZeroHit = false;

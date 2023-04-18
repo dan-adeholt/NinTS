@@ -15,7 +15,6 @@ class UNRomMapper extends Mapper {
   }
 
   update(prgBank: number) {
-    // console.log('Updating because', target, 'changed with value', setting)
     // Fix last bank at $C000 and switch 16 KB bank at $8000
     const bankEnd = this.rom.settings.prgRomSize;
 

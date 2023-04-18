@@ -51,10 +51,6 @@ class PPUMemorySpace {
   }
 
   setMirroringMode(mirroringMode: MirroringMode) {
-    // if (this.mirroringMode !== mirroringMode) {
-    //   console.log('Setting mirroring mode to', mirroringMode, mirroringModeToString(mirroringMode));
-    // }
-
     this.mirroringMode = mirroringMode;
 
     switch(mirroringMode) {
