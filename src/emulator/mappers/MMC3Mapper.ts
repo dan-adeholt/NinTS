@@ -60,10 +60,7 @@ class MMC3Mapper extends Mapper {
   constructor(rom: Rom, cpuMemory: CPUMemorySpace, ppuMemory: PPUMemorySpace) {
     super(cpuMemory, ppuMemory);
     this.rom = rom;
-    this.reload();
-  }
-
-  override reload() {
+    
     for (let i = 0; i < this.registers.length; i++) {
       this.registers[i] = 0;
     }
@@ -76,7 +73,11 @@ class MMC3Mapper extends Mapper {
     this.irqReloadValue = 0;
     this.irqReload = false;
     this.disableIrq = false;
-    this.a12Counter = new A12Counter();    
+    this.a12Counter = new A12Counter();
+    this.updateBanks();
+  }
+
+  override reload() {
     this.updateBanks();
   }
 
