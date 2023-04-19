@@ -69,7 +69,7 @@ const Toolbar = ({
     }
   });
 
-  const { mutate: loadGame } = useMutation(appStorage.loadEmulator, {
+  const { mutate: loadGame } = useMutation(appStorage.getRomSavegame, {
     onSuccess: (romEntry) => {
       if (romEntry != null) {
         emulator.loadEmulator(JSON.parse(romEntry.data))

@@ -51,10 +51,6 @@ export default class ApplicationStorage {
     })
   }
 
-  loadEmulator = (sha: string) => {
-    return this.database.get('romSaveState', sha);
-  }
-
   getRomData = (sha: string) => {
     return this.database.get('roms', sha);  
   }
