@@ -29,6 +29,11 @@ const ignoredKeys = [
   'mapper.ppuMemory.chrSource',
   'mapper.cpuMemory.memory',
   'mapper.cpuMemory.prgRom',
+  'mapper.rom',
+  'ppuMemory.memory',
+  'ppuMemory.chrSource',
+  'cpuMemory.memory',
+  'cpuMemory.prgRom',
   'ppu.mapper',
   'ppu.framebuffer',
   'traceLogLines',
@@ -48,15 +53,25 @@ const readObjectState = (state: any, data: any) => {
     }
 
     if (!Array.isArray(value) && value instanceof Object) {
-      if (value.constructor === Uint8Array) {
+      if (state[key].constructor === Uint8Array) {
         state[key].set(Uint8Array.from(storedValue));
-      } else if (value.constructor === Uint32Array) {
+      } else if (state[key].constructor === Uint32Array) {
         state[key].set(Uint32Array.from(storedValue));
       } else {
         readObjectState(value, storedValue);
       }
     } else {
-      state[key] = storedValue;
+      if (Array.isArray(state[key]) && state[key].length > 0) {
+        if (state[key][0].constructor === Uint8Array) {
+          state[key] = storedValue.map((v: any) => Uint8Array.from(v));
+        } else if (state[key][0].constructor === Uint32Array) {
+          state[key] = storedValue.map((v: any) => Uint32Array.from(v));
+        } else {
+          state[key] = storedValue;
+        }
+      } else {
+        state[key] = storedValue;
+      }
     }
   });
 }
@@ -69,7 +84,7 @@ const dumpObjectState = (state : any, prefix = '') => {
     if (ignoredKeys.includes(prefix + key) || typeof value === 'function') {
       return;
     }
-
+    
     if (!Array.isArray(value) && value instanceof Object) {
       if (value.constructor === Uint8Array || value.constructor === Uint32Array) {
         dumpedState[key] = Array.from(value);
@@ -77,7 +92,15 @@ const dumpObjectState = (state : any, prefix = '') => {
         dumpedState[key] = dumpObjectState(value, prefix + key + '.');
       }
     } else {
-      dumpedState[key] = value;
+      if (Array.isArray(value) && value.length > 0 && value[0] instanceof Object) {
+        if (value[0].constructor === Uint8Array || value[0].constructor === Uint32Array) {
+          dumpedState[key] = Array.from(value.map((v: any) => Array.from(v)));
+        } else {
+          dumpedState[key] = value;
+        }
+      } else {
+        dumpedState[key] = value;
+      }
     }
   });
 
