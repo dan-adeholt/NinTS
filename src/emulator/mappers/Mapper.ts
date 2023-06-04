@@ -7,8 +7,9 @@ class Mapper {
     irq = false
 
     constructor(cpuMemory: CPUMemorySpace, ppuMemory: PPUMemorySpace) {
-        this.cpuMemory = cpuMemory;
-        this.ppuMemory = ppuMemory;
+      this.irq = false;
+      this.cpuMemory = cpuMemory;
+      this.ppuMemory = ppuMemory;
     }
 
     reload() {

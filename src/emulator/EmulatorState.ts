@@ -389,15 +389,12 @@ class EmulatorState {
     }
   }
 
-  setInputMem(addr: number, value: number) {
+  setInputMem(_addr: number, value: number) {
     this.controllerStrobe = (value & 0b1) === 0b1;
 
     if (value & 0b1) {
-      if (addr === 0x4016) {
-        this.controller1.setLatch();
-      } else {
-        this.controller2.setLatch();  
-      }
+      this.controller1.setLatch();
+      this.controller2.setLatch();  
     }
 
     this.controller1.resetReadBits();
