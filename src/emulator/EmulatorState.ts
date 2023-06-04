@@ -357,7 +357,7 @@ class EmulatorState {
       value = this.controller2.peek();  
 
       if (!peek && !this.controllerStrobe) {
-        this.controller1.consumeBit();
+        this.controller2.consumeBit();
       }
     }
 
