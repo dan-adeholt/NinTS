@@ -53,6 +53,7 @@ function phaseToString(phase: Phase) {
 
 const CompareTraceDebugger = ({ emulator, onClose, onRefresh } : DebugDialogProps) => {
   const fileUrl = (localStorage.getItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL + '-' + emulator.rom?.romSHA) as string) ?? '';
+  const isCrossOriginIsolated = window.crossOriginIsolated === true;
 
   const _setFileUrl = (newUrl: string) => {
     localStorage.setItem(LOCAL_STORAGE_KEY_LAST_COMPARE_URL + '-' + emulator.rom?.romSHA, newUrl);
@@ -199,15 +200,21 @@ const CompareTraceDebugger = ({ emulator, onClose, onRefresh } : DebugDialogProp
 
   const errorDetails = phase.phase === 'error' ? phase.data as ErrorType : null
   const isLoadingOrComparing = phase.phase === 'loading' || phase.phase === 'comparing';
+  const canCompare = isCrossOriginIsolated;
 
   return (
     <Dialog onClose={onClose} title="Compare trace debugger">
       <div className={styles.inputRow}>
-        <input value={fileUrl} onChange={e => _setFileUrl(e.target.value)}/>
-        <button disabled={isLoadingOrComparing} onClick={compare}>Compare</button>
-        <button disabled={isLoadingOrComparing} onClick={mute}>Mute</button>
-        <button disabled={isLoadingOrComparing} onClick={clearMuted}>Clear muted</button>
+        <input value={fileUrl} onChange={e => _setFileUrl(e.target.value)} disabled={!canCompare}/>
+        <button disabled={isLoadingOrComparing || !canCompare} onClick={compare}>Compare</button>
+        <button disabled={isLoadingOrComparing || !canCompare} onClick={mute}>Mute</button>
+        <button disabled={isLoadingOrComparing || !canCompare} onClick={clearMuted}>Clear muted</button>
       </div>
+      {!canCompare && (
+        <div className={styles.warningText}>
+          Cross-origin isolation is required to fetch external trace logs for comparison.
+        </div>
+      )}
       <div className={classNames(styles.monospace, styles.compareTraceDebugger)}>
         { phaseToString(phase) }<br/>
         { errorDetails && (

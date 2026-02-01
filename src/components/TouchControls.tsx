@@ -25,6 +25,8 @@ const TouchControls = ({ emulator, sideWidth } : TouchControlsProps) => {
   const dpad = useRef<HTMLDivElement>(null);
 
   const updateDpad = (event: React.TouchEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
     clearDpad();
     const rect = dpad.current?.getBoundingClientRect();
     if (rect == null) {
@@ -57,11 +59,15 @@ const TouchControls = ({ emulator, sideWidth } : TouchControlsProps) => {
   }  
 
   const stopPropagation = (e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()
+  const stopTouch = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 
   return (
     <>
       <div className={styles.leftSide} style={{ width: sideWidth }} onMouseMove={stopPropagation}>
-        <div className={styles.directionControls} ref={dpad} onTouchEnd={clearDpad} onTouchStart={updateDpad} onTouchMove={updateDpad}>
+        <div className={styles.directionControls} ref={dpad} onTouchEnd={(e) => { stopTouch(e); clearDpad(); }} onTouchStart={updateDpad} onTouchMove={updateDpad}>
           <div className={styles.up}>
             <FontAwesomeIcon icon={faUpLong} />
           </div>
@@ -78,20 +84,20 @@ const TouchControls = ({ emulator, sideWidth } : TouchControlsProps) => {
       </div>
 
       <div className={styles.rightSide} style={{ width: sideWidth }} onMouseMove={stopPropagation}>
-        <div className={styles.select} onTouchStart={() => setButton(INPUT_SELECT, true)} onTouchEnd={() => setButton(INPUT_SELECT, false)}>
+        <div className={styles.select} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_SELECT, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_SELECT, false); }}>
           SELECT
         </div>
         <div className={styles.space} />
         <div className={styles.primaryButtons}>
-          <div className={styles.a} onTouchStart={() => setButton(INPUT_A, true)} onTouchEnd={() => setButton(INPUT_A, false)}>
+          <div className={styles.a} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_A, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_A, false); }}>
             A
           </div>
-          <div className={styles.b} onTouchStart={() => setButton(INPUT_B, true)} onTouchEnd={() => setButton(INPUT_B, false)}>
+          <div className={styles.b} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_B, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_B, false); }}>
             B
           </div>
         </div>
         <div className={styles.space} />
-        <div className={styles.start} onTouchStart={() => setButton(INPUT_START, true)} onTouchEnd={() => setButton(INPUT_START, false)}>
+        <div className={styles.start} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_START, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_START, false); }}>
           START
         </div>
       </div>

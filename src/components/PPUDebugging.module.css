@@ -37,6 +37,12 @@
     margin-left: 10px;
 }
 
+.warningText {
+    margin-top: 8px;
+    color: #c28500;
+    font-size: 12px;
+}
+
 .hexViewer {
     max-height: 600px;
     overflow-y: auto;

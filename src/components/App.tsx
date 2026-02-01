@@ -67,8 +67,8 @@ const FPS_LOCK_TABLE: FpsLockEntry[] = [
 const FPS_LOCK_EPSILON = 1;
 
 type AudioState = {
-    scriptProcessor: ScriptProcessorNode
     audioContext: AudioContext
+    audioNode: AudioNode
 }
 
 type Display = {
@@ -76,6 +76,12 @@ type Display = {
   context: CanvasRenderingContext2D
   imageData: ImageData
   framebuffer: Uint32Array
+}
+
+type AnimationState = {
+  animationFrameIndex: number
+  emulatorTime: number
+  lastTime: number
 }
 
 const textBuffer = new Uint8Array(64)
@@ -98,6 +104,11 @@ const renderScreen = (display: Display | null, emulator: EmulatorState | null, s
 
 export type KeyListener = (event: KeyboardEvent) => void
 const audioBuffer = new AudioBuffer();
+const RING_BUFFER_SAMPLES = 1 << 16;
+const RING_BUFFER_MASK = RING_BUFFER_SAMPLES - 1;
+const AUDIO_TARGET_BUFFER_SAMPLES = 1024;
+const AUDIO_MAX_BUFFER_SLACK = 1024;
+const noop = () => undefined;
 
 const emulator = new EmulatorState();
 
@@ -148,9 +159,8 @@ const updateFrame = (
   setShowControls: React.Dispatch<React.SetStateAction<boolean>>,
   hideControlsTimer: React.MutableRefObject<number>,
   animationFrameRef: React.MutableRefObject<number | null>,
-  animationFrameIndex = 0,
-  emulatorTime = performance.now(),
-  lastTime = performance.now()
+  animationState: AnimationState,
+  rafCallback: (timestamp: number) => void
 ) => {
   let stopped = false;
   const gamepads = navigator.getGamepads();
@@ -191,6 +201,7 @@ const updateFrame = (
     }
   }
 
+  let { animationFrameIndex, emulatorTime, lastTime } = animationState;
   const timeDelta = timestamp - lastTime;
   
   const tick = (): boolean => {
@@ -239,15 +250,16 @@ const updateFrame = (
   
   frameTimingBuffer.push(numFrames);
   lastTime = timestamp;
+  animationState.animationFrameIndex = animationFrameIndex;
+  animationState.emulatorTime = emulatorTime;
+  animationState.lastTime = lastTime;
 
   if (!stopped) {
     if (animationFrameRef.current != null) {
       window.cancelAnimationFrame(animationFrameRef.current);
     }
 
-    animationFrameRef.current = window.requestAnimationFrame((_newTimestamp) => {
-      updateFrame(_newTimestamp, display, onStopped, runMode, inputConfigLookup, showDebugInfo, setShowControls, hideControlsTimer, animationFrameRef, animationFrameIndex, emulatorTime, lastTime);
-    });
+    animationFrameRef.current = window.requestAnimationFrame(rafCallback);
   }
 }
 
@@ -265,6 +277,13 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState<string | null>(null);
   const initialRomLoaded = useRef(false);
+  const audioRef = useRef<AudioState | null>(null);
+  const audioSampleSinkRef = useRef<(sampleLeft: number, sampleRight: number) => void>(
+    (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight)
+  );
+  const onAudioSample = useCallback((sampleLeft: number, sampleRight: number) => {
+    audioSampleSinkRef.current(sampleLeft, sampleRight);
+  }, []);
 
   const [hasGamepads, setHasGamepads] = useState(deviceHasGamepads);
 
@@ -278,7 +297,7 @@ function App() {
 
       try {
         const data = parseROM(romData.value.data);
-        emulator.initMachine(data, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+        emulator.initMachine(data, false, onAudioSample);
         setTitle(romData.value.filename);
 
         if (localStorageAutoloadEnabled() && romSaveData.status !== 'rejected' && romSaveData.value != null) {
@@ -315,7 +334,6 @@ function App() {
 
   // Store it as memo inside component so that HMR works properly.
   const DebugDialogComponents = useMemo(() => getDebugDialogComponents(), []);
-  const audioRef = useRef<AudioState | null>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [refresh, triggerRefresh] = useReducer(num => num + 1, 0);
   const [runMode, setRunMode] = useState(RunModeType.STOPPED);
@@ -382,35 +400,140 @@ function App() {
 
   const stopAudioContext = useCallback(() => {
     if (audioRef.current) {
-      audioRef.current.scriptProcessor.disconnect(audioRef.current.audioContext.destination);
+      audioRef.current.audioNode.disconnect(audioRef.current.audioContext.destination);
+      audioRef.current.audioContext.close();
       audioRef.current = null;
     }
+    audioSampleSinkRef.current = noop;
   }, []);
 
-  const initAudioContext = useCallback(() => {
+  const initAudioContext = useCallback(async () => {
     stopAudioContext();
+    audioSampleSinkRef.current = noop;
     // Setup audio.
-    const audioContext = new window.AudioContext({
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const audioContext = new AudioContextCtor({
       sampleRate: SAMPLE_RATE
     });
 
-    const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
-    scriptProcessor.onaudioprocess = event => {
-      audioBuffer.writeToDestination(event.outputBuffer, () => {
-        // We are missing a few samples. The emulator stops right after vblank is hit,
-        // we can try to do a few more cycles before the pre-render scanline so that the
-        // audio buffer can be filled
-        while (audioRef.current && emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
-          emulator.step();
-        }
-      });
+    const canUseWorklet = !!audioContext.audioWorklet;
+    let workletReady = false;
+    try {
+      if (canUseWorklet) {
+        await audioContext.audioWorklet.addModule(new URL('./audio-worklet-processor.ts', import.meta.url));
+        workletReady = true;
+      }
+    } catch (err) {
+      console.error('Failed to load audio worklet module', err);
     }
-    scriptProcessor.connect(audioContext.destination);
+
+    if (!workletReady) {
+      const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 2);
+      scriptProcessor.onaudioprocess = event => {
+        audioBuffer.writeToDestination(event.outputBuffer, () => {
+          while (audioRef.current && emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
+            emulator.step();
+          }
+        });
+      };
+      scriptProcessor.connect(audioContext.destination);
+      audioSampleSinkRef.current = (sampleLeft: number, sampleRight: number) => {
+        audioBuffer.receiveSample(sampleLeft, sampleRight);
+      };
+      audioRef.current = {
+        audioNode: scriptProcessor,
+        audioContext
+      };
+
+      if (audioContext.state !== 'running') {
+        await audioContext.resume();
+      }
+      return;
+    }
+    const canUseSharedArrayBuffer = window.crossOriginIsolated === true && typeof SharedArrayBuffer !== 'undefined';
+    const sharedBuffers = canUseSharedArrayBuffer
+      ? {
+          left: new SharedArrayBuffer(RING_BUFFER_SAMPLES * Float32Array.BYTES_PER_ELEMENT),
+          right: new SharedArrayBuffer(RING_BUFFER_SAMPLES * Float32Array.BYTES_PER_ELEMENT),
+          indices: new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT)
+        }
+      : null;
+    const audioNode = new AudioWorkletNode(audioContext, 'nes-audio-worklet', {
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      ...(sharedBuffers ? {
+        processorOptions: {
+          shared: {
+            ...sharedBuffers,
+            size: RING_BUFFER_SAMPLES,
+            target: AUDIO_TARGET_BUFFER_SAMPLES,
+            maxSlack: AUDIO_MAX_BUFFER_SLACK
+          }
+        }
+      } : {})
+    });
 
     audioRef.current = {
-      scriptProcessor,
+      audioNode,
       audioContext
     };
+
+    if (sharedBuffers) {
+      const sharedLeft = new Float32Array(sharedBuffers.left);
+      const sharedRight = new Float32Array(sharedBuffers.right);
+      const sharedIndices = new Int32Array(sharedBuffers.indices);
+      const writeIndex = Atomics.load(sharedIndices, 0);
+      Atomics.store(sharedIndices, 1, writeIndex);
+
+      audioSampleSinkRef.current = (sampleLeft: number, sampleRight: number) => {
+        const writeIndex = Atomics.load(sharedIndices, 0);
+        const readIndex = Atomics.load(sharedIndices, 1);
+
+        if ((writeIndex - readIndex) >= RING_BUFFER_SAMPLES) {
+          return;
+        }
+
+        const bufferIndex = writeIndex & RING_BUFFER_MASK;
+        sharedLeft[bufferIndex] = sampleLeft;
+        sharedRight[bufferIndex] = sampleRight;
+        Atomics.store(sharedIndices, 0, writeIndex + 1);
+      };
+    } else {
+      audioSampleSinkRef.current = (sampleLeft: number, sampleRight: number) => {
+        audioBuffer.receiveSample(sampleLeft, sampleRight);
+      };
+
+      const sendBlock = () => {
+        const block = audioBuffer.consumeBlock(() => {
+          // We are missing a few samples. The emulator stops right after vblank is hit,
+          // we can try to do a few more cycles before the pre-render scanline so that the
+          // audio buffer can be filled
+          while (audioRef.current && emulator.ppu.scanline !== PRE_RENDER_SCANLINE && !audioBuffer.playBufferFull) {
+            emulator.step();
+          }
+        });
+
+        audioNode.port.postMessage(
+          { type: 'block', left: block.left.buffer, right: block.right.buffer },
+          [block.left.buffer, block.right.buffer]
+        );
+      };
+
+      audioNode.port.onmessage = event => {
+        if (event.data?.type === 'need') {
+          sendBlock();
+        }
+      };
+
+      for (let i = 0; i < 4; i++) {
+        sendBlock();
+      }
+    }
+
+    audioNode.connect(audioContext.destination);
+    if (audioContext.state !== 'running') {
+      await audioContext.resume();
+    }
   }, [stopAudioContext, audioBuffer, emulator]);
 
   const loadRom = useCallback((romBuffer: Uint8Array, filename: string) => {
@@ -419,7 +542,7 @@ function App() {
     setError(null);
     try {
       const rom = parseROM(romBuffer);
-      emulator.initMachine(rom, false, (sampleLeft, sampleRight) => audioBuffer.receiveSample(sampleLeft, sampleRight));
+      emulator.initMachine(rom, false, onAudioSample);
       if (localStorageAutoloadEnabled()) {
         appStorage.getRomSavegame(rom.romSHA).then((savegame) => {
           if (savegame) {
@@ -444,9 +567,43 @@ function App() {
       display.current.context.fillStyle = '#1e1e1e';
       display.current.context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
     }
-  }, [audioBuffer, emulator, triggerRefresh]);
+  }, [appStorage, emulator, onAudioSample, triggerRefresh]);
 
   const animationFrameRef = useRef<number | null>(null);
+  const animationStateRef = useRef<AnimationState>({
+    animationFrameIndex: 0,
+    emulatorTime: performance.now(),
+    lastTime: performance.now()
+  });
+  const onAnimationFrameRef = useRef<(timestamp: number) => void>(() => undefined);
+  const handleStopped = useCallback(() => {
+    // Hit breakpoint
+    stopAudioContext();
+    setShowControls(true);
+    setRunMode(RunModeType.STOPPED);
+    setDialogState(oldState => {
+      return { ...oldState, [DebugDialog.CPUDebugger]: true };
+    });
+  }, [setShowControls, setRunMode, setDialogState, stopAudioContext]);
+
+  onAnimationFrameRef.current = (timestamp: number) => {
+    if (!display.current) {
+      return;
+    }
+    updateFrame(
+      timestamp,
+      display.current,
+      handleStopped,
+      runMode,
+      inputConfigLookup,
+      showDebugInfo,
+      setShowControls,
+      hideControlsTimer,
+      animationFrameRef,
+      animationStateRef.current,
+      onAnimationFrameRef.current
+    );
+  };
 
   const _setRunMode = useCallback((newRunMode: RunModeType) => {
     if (animationFrameRef.current != null) {
@@ -455,7 +612,7 @@ function App() {
 
     if (newRunMode === RunModeType.RUNNING) {
       hideControlsTimer.current = 60;
-      initAudioContext();
+      void initAudioContext();
     } else {
       setShowControls(true);
       stopAudioContext();
@@ -472,32 +629,31 @@ function App() {
       setRunMode(RunModeType.STOPPED);
     } else if (newRunMode !== RunModeType.STOPPED && display.current) {
       setRunMode(newRunMode);
+      animationStateRef.current = {
+        animationFrameIndex: 0,
+        emulatorTime: performance.now(),
+        lastTime: performance.now()
+      };
 
       updateFrame(
         performance.now(),
         display.current,
-        () => {
-          // Hit breakpoint
-          stopAudioContext();
-          setShowControls(true);
-          setRunMode(RunModeType.STOPPED);
-          setDialogState(oldState => {
-            return { ...oldState, [DebugDialog.CPUDebugger]: true };
-          });
-        },
+        handleStopped,
         runMode,
         inputConfigLookup,
         showDebugInfo,
         setShowControls,
         hideControlsTimer,
-        animationFrameRef);
+        animationFrameRef,
+        animationStateRef.current,
+        onAnimationFrameRef.current);
 
     } else {
       setRunMode(newRunMode);
     }
 
     triggerRefresh();
-  }, [triggerRefresh, showDebugInfo, runMode, inputConfig, emulator, initAudioContext, stopAudioContext, display, setRunMode]);
+  }, [triggerRefresh, showDebugInfo, runMode, inputConfig, emulator, initAudioContext, stopAudioContext, display, setRunMode, handleStopped]);
 
   const { mutate: addRom } = useMutation(appStorage.addRoms, {
     onSuccess: (_res, args) => {

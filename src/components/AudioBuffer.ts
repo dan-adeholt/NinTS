@@ -80,6 +80,26 @@ class AudioBuffer {
 
     this.playBufferFull = false;
   }
+
+  consumeBlock(requestMoreSamplesCallback: (numSamples: number) => void) {
+    this.expected += AUDIO_BUFFER_SIZE
+
+    if (!this.playBufferFull) {
+      requestMoreSamplesCallback(AUDIO_BUFFER_SIZE - this.writePosition)
+    }
+
+    if (!this.playBufferFull) {
+      this.writeBufferLeft.fill(this.lastSampleLeft, this.writePosition);
+      this.writeBufferRight.fill(this.lastSampleRight, this.writePosition);
+      this.swapAudioBuffers();
+    }
+
+    const left = this.playBufferLeft.slice();
+    const right = this.playBufferRight.slice();
+    this.playBufferFull = false;
+
+    return { left, right };
+  }
 }
 
 export default AudioBuffer;

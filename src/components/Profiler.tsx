@@ -13,6 +13,7 @@ import { hex } from '../emulator/stateLogging';
 
 const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
   const [perfStr, setPerfStr] = useState<string | null>(null);
+  const isCrossOriginIsolated = window.crossOriginIsolated === true;
 
   const profileAPU = useCallback(() => {
     const testEmulator = new EmulatorState();
@@ -137,8 +138,13 @@ const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
       <div className={styles.inputRow}>
         <button onClick={profileAPU}>Profile APU</button>
         <button onClick={profilePPU}>Profile PPU</button>
-        <button onClick={profileCPU}>Profile CPU</button>
+        <button onClick={profileCPU} disabled={!isCrossOriginIsolated}>Profile CPU</button>
       </div>
+      {!isCrossOriginIsolated && (
+        <div className={styles.warningText}>
+          Cross-origin isolation is required to fetch CPU test ROMs from another origin.
+        </div>
+      )}
       <div className={classNames(styles.hexViewer, styles.profiler)}>
         { perfStr }
       </div>
