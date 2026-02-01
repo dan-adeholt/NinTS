@@ -362,13 +362,36 @@ function App() {
     const measure = () => {
       const mainContainer = mainContainerRef.current;
       const canvas = display.current?.element;
+      const viewport = window.visualViewport;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportWidth = viewport?.width ?? window.innerWidth;
+      const viewportOffsetTop = viewport?.offsetTop ?? 0;
+      const viewportOffsetBottom = window.innerHeight - (viewportOffsetTop + viewportHeight);
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (typeof (navigator as Navigator & { standalone?: boolean }).standalone === 'boolean' && (navigator as Navigator & { standalone?: boolean }).standalone);
+      if (viewport) {
+        document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+        document.documentElement.style.setProperty('--app-width', `${viewportWidth}px`);
+      }
+      document.documentElement.style.setProperty('--viewport-top', `${Math.max(0, viewportOffsetTop)}px`);
+      document.documentElement.style.setProperty('--viewport-bottom', `${Math.max(0, viewportOffsetBottom)}px`);
+      document.documentElement.style.setProperty('--touch-top-extra', isStandalone ? '0px' : '24px');
+      document.documentElement.style.setProperty('--touch-side-extra-left', isStandalone ? '0px' : '16px');
+      document.documentElement.style.setProperty('--touch-side-extra-right', isStandalone ? '0px' : '0px');
+      const toolbar = document.querySelector('[data-toolbar="true"]') as HTMLElement | null;
+      if (toolbar) {
+        document.documentElement.style.setProperty('--toolbar-height', `${toolbar.getBoundingClientRect().height}px`);
+      }
+      const touchScale = Math.max(0.78, Math.min(1, viewportHeight / 520));
+      document.documentElement.style.setProperty('--touch-scale', touchScale.toFixed(3));
       if (mainContainer && canvas) {
-        let newScale = (mainContainer.clientHeight) / canvas.height;
-        if (mainContainer.clientHeight > mainContainer.clientWidth) {
-          newScale = (mainContainer.clientWidth) / canvas.width;
+        const containerHeight = mainContainer.clientHeight;
+        const containerWidth = mainContainer.clientWidth;
+        let newScale = containerHeight / canvas.height;
+        if (containerHeight > containerWidth) {
+          newScale = containerWidth / canvas.width;
         }
 
-        setSideWidth(Math.max(0.15 * mainContainer.clientWidth, (mainContainer.clientWidth - (canvas.width * newScale)) * 0.5));
+        setSideWidth(Math.max(0.15 * containerWidth, (containerWidth - (canvas.width * newScale)) * 0.5));
         canvas.style.transform = `scale(${newScale})`;
       }
     }
@@ -376,9 +399,13 @@ function App() {
 
     measure();
     window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('scroll', measure);
 
     return () => {
       window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('scroll', measure);
     }
   }, []);
 

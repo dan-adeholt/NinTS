@@ -7,21 +7,25 @@
 body {
   background: black;
   color: white;
-  height: 100vh;
+  height: var(--app-height);
+  width: var(--app-width);
   box-sizing: border-box;
 }
 
 .mainContainer {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-    width: 100vw;
+  height: var(--app-height);
+  width: var(--app-width);
   align-items: center;
   justify-content: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  position: relative;
 }
 
 #root {
   height: 100%;
+  width: 100%;
   box-sizing: border-box;
 }
 

@@ -164,7 +164,7 @@ const Toolbar = ({
     <>
       <Transition nodeRef={nodeRef} in={isOpen} timeout={animationDuration} unmountOnExit>
         {state => (
-          <div className={classNames(styles.toolbar)} ref={nodeRef} style={{
+          <div className={classNames(styles.toolbar)} ref={nodeRef} data-toolbar="true" style={{
             ...transitionDefaultStyle,
             ...transitionStyles[state]
           }}

@@ -1,22 +1,38 @@
-
 .leftSide {
-  left: 0;
+  left: calc(var(--touch-side-extra-left, 0px) + env(safe-area-inset-left));
+  width: max(
+    0px,
+    calc(
+      var(--side-width, 0px) - var(--touch-side-extra-left, 0px) -
+        env(safe-area-inset-left)
+    )
+  );
 }
 
 .rightSide {
   position: absolute;
-  right: 0;
+  right: calc(var(--touch-side-extra-right, 0px) + env(safe-area-inset-right));
+  width: max(
+    0px,
+    calc(
+      var(--side-width, 0px) - var(--touch-side-extra-right, 0px) -
+        env(safe-area-inset-right)
+    )
+  );
 }
 
-.leftSide, .rightSide {
-  padding: 7vw 1vw 7vw 1vw;
-  position: absolute;  
-  height: 100%;  
+.leftSide,
+.rightSide {
+  position: absolute;
+  height: 100%;
   z-index: 9;
   flex-direction: column;
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: scale(var(--touch-scale, 1));
+  transform-origin: center;
+  row-gap: calc(0.8vw + 4px);
 }
 
 .space {
@@ -32,7 +48,7 @@
   display: grid;
   grid-template-rows: 1fr 1fr 1fr;
   grid-template-columns: 1fr 1fr;
-  grid-template-areas: 
+  grid-template-areas:
     "up up"
     "left right"
     "down down";
@@ -44,11 +60,13 @@
   font-size: 3.5vw;
 }
 
-.select, .start {
-  font-size: 3.0vw;
+.select,
+.start {
+  font-size: 3vw;
   background: rgba(0, 0, 0, 0.2);
   padding: 1vw;
   border-radius: 1vw;
+  margin: 0.5vw 0;
 }
 
 .primaryButtons > div {
@@ -60,20 +78,26 @@
   border: 0.25vw solid #888;
 }
 
-.select, .start, .directionControls {
+.select,
+.start,
+.directionControls {
   border: 0.25vw solid #555;
 }
 
-.primaryButtons > div:last-child { 
+.primaryButtons > div:last-child {
   margin-bottom: 0;
 }
 
 .primaryButtons {
   width: 100%;
   font-size: 5vw;
+  margin: 0.5vw 0;
 }
 
-.directionControls > div, .primaryButtons > div, .select, .start {
+.directionControls > div,
+.primaryButtons > div,
+.select,
+.start {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,12 +125,14 @@
   grid-area: down;
 }
 
-.leftSide, .rightSide {
+.leftSide,
+.rightSide {
   display: none;
 }
 
-@media (pointer:coarse) and (orientation:landscape) {
-  .leftSide, .rightSide {
-    display: flex;  
+@media (pointer: coarse) and (orientation: landscape) {
+  .leftSide,
+  .rightSide {
+    display: flex;
   }
 }

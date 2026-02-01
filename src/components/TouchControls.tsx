@@ -1,26 +1,40 @@
-import React, { useRef } from 'react';
-import styles from './TouchControls.module.css';
-import { faLeftLong, faUpLong, faDownLong, faRightLong } from '@fortawesome/free-solid-svg-icons';
+import React, { useRef } from "react";
+import styles from "./TouchControls.module.css";
+import {
+  faLeftLong,
+  faUpLong,
+  faDownLong,
+  faRightLong,
+} from "@fortawesome/free-solid-svg-icons";
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import EmulatorState, { INPUT_START, INPUT_SELECT, INPUT_A, INPUT_B, INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP } from '../emulator/EmulatorState';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import EmulatorState, {
+  INPUT_START,
+  INPUT_SELECT,
+  INPUT_A,
+  INPUT_B,
+  INPUT_DOWN,
+  INPUT_LEFT,
+  INPUT_RIGHT,
+  INPUT_UP,
+} from "../emulator/EmulatorState";
 
 type TouchControlsProps = {
-  emulator: EmulatorState
-  sideWidth: number
-}
+  emulator: EmulatorState;
+  sideWidth: number;
+};
 
-const TouchControls = ({ emulator, sideWidth } : TouchControlsProps) => {
+const TouchControls = ({ emulator, sideWidth }: TouchControlsProps) => {
   const setButton = (button: number, value: boolean) => {
     emulator.setInputController(button, value, 0);
-  }
+  };
 
   const clearDpad = () => {
     setButton(INPUT_UP, false);
     setButton(INPUT_DOWN, false);
     setButton(INPUT_LEFT, false);
     setButton(INPUT_RIGHT, false);
-  }
+  };
 
   const dpad = useRef<HTMLDivElement>(null);
 
@@ -42,7 +56,7 @@ const TouchControls = ({ emulator, sideWidth } : TouchControlsProps) => {
         if (y < rect.height / 3) {
           setButton(INPUT_UP, true);
           return;
-        } else if (y < (2 * (rect.height / 3))) {
+        } else if (y < 2 * (rect.height / 3)) {
           if (x < rect.width / 2) {
             setButton(INPUT_LEFT, true);
             return;
@@ -56,18 +70,32 @@ const TouchControls = ({ emulator, sideWidth } : TouchControlsProps) => {
         }
       }
     }
-  }  
+  };
 
-  const stopPropagation = (e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()
+  const stopPropagation = (e: React.MouseEvent<HTMLDivElement>) =>
+    e.stopPropagation();
   const stopTouch = (e: React.TouchEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-  }
+  };
 
   return (
     <>
-      <div className={styles.leftSide} style={{ width: sideWidth }} onMouseMove={stopPropagation}>
-        <div className={styles.directionControls} ref={dpad} onTouchEnd={(e) => { stopTouch(e); clearDpad(); }} onTouchStart={updateDpad} onTouchMove={updateDpad}>
+      <div
+        className={styles.leftSide}
+        style={{ ["--side-width" as never]: `${sideWidth}px` }}
+        onMouseMove={stopPropagation}
+      >
+        <div
+          className={styles.directionControls}
+          ref={dpad}
+          onTouchEnd={(e) => {
+            stopTouch(e);
+            clearDpad();
+          }}
+          onTouchStart={updateDpad}
+          onTouchMove={updateDpad}
+        >
           <div className={styles.up}>
             <FontAwesomeIcon icon={faUpLong} />
           </div>
@@ -83,21 +111,65 @@ const TouchControls = ({ emulator, sideWidth } : TouchControlsProps) => {
         </div>
       </div>
 
-      <div className={styles.rightSide} style={{ width: sideWidth }} onMouseMove={stopPropagation}>
-        <div className={styles.select} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_SELECT, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_SELECT, false); }}>
+      <div
+        className={styles.rightSide}
+        style={{ ["--side-width" as never]: `${sideWidth}px` }}
+        onMouseMove={stopPropagation}
+      >
+        <div
+          className={styles.select}
+          onTouchStart={(e) => {
+            stopTouch(e);
+            setButton(INPUT_SELECT, true);
+          }}
+          onTouchEnd={(e) => {
+            stopTouch(e);
+            setButton(INPUT_SELECT, false);
+          }}
+        >
           SELECT
         </div>
         <div className={styles.space} />
         <div className={styles.primaryButtons}>
-          <div className={styles.a} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_A, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_A, false); }}>
+          <div
+            className={styles.a}
+            onTouchStart={(e) => {
+              stopTouch(e);
+              setButton(INPUT_A, true);
+            }}
+            onTouchEnd={(e) => {
+              stopTouch(e);
+              setButton(INPUT_A, false);
+            }}
+          >
             A
           </div>
-          <div className={styles.b} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_B, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_B, false); }}>
+          <div
+            className={styles.b}
+            onTouchStart={(e) => {
+              stopTouch(e);
+              setButton(INPUT_B, true);
+            }}
+            onTouchEnd={(e) => {
+              stopTouch(e);
+              setButton(INPUT_B, false);
+            }}
+          >
             B
           </div>
         </div>
         <div className={styles.space} />
-        <div className={styles.start} onTouchStart={(e) => { stopTouch(e); setButton(INPUT_START, true); }} onTouchEnd={(e) => { stopTouch(e); setButton(INPUT_START, false); }}>
+        <div
+          className={styles.start}
+          onTouchStart={(e) => {
+            stopTouch(e);
+            setButton(INPUT_START, true);
+          }}
+          onTouchEnd={(e) => {
+            stopTouch(e);
+            setButton(INPUT_START, false);
+          }}
+        >
           START
         </div>
       </div>
