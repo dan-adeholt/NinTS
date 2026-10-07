@@ -70,10 +70,10 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMod
     setBreakpoints(oldBreakpoints => {
       const newBreakpoints = new Map<number, boolean>(oldBreakpoints);
       newBreakpoints.delete(address);
-      
+
       return newBreakpoints;
     })
-  }, []);
+  }, [setBreakpoints]);
 
   const toggleBreakpoint = useCallback((address: number) => {
     setBreakpoints(oldBreakpoints => {
@@ -82,12 +82,12 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMod
       if (newBreakpoints.has(address)) {
         newBreakpoints.set(address, !newBreakpoints.get(address));
       } else {
-        newBreakpoints.set(address, true);  
+        newBreakpoints.set(address, true);
       }
 
       return newBreakpoints;
     })
-  }, []);
+  }, [setBreakpoints]);
 
   const addBreakpoint = useCallback(() => {
     const address = parseInt(newBreakpointAddress.replace('$', '0x'), 16);
@@ -101,10 +101,6 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMod
 
   const runEmulatorFrame = useCallback(() => {
     setRunMode(RunModeType.RUNNING_SINGLE_FRAME);
-  }, [setRunMode]);
-
-  const runScanline = useCallback(() => {
-    setRunMode(RunModeType.RUNNING_SINGLE_SCANLINE);
   }, [setRunMode]);
 
   const stopEmulator = useCallback(() => {
@@ -126,7 +122,7 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMod
       default:
         break;
     }
-  }, [stepEmulator, runEmulator, stopEmulator, runEmulatorFrame, running, runScanline]);
+  }, [stepEmulator]);
 
   useEffect(() => {
     addKeyListener(handleKeyEvent);
@@ -136,9 +132,10 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMod
     }
   }, [handleKeyEvent, addKeyListener, removeKeyListener]);
 
+  // The emulator is mutated in place, refresh and runMode tell us when to disassemble again
   const lines = useMemo(() => {
     return disassemble(emulator);
-  }, [emulator, refresh, runMode]);
+  }, [emulator, refresh, runMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const data = useMemo<AddressRowData>(() => ({
     lines, emulator, breakpoints, toggleBreakpoint, running
@@ -189,7 +186,7 @@ const CPUDebugger = ({ onRefresh, refresh, emulator, runMode, onClose, setRunMod
       </div>),
       title: 'Breakpoints'
     }
-    ]), [lines, data, breakpoints, newBreakpointAddress, addBreakpoint, removeBreakpoint, toggleBreakpoint, refresh]);
+    ]), [lines, data, breakpoints, newBreakpointAddress, addBreakpoint, removeBreakpoint, toggleBreakpoint, onRefresh, refresh]); // eslint-disable-line react-hooks/exhaustive-deps -- refresh re-reads EmulatorBreakState.enableLogs
 
   const registerCell = (label: React.ReactNode, register: number, formatter = hex) => (
     <td>

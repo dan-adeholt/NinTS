@@ -15,7 +15,7 @@ const PPUScanlineDebugger = ({ emulator, refresh, onClose } : DebugDialogProps) 
     }
 
     return ret;
-  }, [refresh, emulator])
+  }, [refresh, emulator]); // eslint-disable-line react-hooks/exhaustive-deps -- refresh signals that the emulator was mutated
 
   return (
     <Dialog onClose={onClose} title={"PPU Scanline logs"} horizontalPosition={DialogHorizontalPosition.RIGHT}>

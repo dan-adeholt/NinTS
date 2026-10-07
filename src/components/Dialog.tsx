@@ -59,7 +59,7 @@ const Dialog = (
     if (dialogRef.current) {
       dialogRef.current.className = classNames(styles.dialog, styles.isOpen, fullScreen && styles.fullScreen);
     }
-  }, []);
+  }, [fullScreen]);
 
   const content = (
     <div

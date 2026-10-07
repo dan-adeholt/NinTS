@@ -196,7 +196,7 @@ const CompareTraceDebugger = ({ emulator, onClose, onRefresh } : DebugDialogProp
   const clearMuted = useCallback(() => {
     setMutedLocations([]);
     localStorage.setItem(LOCAL_STORAGE_KEY_MUTED_LOCATIONS_PREFIX + emulator.rom?.romSHA, JSON.stringify([]));
-  }, []);
+  }, [emulator]);
 
   const errorDetails = phase.phase === 'error' ? phase.data as ErrorType : null
   const isLoadingOrComparing = phase.phase === 'loading' || phase.phase === 'comparing';

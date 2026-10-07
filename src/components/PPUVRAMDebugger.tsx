@@ -18,7 +18,7 @@ const PPUVRAMDebugger = ({ emulator, refresh, onClose } : DebugDialogProps) => {
     }
 
     return ret;
-  }, [emulator, refresh])
+  }, [emulator, refresh]); // eslint-disable-line react-hooks/exhaustive-deps -- refresh signals that the emulator was mutated
 
   return (
     <Dialog onClose={onClose} title="PPU VRAM Debugger" horizontalPosition={DialogHorizontalPosition.RIGHT}>

@@ -54,3 +54,26 @@ export const defaultInputConfig: InputConfig = {
    { button: INPUT_START, controller: 0, character: '-' }
   ]
 }  
+
+export type InputConfigLookup = {
+  keyboardLookup: Map<string, KeyboardBinding>
+  gamepadLookup: Map<number, GamepadControllerBinding>
+}
+
+export const createInputConfigLookup = (inputConfig: InputConfig): InputConfigLookup => {
+  const keyboardLookup = new Map<string, KeyboardBinding>();
+  const gamepadLookup = new Map<number, GamepadControllerBinding>();
+
+  for (const binding of inputConfig.keyboardBindings) {
+    keyboardLookup.set(binding.character, binding);
+  }
+
+  for (const binding of inputConfig.gamepadBindings) {
+    gamepadLookup.set(getGamepadIndexFromButton(binding.gamepadButton, binding.gamepad), binding);
+  }
+
+  return {
+    keyboardLookup,
+    gamepadLookup
+  }
+}

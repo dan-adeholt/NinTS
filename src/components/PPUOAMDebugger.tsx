@@ -43,7 +43,7 @@ const PPUOAMDebugger = ({ refresh, emulator, onClose } : DebugDialogProps) => {
     }
 
     return ret;
-  }, [refresh, emulator]);
+  }, [refresh, emulator]); // eslint-disable-line react-hooks/exhaustive-deps -- refresh signals that the emulator was mutated
 
   return (
     <Dialog onClose={onClose} title={"OAM Debugger"} horizontalPosition={DialogHorizontalPosition.RIGHT}>

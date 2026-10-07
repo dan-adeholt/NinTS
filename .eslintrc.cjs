@@ -3,6 +3,7 @@ module.exports = {
     // By extending from a plugin config, we can get recommended rules without having to add them manually.
     'eslint:recommended',
     'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
     'plugin:import/recommended',
     'plugin:@typescript-eslint/recommended'
   ],
@@ -25,5 +26,7 @@ module.exports = {
   },
   rules: {
     // Add your own rules here to override ones from the extended configs.
+    // Vite resolves query suffixes such as ?worker&url itself
+    'import/no-unresolved': ['error', { ignore: ['\\?worker&url$'] }],
   }
 };

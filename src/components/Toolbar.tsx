@@ -90,12 +90,12 @@ const Toolbar = ({
       const state = JSON.stringify(emulator.saveEmulator());
       saveGame({ data: state, index: 0, sha: emulator.rom.romSHA });
     }
-  }, [emulator, setRunMode]);
+  }, [emulator, setRunMode, saveGame]);
 
   const loadState = useCallback(() => {
     loadGame(emulator.rom?.romSHA);
     setRunMode(RunModeType.RUNNING);
-  }, [emulator, setRunMode]);
+  }, [emulator, setRunMode, loadGame]);
 
   const [autoloadEnabled, setAutoloadEnabled] = useState(localStorageAutoloadEnabled());
   
@@ -124,7 +124,7 @@ const Toolbar = ({
       }
       fileReader.readAsArrayBuffer(file);
     }
-  }, [loadRom]);
+  }, [loadRom, setRunMode]);
 
   const _clearLoadedRoms = () => {
     clearLoadedRoms();
@@ -154,11 +154,11 @@ const Toolbar = ({
     setRunMode(RunModeType.STOPPED);
   }
 
-  const promptClearRoms = useCallback(() => {
+  const promptClearRoms = () => {
     if (window.confirm('Are you sure you want to clear all loaded ROMs?')) {
       _clearLoadedRoms();
-    }  
-  }, []);  
+    }
+  };
   
   return (
     <>

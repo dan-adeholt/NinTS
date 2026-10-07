@@ -11,7 +11,7 @@ import classNames from 'classnames';
 import styles from './PPUDebugging.module.css';
 import { hex } from '../emulator/stateLogging';
 
-const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
+const Profiler = ({ onClose } : DebugDialogProps) => {
   const [perfStr, setPerfStr] = useState<string | null>(null);
   const isCrossOriginIsolated = window.crossOriginIsolated === true;
 
@@ -91,35 +91,35 @@ const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
     const t0 = performance.now();
     let totalNumCycles = 0;
 
-    for (const emulator of emulators) {
+    for (const testEmulator of emulators) {
       let testIsRunning = false;
       let testIsDone = false;
-      const startCycle = emulator.CYC;
+      const startCycle = testEmulator.CYC;
 
       while (!testIsDone) {
-        const emulatorStatus = emulator.step();
+        const emulatorStatus = testEmulator.step();
         if (!emulatorStatus) {
           console.error('Invalid status');
           break;
         }
 
-        const status = emulator.readMem(0x6000);
+        const status = testEmulator.readMem(0x6000);
 
         if (testIsRunning && status !== 0x80) {
           if (status === 0x81) {
-            emulator.reset();
+            testEmulator.reset();
           } else {
             if (status !== 0x00) {
               let testText = '';
 
-              for (let i = 0x6004; emulator.readMem(i) !== 0; i++) {
-                testText += String.fromCharCode(emulator.readMem(i));
+              for (let i = 0x6004; testEmulator.readMem(i) !== 0; i++) {
+                testText += String.fromCharCode(testEmulator.readMem(i));
               }
 
               console.error('Failed with status: ', hex(status) + ' - ' + testText);
             }
             testIsDone = true;
-            totalNumCycles += (emulator.CYC - startCycle);
+            totalNumCycles += (testEmulator.CYC - startCycle);
           }
         } else if (!testIsRunning) {
           testIsRunning = status === 0x80;
@@ -131,7 +131,7 @@ const Profiler = ({ onClose, emulator } : DebugDialogProps) => {
     const clockSpeed = ((totalNumCycles) / (diffMs * 1000));
 
     setPerfStr('Elapsed ' + diffMs.toFixed(1) + 'ms, ' + clockSpeed.toFixed(1) + 'MHz');
-  }, [emulator]);
+  }, []);
 
   return (
     <Dialog onClose={onClose} title="Profiler">

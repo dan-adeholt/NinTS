@@ -9,7 +9,7 @@ class LengthCounter {
   reloadValue = 0;
   prevValue = 0;
 
-  init(registerValue) {
+  init(registerValue: number) {
     // Timer indices are always stored in the upper 5 bits.
     const timerIndex = (registerValue & 0b11111000) >> 3;
     this.reloadValue = lengthLookup[timerIndex];
@@ -30,7 +30,7 @@ class LengthCounter {
     this.haltCounter = this.pendingHaltCounter;
   }
 
-  setHalt(newHalt) {
+  setHalt(newHalt: boolean) {
     this.pendingHaltCounter = newHalt;
   }
 

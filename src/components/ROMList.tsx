@@ -43,7 +43,7 @@ const ROMList = ({ romList, loadRom, onClose, handleFileClick, handleFileSelecte
     }
   
     return romList.slice(0, endIndex);
-  }, [romList, romList, endIndex, searchFilter]);
+  }, [romList, endIndex, searchFilter]);
   
   const loadMore = () => {
     setEndIndex(old => old + 100);

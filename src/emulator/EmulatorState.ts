@@ -305,10 +305,7 @@ class EmulatorState {
 
   reset() {
     setInterrupt(this, true);
-    this.SP -= 3;
-    if (this.SP < 0) {
-      this.SP += 0xFF;
-    }
+    this.SP = (this.SP - 3) & 0xFF;
 
     const lastValue4017 = this.apu.lastValue4017;
     const triangleLengthCounter = this.apu.triangle.lengthCounter;

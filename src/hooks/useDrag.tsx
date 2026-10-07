@@ -37,7 +37,7 @@ export const useDrag = (offset: DragOffset, setOffset: Dispatch<SetStateAction<D
       document.removeEventListener('mouseup', endListener);
       document.removeEventListener('mousemove', moveListener);
     }
-  }, []);
+  }, [setOffset]);
 
   const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent> | React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     if (enabled) {
