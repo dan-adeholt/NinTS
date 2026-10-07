@@ -2,6 +2,10 @@
   "name": "nints",
   "private": true,
   "version": "0.0.0",
+  "description": "A cycle-accurate NES emulator written in TypeScript",
+  "homepage": "https://nin-ts.vercel.app/",
+  "repository": "github:dan-adeholt/NinTS",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
