@@ -6,6 +6,22 @@ A cycle-accurate NES emulator written in TypeScript that runs in the browser.
 
 NinTS passes 145 of 156 (about 93%) of the [TASVideos accuracy test ROMs](https://tasvideos.org/EmulatorResources/NESAccuracyTests) it is tested against, including every CPU and APU test. It supports the NROM, MMC1, UNROM, CNROM, MMC3 and AxROM mappers, which covers a large part of the NES library, and emulates the NTSC version of the console.
 
+## Try it online
+
+The emulator is hosted at [nin-ts.vercel.app](https://nin-ts.vercel.app/). Load a `.nes` ROM file from the menu or drop it on the page.
+
+**Keyboard:** the default controls are listed below. They can be changed, along with gamepad bindings, under *Configure controls* in the settings menu.
+
+| NES | Keyboard |
+| --- | --- |
+| D-pad | W A S D |
+| A | Space |
+| B | M |
+| Select | . |
+| Start | - |
+
+**Touch:** on phones and tablets, on-screen controls appear on both sides of the screen when the device is held in landscape. They are hidden when a gamepad is connected.
+
 ## Features
 
 * **Cycle-accurate core.** The CPU, PPU and APU are stepped in lockstep, one CPU cycle at a time, including dummy reads/writes, interrupt timing and DMA cycle stealing.
@@ -36,16 +52,6 @@ Then open [http://localhost:5173](http://localhost:5173) and load a `.nes` ROM f
 | `yarn test` | Run the test suite (requires the `nes-test-roms` submodule) |
 | `yarn lint` | Type check and lint |
 | `yarn perfTest <rom>` | Run the performance benchmark, see [Performance](#performance) |
-
-### Default controls
-
-| NES | Keyboard |
-| --- | --- |
-| D-pad | W A S D |
-| A | Space |
-| B | M |
-| Select | . |
-| Start | - |
 
 ## Tech stack
 
